@@ -83,7 +83,7 @@ export class KickConnector implements Connector {
   }
 
   async start(): Promise<void> {
-    if (!this.creds()) return this.ctx.status({ status: 'needs-setup', detail: 'Add your Kick client ID and secret.' })
+    if (!this.creds()) return this.ctx.status({ status: 'needs-setup' })
     const raw = store.getSecret('kick.tokens')
     if (!raw) return this.ctx.status({ status: 'needs-login' })
     this.tokens = JSON.parse(raw)
@@ -110,6 +110,7 @@ export class KickConnector implements Connector {
         onState: (s, detail) => this.ctx.status({ status: s, account: this.name, detail })
       })
       this.socket.start()
+      void this.emotes()
     } catch (err) {
       if (run !== this.run) return
       this.ctx.status({ status: 'reconnecting', account: this.name, detail: `Kick read failed: ${message(err)} Sending still works.` })

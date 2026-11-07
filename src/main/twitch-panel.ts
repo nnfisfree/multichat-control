@@ -20,16 +20,18 @@ html.nnf-rewards .nnf-root { position: fixed !important; inset: 0 !important; wi
 html.nnf-rewards .nnf-root > *, html.nnf-rewards .nnf-root > * > *, html.nnf-rewards .nnf-root > * > * > *, html.nnf-rewards .nnf-root .reward-center__content { width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; }
 html.nnf-rewards .nnf-root .reward-center-body { max-height: none !important; }
 html.nnf-rewards .nnf-root :focus { outline: none !important; box-shadow: none !important; }
+html.nnf-rewards .rewards-popover-header button[aria-label="Close"] { display: none !important; }
+#nnf-notice { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; font: 15px 'Segoe UI', sans-serif; color: #fff; background: #18181b; z-index: 2147483647; }
 `
 
 /**
- * Keeps the popover open and isolated. If it can't be found within a few seconds, such as when
- * signed out, the whole page is shown so the user can still sign in or accept Twitch's prompts.
+ * Keeps the popover open and isolated. The rest of the page appears only when signed out, because
+ * Twitch's sign-in lives there. Signed in, a missing popover shows a notice rather than the chat.
  */
 const ISOLATE_JS = `(() => {
   if (window.__nnfPanel) return
   const root = document.documentElement
-  const state = window.__nnfPanel = { rewardsOnly: true, started: Date.now(), lastClick: 0 }
+  const state = window.__nnfPanel = { started: Date.now(), lastClick: 0 }
   const balance = () => {
     const box = document.querySelector('.chat-input__buttons-container')
     if (!box) return null
@@ -37,34 +39,42 @@ const ISOLATE_JS = `(() => {
     return buttons.find((b) => /points|bits/i.test(b.getAttribute('aria-label') || '') && b.getAttribute('data-a-target') !== 'bits-button')
       || buttons.find((b) => !b.getAttribute('data-a-target') && /\\d/.test(b.innerText))
   }
-  const clear = () => {
-    root.classList.remove('nnf-rewards', 'nnf-pending')
-    document.querySelectorAll('.nnf-root, .nnf-flat').forEach((e) => e.classList.remove('nnf-root', 'nnf-flat'))
+  const notice = (show) => {
+    const el = document.getElementById('nnf-notice')
+    if (!show) return el && el.remove()
+    if (el) return
+    const box = document.createElement('div')
+    box.id = 'nnf-notice'
+    box.textContent = 'Twitch rewards could not be opened. Close this panel and try again.'
+    root.appendChild(box)
   }
   const tick = () => {
-    if (!state.rewardsOnly) return clear()
     const content = document.querySelector('.reward-center__content')
     const dialog = content && content.closest('[role="dialog"]')
     if (dialog) {
       if (!dialog.classList.contains('nnf-root')) {
-        clear()
+        document.querySelectorAll('.nnf-root, .nnf-flat').forEach((e) => e.classList.remove('nnf-root', 'nnf-flat'))
         dialog.classList.add('nnf-root')
         for (let n = dialog.parentElement; n && n !== document.body; n = n.parentElement) n.classList.add('nnf-flat')
       }
       root.classList.remove('nnf-pending')
       root.classList.add('nnf-rewards')
+      notice(false)
       state.started = Date.now()
       return
     }
-    root.classList.remove('nnf-rewards')
     const button = balance()
     if (button && Date.now() - state.lastClick > 1500) {
       state.lastClick = Date.now()
       button.click()
     }
-    if (Date.now() - state.started > 6000) root.classList.remove('nnf-pending')
-    else if (!document.querySelector('[data-a-target="consent-banner-accept"]')) root.classList.add('nnf-pending')
-    else root.classList.remove('nnf-pending')
+    const waited = Date.now() - state.started
+    if (button) {
+      root.classList.add('nnf-pending')
+      if (waited > 8000) notice(true)
+    } else if (waited > 6000 || document.querySelector('[data-a-target="consent-banner-accept"]')) {
+      root.classList.remove('nnf-rewards', 'nnf-pending')
+    } else root.classList.add('nnf-pending')
   }
   setInterval(tick, 400)
   tick()
@@ -106,7 +116,6 @@ export class TwitchPanel {
   private view: WebContentsView | null = null
   private ses: Session | null = null
   private shown = false
-  private rewardsOnly = true
 
   constructor(private window: () => BrowserWindow | null, private channel: () => string | undefined) {}
 
@@ -125,13 +134,9 @@ export class TwitchPanel {
     return this.ses
   }
 
-  private applyMode(): void {
-    void this.view?.webContents.executeJavaScript(`window.__nnfPanel && (window.__nnfPanel.rewardsOnly = ${this.rewardsOnly}, window.__nnfPanel.started = Date.now())`).catch(() => {})
-  }
-
   private isolate(contents: WebContents): void {
     void contents.insertCSS(ISOLATE_CSS).catch(() => {})
-    void contents.executeJavaScript(ISOLATE_JS).then(() => this.applyMode()).catch(() => {})
+    void contents.executeJavaScript(ISOLATE_JS).catch(() => {})
   }
 
   show(bounds: PanelBounds): ActionResult {
@@ -156,22 +161,6 @@ export class TwitchPanel {
   hide(): void {
     if (this.view && this.shown) this.window()?.contentView.removeChildView(this.view)
     this.shown = false
-  }
-
-  /** Some rewards need typing in chat, so the full page stays one click away. */
-  setRewardsOnly(on: boolean): void {
-    this.rewardsOnly = on
-    this.applyMode()
-  }
-
-  /** Fallback when embedding fails: the same page and session in its own window. */
-  popOut(): ActionResult {
-    const url = this.url()
-    if (!url) return { ok: false, message: 'Log in to Twitch first, so the app knows which channel to open.' }
-    const child = new BrowserWindow({ width: 460, height: 760, title: 'Twitch Rewards', autoHideMenuBar: true, webPreferences: { session: this.session(), sandbox: true } })
-    lockToTwitch(child.webContents, () => child)
-    void child.loadURL(url)
-    return { ok: true }
   }
 
   destroy(): void {

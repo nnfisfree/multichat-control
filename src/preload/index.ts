@@ -23,13 +23,11 @@ const api: NnfApi = {
   openExternal: call('openExternal') as NnfApi['openExternal'],
   showPanel: call('showPanel') as NnfApi['showPanel'],
   hidePanel: call('hidePanel') as NnfApi['hidePanel'],
-  panelRewardsOnly: call('panelRewardsOnly') as NnfApi['panelRewardsOnly'],
   onSettings(cb) {
     const listener = (_e: unknown, s: Settings): void => cb(s)
     ipcRenderer.on('settings:changed', listener)
     return () => ipcRenderer.removeListener('settings:changed', listener)
   },
-  popOutPanel: call('popOutPanel') as NnfApi['popOutPanel'],
   window: (action) => ipcRenderer.send('window', action)
 }
 

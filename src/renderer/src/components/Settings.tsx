@@ -1,9 +1,12 @@
-import { useEffect, useState, type JSX, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
+import logo from '../../../../resources/logo.webp'
 import { KICK_REDIRECT_URI } from '../../../shared/app-config'
 import { PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type Platform } from '../../../shared/types'
 import { Icon, PlatformIcon } from '../Icons'
 import { setSecrets, updateSettings, useStore } from '../store'
 import { statusText } from './Tabs'
+
+const LOGIN_LABEL: Record<Platform, string> = { twitch: 'Log in with Twitch', youtube: 'Log in with Google', kick: 'Log in with Kick' }
 
 const GUIDE: Record<Platform, { title: string; url: string; steps: string[] }> = {
   twitch: {
@@ -42,6 +45,11 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
   const showFields = !(platform === 'twitch' && builtIn)
   const live = st?.status === 'connected' || st?.status === 'waiting' || st?.status === 'reconnecting'
 
+  const login = (): void => {
+    if (st?.status === 'needs-setup') setErr(`This copy of the app has no ${PLATFORM_LABEL[platform]} login built in yet.`)
+    else act(() => window.nnf.login(platform))()
+  }
+
   const act = (fn: () => Promise<unknown>) => () => {
     setErr('')
     fn().catch((e) => {
@@ -63,9 +71,16 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
           <a href={st.device.url} onClick={(e) => { e.preventDefault(); void window.nnf.openExternal(st.device!.url) }}>{st.device.url}</a>
         </div>
       )}
+      {err && <div className="notice bad" role="alert">{err}</div>}
+      <div className="row-btns">
+        {live
+          ? <button className="btn ghost" onClick={act(() => window.nnf.logout(platform))}>Log out</button>
+          : <button className="btn" disabled={st?.status === 'connecting' || (st?.status === 'authorizing' && platform !== 'twitch')} onClick={login}>{st?.status === 'authorizing' && platform === 'twitch' ? 'Get a new code' : LOGIN_LABEL[platform]}</button>}
+        {live && <button className="btn ghost" onClick={act(() => window.nnf.reconnect(platform))}>Reconnect</button>}
+      </div>
       {showFields && !live && (
-        <details open={!builtIn && !settings[idKey]}>
-          <summary>{builtIn ? 'Optional: use my own developer app' : 'One-time setup'}</summary>
+        <details className="advanced">
+          <summary>Advanced: use my own developer app</summary>
           <ol>{g.steps.map((s) => <li key={s}>{s}</li>)}</ol>
           <p><button className="linkish" onClick={() => void window.nnf.openExternal(g.url)}>Open {g.title}</button></p>
           <label>Client ID
@@ -81,13 +96,6 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
           )}
         </details>
       )}
-      {err && <div className="notice bad" role="alert">{err}</div>}
-      <div className="row-btns">
-        {live
-          ? <button className="btn ghost" onClick={act(() => window.nnf.logout(platform))}>Log out</button>
-          : <button className="btn" disabled={st?.status === 'needs-setup' || st?.status === 'connecting' || (st?.status === 'authorizing' && platform !== 'twitch')} onClick={act(() => window.nnf.login(platform))}>{st?.status === 'authorizing' && platform === 'twitch' ? 'Get a new code' : 'Log in'}</button>}
-        {live && <button className="btn ghost" onClick={act(() => window.nnf.reconnect(platform))}>Reconnect</button>}
-      </div>
     </article>
   )
 }
@@ -103,6 +111,31 @@ const CHAT_EVENT_ROWS: [ChatEventGroup, string, string][] = [
   ['cheers', 'Kick Cheers', 'Twitch cheers always show as messages'],
   ['follows', 'Follows', 'Off by default, because follow bots can flood chat']
 ]
+
+const LINKS: [string, string][] = [
+  ['Twitch', 'https://www.twitch.tv/nonamefound'],
+  ['YouTube', 'https://www.youtube.com/nonamefoundDCUO'],
+  ['Kick', 'https://kick.com/nonameonlive'],
+  ['Discord', 'https://discord.com/invite/Jg8qjrsTtb'],
+  ['Shop', 'https://www.nonamefound.lol/']
+]
+
+function About(): JSX.Element {
+  return (
+    <Section title="About this App" desc="Who made it, and why">
+      <div className="about">
+        <img className="about-logo" src={logo} alt="NoNameFound logo" />
+        <div className="about-text">
+          <p>Hi, I'm <b>NoNameFound</b>: a streamer, IT engineer and Linux enthusiast. I've played DC Universe Online since the beta, on both the EU and US PC servers. I love sharing top-level competitive gameplay, entertaining my audience and constantly interacting with them. I also stream other games, mainly MMORPGs like Guild Wars 2.</p>
+          <p>I stream on several platforms at once, and I wanted one chat with every control a click away. So I made this app, and I'm sharing it so other streamers can use it too.</p>
+          <div className="about-links">
+            {LINKS.map(([label, url]) => <button key={label} className="btn ghost" onClick={() => void window.nnf.openExternal(url)}>{label}</button>)}
+          </div>
+        </div>
+      </div>
+    </Section>
+  )
+}
 
 const BUNDLED_FONTS = ['Segoe UI', 'Inter', 'Rajdhani', 'Orbitron']
 
@@ -148,10 +181,17 @@ export function Settings({ onClose }: { onClose(): void }): JSX.Element {
   const providers = s.emoteProviders
   const setProvider = (key: keyof typeof providers, on: boolean): void => void updateSettings({ emoteProviders: { ...providers, [key]: on } })
   const percent = Math.round(s.windowOpacity * 100)
+  const modal = useRef<HTMLDivElement>(null)
+  const followLight = (e: MouseEvent): void => {
+    const box = modal.current!
+    const r = box.getBoundingClientRect()
+    box.style.setProperty('--light-x', `${e.clientX - r.left}px`)
+    box.style.setProperty('--light-y', `${e.clientY - r.top}px`)
+  }
 
   return (
     <div className="modal-back">
-      <div className="modal" role="dialog" aria-label="Settings">
+      <div className="modal" role="dialog" aria-label="Settings" ref={modal} onMouseMove={followLight}>
         <div className="drawer-head">
           <h2>Settings</h2>
           <div className="grow" />
@@ -232,6 +272,8 @@ export function Settings({ onClose }: { onClose(): void }): JSX.Element {
               <Toggle label="Confirm big actions" on={s.confirmActions} onChange={(v) => void updateSettings({ confirmActions: v })} />
             </Row>
           </Section>
+
+          <About />
 
           <p className="fine">Version {boot.version}. Data is stored in {boot.dataDir}. Keep that folder private: it holds your logins.</p>
         </div>

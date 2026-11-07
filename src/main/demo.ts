@@ -12,7 +12,8 @@ const emoteUrl = (bg: string, face: string): string =>
 
 const EMOTE_DEFS: Record<Platform, [string, Emote['provider'], string, string, string][]> = {
   twitch: [
-    ['nnfHype', 'twitch', 'Channel', '#9146ff', '!'], ['nnfLove', 'twitch', 'Channel', '#d22bd2', '<3'],
+    ['nnfHype', 'twitch', 'My Channel Emotes', '#9146ff', '!'], ['nnfLove', 'twitch', 'My Channel Emotes', '#d22bd2', '<3'],
+    ['friendWave', 'twitch', 'StreamerFriend Emotes', '#27a9e8', 'W'], ['friendGG', 'twitch', 'StreamerFriend Emotes', '#27a9e8', 'G'],
     ['PogChamp', 'twitch', 'Twitch Global', '#7a4ee0', 'O'], ['Kappa', 'twitch', 'Twitch Global', '#6b5fa0', 'K'],
     ['catJAM', '7tv', '7TV Channel', '#2aa5c9', '^'], ['KEKW', 'bttv', 'BTTV Channel', '#d84848', 'X'],
     ['monkaS', 'ffz', 'FFZ Channel', '#3d9a5b', '?']
@@ -24,9 +25,26 @@ const EMOTE_DEFS: Record<Platform, [string, Emote['provider'], string, string, s
   youtube: [['😀', 'emoji', 'Emoji', '', ''], ['🔥', 'emoji', 'Emoji', '', ''], ['🎉', 'emoji', 'Emoji', '', '']]
 }
 
-const emotesFor = (p: Platform): Emote[] => EMOTE_DEFS[p].map(([name, provider, group, bg, face]) => ({
-  id: name, name, provider, platform: p, group, url: bg ? emoteUrl(bg, face) : ''
-}))
+const GROUP_ICON: Record<string, string> = {
+  'My Channel Emotes': emoteUrl('#8d1fc8', 'D'),
+  'StreamerFriend Emotes': emoteUrl('#27a9e8', 'S')
+}
+
+/** `--demo-emotes=N` adds N extra emotes, to measure the picker with a large collection. */
+const extraEmotes = (): Emote[] => {
+  const count = Number(process.argv.find((a) => a.startsWith('--demo-emotes='))?.split('=')[1]) || 0
+  return Array.from({ length: count }, (_, i) => ({
+    id: `extra${i}`, name: `extra${i}`, provider: 'twitch' as const, platform: 'twitch' as const, url: emoteUrl('#5b35f0', String(i % 10)),
+    group: `Channel${Math.floor(i / 40)} Emotes`, groupIcon: emoteUrl('#27a9e8', 'C')
+  }))
+}
+
+const emotesFor = (p: Platform): Emote[] => [
+  ...EMOTE_DEFS[p].map(([name, provider, group, bg, face]) => ({
+    id: name, name, provider, platform: p, group, groupIcon: GROUP_ICON[group], url: bg ? emoteUrl(bg, face) : ''
+  })),
+  ...(p === 'twitch' ? extraEmotes() : [])
+]
 
 const CHATTERS: Record<Platform, string[]> = {
   twitch: ['PixelNomad', 'LunaByte', 'TurboTaco', 'NovaRush_', 'CosmicKiwi', 'QuietStorm'],

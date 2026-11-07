@@ -78,7 +78,7 @@ export class YouTubeConnector implements Connector {
   }
 
   async start(): Promise<void> {
-    if (!this.creds()) return this.ctx.status({ status: 'needs-setup', detail: 'Add your Google client ID and secret.' })
+    if (!this.creds()) return this.ctx.status({ status: 'needs-setup' })
     const raw = store.getSecret('youtube.tokens')
     if (!raw) return this.ctx.status({ status: 'needs-login' })
     this.tokens = JSON.parse(raw)

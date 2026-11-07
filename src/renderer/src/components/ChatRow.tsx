@@ -7,7 +7,7 @@ import { EventCard } from './EventCard'
 
 function Part({ p }: { p: MessagePart }): JSX.Element {
   if (p.type === 'gif') return <img className="gif" src={p.url} alt={p.alt} title={p.alt} />
-  if (p.type === 'emote') return <img className="emote" src={p.url} alt={p.name} title={p.name} loading="lazy" />
+  if (p.type === 'emote') return <img className="emote" src={p.url} alt={p.name} title={p.name} decoding="async" />
   if (p.type === 'link') return <a href={p.url} onClick={(e) => { e.preventDefault(); void window.nnf.openExternal(p.url) }}>{p.text}</a>
   return <>{p.text}</>
 }

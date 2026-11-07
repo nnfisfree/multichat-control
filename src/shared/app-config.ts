@@ -1,4 +1,4 @@
-export const APP_NAME = "NoNameFound's Multichat Stream"
+export const APP_NAME = "NoName's Multichat Control"
 
 /**
  * Public Twitch Client ID built into release builds. Twitch public clients have no secret,

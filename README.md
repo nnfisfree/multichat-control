@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="resources/icon.png" width="112" alt="NoNameFound's Multichat Stream logo" />
+<img src="resources/icon.png" width="112" alt="NoName's Multichat Control logo" />
 
-# NoNameFound's Multichat Stream
+# NoName's Multichat Control
 
 **One window for every stream chat.**
 
@@ -15,7 +15,7 @@ Read and write Twitch, YouTube and Kick chat together, see every event as it hap
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoNameFound's Multichat Stream showing live chat, the events drop-down, the emote picker, sending a message and quick actions" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control showing live chat, the events drop-down, the emote picker, sending a message and quick actions" />
 
 <sub>Everything shown here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -25,7 +25,7 @@ Read and write Twitch, YouTube and Kick chat together, see every event as it hap
 
 ## Why it exists
 
-Streaming to several platforms usually means juggling browser tabs, or running a large bot suite just to read chat. NoNameFound's Multichat Stream is focused on the moment you're live: one merged chat, one list of events, and real controls within a click.
+Streaming to several platforms usually means juggling browser tabs, or running a large bot suite just to read chat. NoName's Multichat Control is focused on the moment you're live: one merged chat, one list of events, and real controls within a click.
 
 It doesn't need OBS, a bot, a server or a runtime. Each person logs in with their own accounts, so it works for any streamer.
 
@@ -127,7 +127,7 @@ Demo mode simulates all three platforms, so you can explore everything except th
 
 Open the gear icon. Each platform has its own login and on-screen steps.
 
-On an official release, click **Log in** and sign in on the platform's own page: Twitch, your Google account for YouTube, or your Kick account for Kick. There's nothing else to set up.
+On an official release, click **Log in with Twitch**, **Log in with Google** or **Log in with Kick**, and sign in on the platform's own page: Twitch, your Google account for YouTube, or your Kick account for Kick. There's nothing else to set up.
 
 Twitch expires its logins after about 30 days, so the app may ask you to log in again.
 
@@ -136,7 +136,7 @@ Twitch expires its logins after about 30 days, so the app may ask you to log in 
 <details>
 <summary><b>Built it from source?</b></summary>
 
-Twitch works as it is. YouTube and Kick need a developer app, because their credentials aren't stored in this repository. You can enter your own in Settings under each platform, or include them in your build.
+Twitch works as it is. YouTube and Kick need a developer app, because their credentials aren't stored in this repository. You can enter your own in Settings, under **Advanced** on each platform, or include them in your build.
 
 **YouTube**
 
@@ -170,8 +170,9 @@ These limits come from the platforms.
 |---|---|
 | **Twitch** | No public API can redeem a reward or Power-up, so the panel is Twitch's own page. **Power-ups there spend real Bits.** |
 | **Twitch** | Only the app that created a reward can edit it or fulfil its redemptions. Rewards from the Twitch dashboard are read-only here, and their redemptions still appear in Events. |
-| **Twitch** | The rewards-only view depends on Twitch's page layout. If that changes, the panel falls back to the full page. |
+| **Twitch** | The rewards panel depends on Twitch's page layout, so a Twitch redesign can stop it opening until the app is updated. Rewards that need a typed chat message must be redeemed in Twitch's normal chat. |
 | **Twitch** | Pronouns come from the community service [pronouns.alejo.io](https://pronouns.alejo.io), so they cover Twitch chatters who registered there. Turning them on sends chatter names to that service. |
+| **YouTube** | Until Google verifies this app, YouTube login on official builds only works for approved testers, and those logins expire every 7 days. |
 | **YouTube** | Chat exists only during a live broadcast. The app waits and connects by itself. |
 | **YouTube** | Each Google project gets 10,000 quota units a day, shared by everyone using that build. Each message sent costs 20. To avoid sharing, enter your own app in Settings. Messages are limited to 200 characters. |
 | **YouTube** | Custom member emoji have no documented API, so they show as text and aren't in the picker. |
@@ -219,4 +220,4 @@ Contributions are welcome. Please run `npm test` and `npm run typecheck` before 
 
 [MIT](LICENSE). Use it, change it and share it.
 
-<sub>NoNameFound's Multichat Stream is an independent project, and isn't affiliated with or endorsed by Twitch, YouTube, Kick, BetterTTV, 7TV or FrankerFaceZ. All trademarks belong to their owners.</sub>
+<sub>NoName's Multichat Control is an independent project, and isn't affiliated with or endorsed by Twitch, YouTube, Kick, BetterTTV, 7TV or FrankerFaceZ. All trademarks belong to their owners.</sub>

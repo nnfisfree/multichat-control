@@ -102,6 +102,8 @@ export interface Emote {
   provider: 'twitch' | '7tv' | 'bttv' | 'ffz' | 'kick' | 'emoji'
   platform: Platform
   group: string
+  /** Avatar shown beside the group's heading. */
+  groupIcon?: string
   animated?: boolean
 }
 
@@ -233,8 +235,6 @@ export interface NnfApi {
   openExternal(url: string): Promise<void>
   showPanel(bounds: PanelBounds): Promise<ActionResult>
   hidePanel(): Promise<void>
-  panelRewardsOnly(on: boolean): Promise<void>
-  popOutPanel(): Promise<ActionResult>
   window(action: 'minimize' | 'maximize' | 'close'): void
 }
 

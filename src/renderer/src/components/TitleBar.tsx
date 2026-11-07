@@ -1,9 +1,11 @@
 import type { JSX } from 'react'
+import icon from '../../../../resources/icon.png'
 import { APP_NAME } from '../../../shared/app-config'
 
 export function TitleBar({ demo }: { demo: boolean }): JSX.Element {
   return (
     <header className="titlebar">
+      <img className="brand-icon" src={icon} alt="" />
       <span className="brand">{APP_NAME}</span>
       {demo && <span className="demo-tag">DEMO</span>}
       <div className="grow" />

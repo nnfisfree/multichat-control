@@ -1,6 +1,6 @@
 appId: app.nnfmultichat.desktop
-productName: "NoNameFound's Multichat Stream"
-executableName: NoNameFounds-Multichat-Stream
+productName: "NoName's Multichat Control"
+executableName: NoNames-Multichat-Control
 directories:
   output: release
 files:
@@ -16,6 +16,6 @@ win:
     - portable
     - zip
   icon: resources/icon.png
-  artifactName: NoNameFounds-Multichat-Stream-${version}-${arch}.${ext}
+  artifactName: NoNames-Multichat-Control-${version}-${arch}.${ext}
 portable:
-  artifactName: NoNameFounds-Multichat-Stream-${version}-portable.exe
+  artifactName: NoNames-Multichat-Control-${version}-portable.exe

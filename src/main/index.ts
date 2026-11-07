@@ -134,8 +134,6 @@ function registerIpc(): void {
   handle('openExternal', openExternal)
   handle('showPanel', (b: PanelBounds) => panel.show(b))
   handle('hidePanel', () => panel.hide())
-  handle('panelRewardsOnly', (on: boolean) => panel.setRewardsOnly(on))
-  handle('popOutPanel', () => panel.popOut())
   ipcMain.on('window', (e, action: string) => {
     if (!win || e.sender !== win.webContents) return
     if (action === 'minimize') win.minimize()
@@ -164,7 +162,7 @@ else {
       iconPath,
       settingsChanged: () => win?.webContents.send('settings:changed', store.settings)
     })
-    panel = new TwitchPanel(() => win, () => twitch?.channelLogin())
+    panel = new TwitchPanel(() => win, () => (demo ? process.env.NNF_PANEL_CHANNEL : twitch?.channelLogin()))
     buildConnectors()
     registerIpc()
     createWindow()

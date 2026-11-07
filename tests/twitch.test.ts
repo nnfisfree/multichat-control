@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { buildEmoteList, smallAvatar } from '../src/main/platforms/twitch/emotes'
 import { chatMessage, cheermoteUrl, eventFromSub, hypeTrain, notification } from '../src/main/platforms/twitch/normalize'
 
 const base = {
@@ -39,6 +40,27 @@ describe('GIFs and cheers', () => {
   })
   it('marks gigantified emotes', () => {
     expect(chatMessage({ ...base, message_type: 'power_ups_gigantified_emote' }, new Map(), third).effect).toBe('giant')
+  })
+})
+
+describe('buildEmoteList', () => {
+  const self = { id: '1', avatar: 'me.png' }
+  const owners = new Map([['2', { name: 'Zed', avatar: 'z.png' }], ['3', { name: 'Amy', avatar: 'a.png' }]])
+  const e = (name: string, owner_id = '1') => ({ id: name, name, owner_id, format: ['static'] })
+  const list = buildEmoteList(self, [e('mine')], [e('mine'), e('mine2'), e('z1', '2'), e('a1', '3'), e('prime', 'twitch')], [e('global')], owners)
+
+  it('puts your channel first, then channels by name, then the rest', () => {
+    expect([...new Set(list.map((x) => x.group))]).toEqual(['My Channel Emotes', 'Amy Emotes', 'Zed Emotes', 'Other Emotes', 'Twitch Global'])
+  })
+  it('attaches each channel avatar to its group', () => {
+    expect(list.find((x) => x.name === 'mine')?.groupIcon).toBe('me.png')
+    expect(list.find((x) => x.name === 'a1')?.groupIcon).toBe('a.png')
+  })
+  it('lists an emote once', () => {
+    expect(list.filter((x) => x.name === 'mine')).toHaveLength(1)
+  })
+  it('asks for small avatars', () => {
+    expect(smallAvatar('https://x/a-profile_image-300x300.png')).toBe('https://x/a-profile_image-70x70.png')
   })
 })
 

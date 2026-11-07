@@ -3,12 +3,14 @@ import { TWITCH_CLIENT_ID } from '../../../shared/app-config'
 import type { EmoteLookup } from '../../../shared/parts'
 import type { ActionDef, ActionResult, Badge, Emote, ModerationRequest } from '../../../shared/types'
 import { deviceLogin, refreshTokens, validate, type TwitchTokens } from '../../auth/twitch-device'
+import { loadEmoteCache, saveEmoteCache } from '../../emotes/cache'
 import { loadTwitchExtras, toLookup } from '../../emotes/third-party'
 import { errorText, HttpError, message, readBody } from '../../net'
 import { Pronouns } from '../../pronouns'
 import { store } from '../../store'
 import type { Connector, ConnectorContext } from '../connector'
 import { buildActions, runTwitchAction } from './actions'
+import { buildEmoteList, fetchOwners, smallAvatar } from './emotes'
 import { EventSub } from './eventsub'
 import { chatMessage, eventFromSub, hypeTrain, notification, type CheerMap } from './normalize'
 
@@ -29,6 +31,9 @@ export class TwitchConnector implements Connector {
   private badges = new Map<string, Badge>()
   private third: EmoteLookup = new Map()
   private emoteCache: Emote[] | null = null
+  private emoteLoad: Promise<Emote[]> | null = null
+  private thirdList: Emote[] = []
+  private avatar = ''
   private manageable = new Set<string>()
   private loginRun = 0
   private pronouns: Pronouns
@@ -108,6 +113,8 @@ export class TwitchConnector implements Connector {
     this.login_ = who.login
     const users = await this.helix('GET', '/users', { id: who.user_id })
     this.displayName = users.data?.[0]?.display_name ?? who.login
+    this.avatar = smallAvatar(users.data?.[0]?.profile_image_url)
+    this.emoteCache = loadEmoteCache(`twitch-${who.user_id}`)
     await Promise.all([this.loadBadges(), this.loadThirdParty(), this.loadManageable(), this.loadCheers()])
     this.sub = new EventSub({
       onSession: (id) => this.subscribeAll(id),
@@ -115,6 +122,8 @@ export class TwitchConnector implements Connector {
       onState: (s, detail) => this.ctx.status({ status: s, account: this.displayName, detail })
     })
     this.sub.start()
+    // Ready before the picker is first opened.
+    void this.refreshList()
   }
 
   async stop(): Promise<void> {
@@ -168,7 +177,8 @@ export class TwitchConnector implements Connector {
   }
 
   private async loadThirdParty(): Promise<void> {
-    this.third = toLookup(await this.thirdParty())
+    this.thirdList = await this.thirdParty()
+    this.third = toLookup(this.thirdList)
   }
 
   private async loadCheers(): Promise<void> {
@@ -181,7 +191,9 @@ export class TwitchConnector implements Connector {
 
   async refreshEmotes(): Promise<void> {
     this.emoteCache = null
-    if (this.tokens) await this.loadThirdParty()
+    if (!this.tokens) return
+    await this.loadThirdParty()
+    await this.refreshList()
   }
 
   private async loadManageable(): Promise<void> {
@@ -289,10 +301,20 @@ export class TwitchConnector implements Connector {
   async emotes(): Promise<Emote[]> {
     if (this.emoteCache) return this.emoteCache
     if (!this.tokens) return []
-    const url = (e: any): string => `https://static-cdn.jtvnw.net/emoticons/v2/${e.id}/${e.format?.includes('animated') ? 'default' : 'static'}/dark/2.0`
-    const map = (list: any[], group: string): Emote[] => (list ?? []).map((e) => ({
-      id: e.id, name: e.name, url: url(e), provider: 'twitch', platform: 'twitch', group, animated: e.format?.includes('animated')
-    }))
+    return this.refreshList()
+  }
+
+  /** One shared download, however many callers ask at the same moment. */
+  private refreshList(): Promise<Emote[]> {
+    this.emoteLoad ??= this.fetchEmotes().then((list) => {
+      this.emoteCache = list
+      saveEmoteCache(`twitch-${this.userId}`, list)
+      return list
+    }).finally(() => { this.emoteLoad = null })
+    return this.emoteLoad
+  }
+
+  private async fetchEmotes(): Promise<Emote[]> {
     const userEmotes: any[] = []
     let cursor: string | undefined
     do {
@@ -300,15 +322,15 @@ export class TwitchConnector implements Connector {
       userEmotes.push(...(r?.data ?? []))
       cursor = r?.pagination?.cursor
     } while (cursor)
-    const [channel, global, third] = await Promise.all([
+    const [channel, global, owners] = await Promise.all([
       this.helix('GET', '/chat/emotes', { broadcaster_id: this.userId }).catch(() => null),
       this.helix('GET', '/chat/emotes/global').catch(() => null),
-      this.thirdParty()
+      fetchOwners(this.helix, userEmotes.map((e) => e.owner_id))
     ])
-    const seen = new Set<string>()
-    const unique = (list: Emote[]): Emote[] => list.filter((e) => !seen.has(e.name) && seen.add(e.name))
-    this.emoteCache = unique([...map(channel?.data, 'Channel'), ...map(userEmotes, 'My Emotes'), ...map(global?.data, 'Twitch Global'), ...third])
-    return this.emoteCache
+    const native = buildEmoteList({ id: this.userId, avatar: this.avatar }, channel?.data ?? [], userEmotes, global?.data ?? [], owners)
+    // A failed refresh must not replace a good saved list with nothing.
+    if (!native.length && this.emoteCache) return this.emoteCache
+    return [...native, ...this.thirdList]
   }
 
   async actions(): Promise<ActionDef[]> {

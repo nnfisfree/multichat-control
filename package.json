@@ -1,9 +1,9 @@
 {
   "name": "multistreaming-app",
-  "productName": "NoNameFound's Multichat Stream",
+  "productName": "NoName's Multichat Control",
   "version": "0.1.0",
   "description": "Standalone multi-platform stream chat for Twitch, YouTube and Kick.",
-  "author": "NoNameFound's Multichat Stream contributors",
+  "author": "NoName's Multichat Control contributors",
   "private": true,
   "main": "out/main/index.js",
   "scripts": {

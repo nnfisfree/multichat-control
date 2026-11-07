@@ -6,11 +6,11 @@ import { useStore } from '../store'
 export type Tab = Platform | 'all'
 
 const STATUS_TEXT: Record<ConnectionState['status'], string> = {
-  'needs-setup': 'Needs setup', 'needs-login': 'Not logged in', authorizing: 'Logging in', connecting: 'Connecting',
+  'needs-setup': 'Not logged in', 'needs-login': 'Not logged in', authorizing: 'Logging in', connecting: 'Connecting',
   connected: 'Connected', reconnecting: 'Reconnecting', waiting: 'Waiting for broadcast', error: 'Error', disabled: 'Off'
 }
 
-export const statusText = (s?: ConnectionState): string => (s ? `${STATUS_TEXT[s.status]}${s.detail ? `: ${s.detail}` : ''}` : 'Off')
+export const statusText = (s?: ConnectionState): string => (s ? `${STATUS_TEXT[s.status]}${s.detail && s.status !== 'needs-setup' ? `: ${s.detail}` : ''}` : 'Off')
 
 function dotClass(s?: ConnectionState): string {
   if (!s) return 'off'
