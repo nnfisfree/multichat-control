@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX, type ReactNode } from 'react'
 import { KICK_REDIRECT_URI } from '../../../shared/app-config'
-import { PLATFORM_LABEL, type ChatEventGroup, type Platform } from '../../../shared/types'
+import { PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type Platform } from '../../../shared/types'
 import { Icon, PlatformIcon } from '../Icons'
 import { setSecrets, updateSettings, useStore } from '../store'
 import { statusText } from './Tabs'
@@ -38,7 +38,8 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
   const g = GUIDE[platform]
   const idKey = `${platform}ClientId` as const
   const secretKey = platform === 'youtube' ? 'youtubeSecret' : platform === 'kick' ? 'kickSecret' : null
-  const showFields = !(platform === 'twitch' && boot.builtInTwitchId)
+  const builtIn = platform === 'twitch' ? boot.builtInTwitchId : platform === 'youtube' ? boot.builtInYoutube : boot.builtInKick
+  const showFields = !(platform === 'twitch' && builtIn)
   const live = st?.status === 'connected' || st?.status === 'waiting' || st?.status === 'reconnecting'
 
   const act = (fn: () => Promise<unknown>) => () => {
@@ -63,8 +64,8 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
         </div>
       )}
       {showFields && !live && (
-        <details open={!settings[idKey]}>
-          <summary>One-time setup</summary>
+        <details open={!builtIn && !settings[idKey]}>
+          <summary>{builtIn ? 'Optional: use my own developer app' : 'One-time setup'}</summary>
           <ol>{g.steps.map((s) => <li key={s}>{s}</li>)}</ol>
           <p><button className="linkish" onClick={() => void window.nnf.openExternal(g.url)}>Open {g.title}</button></p>
           <label>Client ID
@@ -160,6 +161,16 @@ export function Settings({ onClose }: { onClose(): void }): JSX.Element {
           {!s.setupDismissed && <p className="lead">Welcome! Log in to each platform you stream on. You can do this later from the gear icon.</p>}
           <Section title="Accounts" desc="Connect the platforms you stream on">
             {(['twitch', 'youtube', 'kick'] as Platform[]).map((p) => <Account key={p} platform={p} />)}
+          </Section>
+
+          <Section title="Window" desc="Choose what happens when you close the app">
+            <Row title="When Closing the Window" desc="In the tray, chat stays connected in the background. Open it from the tray icon.">
+              <select aria-label="When closing the window" value={s.closeAction} onChange={(e) => void updateSettings({ closeAction: e.target.value as CloseAction })}>
+                <option value="exit">Exit completely</option>
+                <option value="ask">Ask every time</option>
+                <option value="tray">Minimize to tray</option>
+              </select>
+            </Row>
           </Section>
 
           <Section title="Appearance" desc="Change how the app looks">

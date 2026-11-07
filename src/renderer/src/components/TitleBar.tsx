@@ -1,9 +1,10 @@
 import type { JSX } from 'react'
+import { APP_NAME } from '../../../shared/app-config'
 
 export function TitleBar({ demo }: { demo: boolean }): JSX.Element {
   return (
     <header className="titlebar">
-      <span className="brand">NNF MultiChat</span>
+      <span className="brand">{APP_NAME}</span>
       {demo && <span className="demo-tag">DEMO</span>}
       <div className="grow" />
       <button className="win-btn" aria-label="Minimize" onClick={() => window.nnf.window('minimize')}>_</button>

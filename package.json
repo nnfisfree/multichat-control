@@ -1,9 +1,9 @@
 {
   "name": "multistreaming-app",
-  "productName": "NNF MultiChat",
+  "productName": "NoNameFound's Multichat Stream",
   "version": "0.1.0",
   "description": "Standalone multi-platform stream chat for Twitch, YouTube and Kick.",
-  "author": "NNF MultiChat contributors",
+  "author": "NoNameFound's Multichat Stream contributors",
   "private": true,
   "main": "out/main/index.js",
   "scripts": {

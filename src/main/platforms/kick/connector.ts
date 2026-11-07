@@ -2,6 +2,7 @@ import { KICK_REDIRECT_PORT } from '../../../shared/app-config'
 import type { EmoteLookup } from '../../../shared/parts'
 import type { ActionDef, ActionResult, Emote, ModerationRequest } from '../../../shared/types'
 import { loopbackLogin } from '../../auth/loopback-pkce'
+import { credentials, type AppCredentials } from '../../credentials'
 import { load7tv, toLookup } from '../../emotes/third-party'
 import { errorText, fetchJson, HttpError, message, readBody, sleep } from '../../net'
 import { store } from '../../store'
@@ -29,10 +30,8 @@ export class KickConnector implements Connector {
 
   constructor(private ctx: ConnectorContext) {}
 
-  private creds(): { id: string; secret: string } | null {
-    const id = store.settings.kickClientId
-    const secret = store.getSecret('kick.clientSecret')
-    return id && secret ? { id, secret } : null
+  private creds(): AppCredentials | null {
+    return credentials('kick')
   }
 
   private save(t: Tokens | null): void {

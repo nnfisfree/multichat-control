@@ -54,7 +54,7 @@ h2, h3 { margin: 0; }
 /* Title bar */
 .titlebar { height: 38px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 14px; -webkit-app-region: drag; }
 .titlebar button { -webkit-app-region: no-drag; }
-.brand { color: var(--muted); font-size: 14px; }
+.brand { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .demo-tag { font-size: 11px; font-weight: 700; color: #151040; background: var(--orange); padding: 0 8px; border-radius: 8px; }
 .win-btn { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; line-height: 1; color: #fff; background: var(--blue); }
 .win-btn:hover { background: var(--blue-2); }

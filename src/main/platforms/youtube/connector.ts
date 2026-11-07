@@ -1,5 +1,6 @@
 import type { ActionDef, ActionResult, Emote, ModerationRequest } from '../../../shared/types'
 import { loopbackLogin } from '../../auth/loopback-pkce'
+import { credentials, type AppCredentials } from '../../credentials'
 import { emojiSet } from '../../emotes/emoji'
 import { errorText, fetchJson, HttpError, message, readBody, sleep } from '../../net'
 import { store } from '../../store'
@@ -27,10 +28,8 @@ export class YouTubeConnector implements Connector {
 
   constructor(private ctx: ConnectorContext) {}
 
-  private creds(): { id: string; secret: string } | null {
-    const id = store.settings.youtubeClientId
-    const secret = store.getSecret('youtube.clientSecret')
-    return id && secret ? { id, secret } : null
+  private creds(): AppCredentials | null {
+    return credentials('youtube')
   }
 
   private save(t: Tokens | null): void {

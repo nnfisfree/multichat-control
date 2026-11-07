@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="resources/icon.png" width="112" alt="NNF MultiChat logo" />
+<img src="resources/icon.png" width="112" alt="NoNameFound's Multichat Stream logo" />
 
-# NNF MultiChat
+# NoNameFound's Multichat Stream
 
 **One window for every stream chat.**
 
@@ -15,7 +15,7 @@ Read and write Twitch, YouTube and Kick chat together, see every event as it hap
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NNF MultiChat showing live chat, the events drop-down, the emote picker, sending a message and quick actions" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoNameFound's Multichat Stream showing live chat, the events drop-down, the emote picker, sending a message and quick actions" />
 
 <sub>Everything shown here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -25,7 +25,7 @@ Read and write Twitch, YouTube and Kick chat together, see every event as it hap
 
 ## Why it exists
 
-Streaming to several platforms usually means juggling browser tabs, or running a large bot suite just to read chat. NNF MultiChat is focused on the moment you're live: one merged chat, one list of events, and real controls within a click.
+Streaming to several platforms usually means juggling browser tabs, or running a large bot suite just to read chat. NoNameFound's Multichat Stream is focused on the moment you're live: one merged chat, one list of events, and real controls within a click.
 
 It doesn't need OBS, a bot, a server or a runtime. Each person logs in with their own accounts, so it works for any streamer.
 
@@ -76,6 +76,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - Slow, follower-only, sub-only and emote-only modes
 - Shield mode, polls and predictions
 - Stream title and category
+- Keep running in the tray when you close the window
 
 </td>
 </tr>
@@ -126,43 +127,38 @@ Demo mode simulates all three platforms, so you can explore everything except th
 
 Open the gear icon. Each platform has its own login and on-screen steps.
 
-<details>
-<summary><b>Twitch</b></summary>
+On an official release, click **Log in** and sign in on the platform's own page: Twitch, your Google account for YouTube, or your Kick account for Kick. There's nothing else to set up.
 
-1. Click **Log in**.
-2. Enter the code shown in the app in your browser, and approve the permissions.
-
-Twitch expires these logins after about 30 days, so the app may ask you to log in again.
+Twitch expires its logins after about 30 days, so the app may ask you to log in again.
 
 **Rewards panel:** click the gem icon and sign in to Twitch inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in.
 
-**Publishing your own builds?** Register your own Twitch app as a **Public** client, and set its Client ID in `src/shared/app-config.ts`. A public Client ID isn't a secret.
-
-</details>
-
 <details>
-<summary><b>YouTube</b></summary>
+<summary><b>Built it from source?</b></summary>
 
-You need your own free Google project, once. Each project has its own daily quota.
+Twitch works as it is. YouTube and Kick need a developer app, because their credentials aren't stored in this repository. You can enter your own in Settings under each platform, or include them in your build.
+
+**YouTube**
 
 1. In the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create a project and enable **YouTube Data API v3**.
 2. Configure the OAuth consent screen, then **publish** it. Logins from an app left in Testing expire after 7 days.
 3. Create an OAuth client ID of type **Desktop app**.
-4. Paste the Client ID and secret into the app, then click **Log in**.
 
-Google will warn that the app is unverified. That's expected for your own project.
+Google warns that an app is unverified until it passes Google's review.
 
-</details>
-
-<details>
-<summary><b>Kick</b></summary>
-
-You need your own free Kick app, once.
+**Kick**
 
 1. At [kick.com/settings/developer](https://kick.com/settings/developer), enable developer mode and create an app.
 2. Set the redirect URL to exactly `http://localhost:53682/callback`.
 3. Enable all scopes.
-4. Paste the Client ID and secret into the app, then click **Log in**.
+
+**Including them in your build**
+
+Copy `.env.example` to `.env.local`, fill it in, and run `npm run dist`. People using that build can then log in without any setup.
+
+Never commit `.env.local`. Anything built into an exe can be extracted from it, so only do this with apps made for this purpose, and don't reuse their credentials elsewhere.
+
+**Publishing your own builds?** Also register your own Twitch app as a **Public** client, and set its Client ID in `src/shared/app-config.ts`. A public Client ID isn't a secret.
 
 </details>
 
@@ -177,7 +173,7 @@ These limits come from the platforms.
 | **Twitch** | The rewards-only view depends on Twitch's page layout. If that changes, the panel falls back to the full page. |
 | **Twitch** | Pronouns come from the community service [pronouns.alejo.io](https://pronouns.alejo.io), so they cover Twitch chatters who registered there. Turning them on sends chatter names to that service. |
 | **YouTube** | Chat exists only during a live broadcast. The app waits and connects by itself. |
-| **YouTube** | Each project gets 10,000 quota units a day, and each message sent costs 20. Messages are limited to 200 characters. |
+| **YouTube** | Each Google project gets 10,000 quota units a day, shared by everyone using that build. Each message sent costs 20. To avoid sharing, enter your own app in Settings. Messages are limited to 200 characters. |
 | **YouTube** | Custom member emoji have no documented API, so they show as text and aren't in the picker. |
 | **Kick** | Official events need a public web server, so **reading uses the same unofficial live connection as Kick's website**. Kick can change it without notice. Sending and moderation use the official API, and the app warns you if reading stops. |
 
@@ -223,4 +219,4 @@ Contributions are welcome. Please run `npm test` and `npm run typecheck` before 
 
 [MIT](LICENSE). Use it, change it and share it.
 
-<sub>NNF MultiChat is an independent project, and isn't affiliated with or endorsed by Twitch, YouTube, Kick, BetterTTV, 7TV or FrankerFaceZ. All trademarks belong to their owners.</sub>
+<sub>NoNameFound's Multichat Stream is an independent project, and isn't affiliated with or endorsed by Twitch, YouTube, Kick, BetterTTV, 7TV or FrankerFaceZ. All trademarks belong to their owners.</sub>

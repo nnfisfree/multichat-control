@@ -139,6 +139,8 @@ export type ModerationRequest =
 
 export type ChatEventGroup = 'subs' | 'gifts' | 'cheers' | 'raids' | 'redemptions' | 'powerups' | 'follows' | 'paid' | 'hype'
 
+export type CloseAction = 'exit' | 'ask' | 'tray'
+
 export interface EmoteProviders { bttv: boolean; seventv: boolean; ffz: boolean }
 
 export interface Settings {
@@ -157,6 +159,7 @@ export interface Settings {
   showPronouns: boolean
   emoteProviders: EmoteProviders
   chatEvents: Record<ChatEventGroup, boolean>
+  closeAction: CloseAction
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -174,6 +177,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showPronouns: true,
   emoteProviders: { bttv: true, seventv: true, ffz: true },
   // Follows start off because follow bots can flood chat.
+  closeAction: 'ask',
   chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: false, paid: true, hype: true }
 }
 
@@ -190,6 +194,8 @@ export interface Bootstrap {
   hype: HypeTrain | null
   demo: boolean
   builtInTwitchId: boolean
+  builtInYoutube: boolean
+  builtInKick: boolean
   dataDir: string
   version: string
 }

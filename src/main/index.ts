@@ -1,8 +1,10 @@
 import { BrowserWindow, app, ipcMain, session, shell } from 'electron'
 import { join } from 'node:path'
-import { TWITCH_CLIENT_ID } from '../shared/app-config'
+import { APP_NAME, TWITCH_CLIENT_ID } from '../shared/app-config'
 import { safeUrl } from '../shared/parts'
 import { PLATFORMS, type Bootstrap, type PanelBounds, type Platform, type Settings } from '../shared/types'
+import { CloseToTray } from './close-to-tray'
+import { hasBuiltIn } from './credentials'
 import { DemoConnector } from './demo'
 import { Hub } from './hub'
 import type { Connector } from './platforms/connector'
@@ -18,11 +20,13 @@ const demo = process.argv.includes('--demo')
 const demoRate = Number(process.argv.find((a) => a.startsWith('--demo-rate='))?.split('=')[1]) || 60
 
 const MIN_OPACITY = 0.05
+const iconPath = app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'resources/icon.png')
 
 const hub = new Hub()
 let win: BrowserWindow | null = null
 let twitch: TwitchConnector | null = null
 let panel: TwitchPanel
+let closer: CloseToTray
 
 function openExternal(url: string): void {
   const safe = safeUrl(url)
@@ -42,10 +46,12 @@ function createWindow(): void {
     frame: false,
     show: false,
     backgroundColor: '#150a3c',
-    title: 'NNF MultiChat',
+    title: APP_NAME,
+    icon: iconPath,
     webPreferences: { preload: join(__dirname, '../preload/index.js'), contextIsolation: true, sandbox: true, nodeIntegration: false }
   })
   applyOpacity()
+  closer.attach(win)
   win.once('ready-to-show', () => win?.show())
   win.on('closed', () => { win = null })
   // The renderer is a local page: it must never navigate or open windows itself.
@@ -86,6 +92,8 @@ function registerIpc(): void {
     ...hub.snapshot(),
     demo,
     builtInTwitchId: !!TWITCH_CLIENT_ID,
+    builtInYoutube: hasBuiltIn('youtube'),
+    builtInKick: hasBuiltIn('kick'),
     dataDir,
     version: app.getVersion()
   }))
@@ -139,12 +147,11 @@ function registerIpc(): void {
 if (!app.requestSingleInstanceLock()) app.quit()
 else {
   app.on('second-instance', () => {
-    if (win?.isMinimized()) win.restore()
+    closer.show()
     // Opening the app again rescues a window left almost invisible.
     store.saveSettings({ windowOpacity: 1 })
     applyOpacity()
     win?.webContents.send('settings:changed', store.settings)
-    win?.focus()
   })
 
   void app.whenReady().then(async () => {
@@ -152,6 +159,11 @@ else {
     // Listing installed fonts is the only permission the app itself needs.
     session.defaultSession.setPermissionRequestHandler((_c, p, done) => done((p as string) === 'local-fonts'))
     session.defaultSession.setPermissionCheckHandler((_c, p) => (p as string) === 'local-fonts')
+    closer = new CloseToTray({
+      window: () => win,
+      iconPath,
+      settingsChanged: () => win?.webContents.send('settings:changed', store.settings)
+    })
     panel = new TwitchPanel(() => win, () => twitch?.channelLogin())
     buildConnectors()
     registerIpc()

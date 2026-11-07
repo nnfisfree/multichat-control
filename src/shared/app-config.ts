@@ -1,3 +1,5 @@
+export const APP_NAME = "NoNameFound's Multichat Stream"
+
 /**
  * Public Twitch Client ID built into release builds. Twitch public clients have no secret,
  * so this value is safe to commit. Leave empty to have users paste their own in the setup screen.

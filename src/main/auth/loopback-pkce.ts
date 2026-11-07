@@ -1,11 +1,12 @@
 import { shell } from 'electron'
+import { APP_NAME } from '../../shared/app-config'
 import { createHash, randomBytes } from 'node:crypto'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 
 const b64 = (b: Buffer): string => b.toString('base64url')
 
-const PAGE = (ok: boolean): string => `<!doctype html><meta charset="utf-8"><title>NNF MultiChat</title>
+const PAGE = (ok: boolean): string => `<!doctype html><meta charset="utf-8"><title>${APP_NAME}</title>
 <body style="background:#150a3c;color:#fff;font:18px sans-serif;display:grid;place-items:center;height:90vh">
 <div>${ok ? 'Login complete. You can close this tab.' : 'Login failed. Please return to the app and try again.'}</div>`
 

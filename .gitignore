@@ -10,5 +10,6 @@ nnf-data/
 screenshots/
 
 .env*
+!.env.example
 .claude/
 *.log
