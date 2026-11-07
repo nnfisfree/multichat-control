@@ -1,5 +1,5 @@
 {
-  "name": "multistreaming-app",
+  "name": "multistream-control",
   "productName": "NoName's Multichat Control",
   "version": "0.1.0",
   "description": "Standalone multi-platform stream chat for Twitch, YouTube and Kick.",
@@ -53,6 +53,6 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/nnfisfree/multistreaming-app.git"
+    "url": "https://github.com/nnfisfree/multistream-control.git"
   }
 }
