@@ -1,7 +1,7 @@
 import type { Emote } from '../../../shared/types'
 import type { Helix } from './connector'
 
-export const MY_CHANNEL_GROUP = 'My Channel Emotes'
+const MY_CHANNEL_GROUP = 'My Channel Emotes'
 
 export interface Owner { name: string; avatar: string }
 
