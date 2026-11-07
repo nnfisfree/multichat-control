@@ -1,10 +1,13 @@
 appId: app.nnfmultichat.desktop
 productName: "NoName's Multichat Control"
-executableName: NoNames-Multichat-Control
+executableName: Multichat-Control
 directories:
   output: release
+# Only the built app. Anything else under out/ must never ship.
 files:
-  - out/**
+  - out/main/**
+  - out/preload/**
+  - out/renderer/**
   - package.json
 extraResources:
   - from: resources/proto
@@ -16,6 +19,6 @@ win:
     - portable
     - zip
   icon: resources/icon.png
-  artifactName: NoNames-Multichat-Control-${version}-${arch}.${ext}
+  artifactName: Multichat-Control-${version}-${arch}.${ext}
 portable:
-  artifactName: NoNames-Multichat-Control-${version}-portable.exe
+  artifactName: Multichat-Control-${version}-portable.exe

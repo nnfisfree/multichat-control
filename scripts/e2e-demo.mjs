@@ -1,9 +1,11 @@
 // Drives the built app in demo mode and checks core behaviour. Run after `npm run build`.
-import { resolve } from 'node:path'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { _electron as electron } from 'playwright-core'
 
-const shots = resolve(process.argv[2] ?? 'out/e2e')
+// Screenshots stay outside the project, so they can never be packaged.
+const shots = resolve(process.argv[2] ?? join(tmpdir(), 'multichat-e2e'))
 mkdirSync(shots, { recursive: true })
 const rate = process.env.RATE ?? '600'
 
