@@ -1,0 +1,14 @@
+node_modules/
+out/
+release/
+
+# Local app data holds logins and browser sessions. Never commit it.
+.nnf-data/
+nnf-data/
+
+# Private reference images taken from real streams.
+screenshots/
+
+.env*
+.claude/
+*.log

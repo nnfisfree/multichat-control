@@ -1,0 +1,18 @@
+appId: app.nnfmultichat.desktop
+productName: NNF MultiChat
+directories:
+  output: release
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: resources/proto
+    to: proto
+win:
+  target:
+    - portable
+    - zip
+  icon: resources/icon.png
+  artifactName: NNF-MultiChat-${version}-${arch}.${ext}
+portable:
+  artifactName: NNF-MultiChat-${version}-portable.exe

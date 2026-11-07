@@ -1,0 +1,58 @@
+{
+  "name": "multistreaming-app",
+  "productName": "NNF MultiChat",
+  "version": "0.1.0",
+  "description": "Standalone multi-platform stream chat for Twitch, YouTube and Kick.",
+  "author": "NNF MultiChat contributors",
+  "private": true,
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "demo": "electron-vite dev -- --demo",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dist": "electron-vite build && electron-builder --win",
+    "test:ui": "node scripts/e2e-demo.mjs",
+    "test:contracts": "node scripts/check-contracts.mjs"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.7",
+    "@grpc/proto-loader": "^0.8.1",
+    "ws": "^8.22.1"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/orbitron": "^5.3.0",
+    "@fontsource/rajdhani": "^5.3.0",
+    "@tanstack/react-virtual": "^3.14.26",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
+    "@vitejs/plugin-react": "^6.2.1",
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "playwright-core": "^1.65.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "twitch",
+    "youtube",
+    "kick",
+    "multistream",
+    "chat",
+    "electron",
+    "streaming"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nnfisfree/multistreaming-app.git"
+  }
+}
