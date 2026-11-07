@@ -123,8 +123,8 @@ check('delete marks message', (await page.$$('.deleted')).length >= 1)
 // Events and the Hype Train show in chat, and GIFs render as images.
 await page.waitForTimeout(6000)
 check('hype banner shown', !!(await page.$('.hype')), await page.$eval('.hype', (el) => el.innerText.replace(/\n/g, ' ')).catch(() => ''))
-check('event cards in chat', (await page.$$('.ev')).length > 0)
-check('event cards carry badges', (await page.$$('.ev .ev-badge')).length === (await page.$$('.ev')).length)
+await page.waitForSelector('.ev', { timeout: 15000 }).then(() => check('event cards in chat', true), () => check('event cards in chat', false))
+check('event cards carry badges', await page.$$eval('.ev', (cards) => cards.every((c) => c.querySelector('.ev-badge'))))
 await shot('10-events-in-chat')
 await page.waitForFunction(() => { const g = document.querySelector('.gif'); return g && g.naturalWidth > 0 }, null, { timeout: 8000 }).then(() => check('GIF renders as an image', true), () => check('GIF renders as an image', false))
 

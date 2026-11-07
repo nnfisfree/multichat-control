@@ -15,8 +15,8 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width
 
 app.disableHardwareAcceleration()
 app.whenReady().then(async () => {
-  const win = new BrowserWindow({ width: 512, height: 512, show: false, transparent: true, frame: false, webPreferences: { offscreen: true } })
-  await win.loadURL('data:text/html,' + encodeURIComponent(`<!doctype html><body style="margin:0;background:transparent">${svg}</body>`))
+  const win = new BrowserWindow({ width: 512, height: 512, useContentSize: true, show: false, transparent: true, frame: false, webPreferences: { offscreen: true } })
+  await win.loadURL('data:text/html,' + encodeURIComponent(`<!doctype html><style>html,body{margin:0;width:512px;height:512px;overflow:hidden;background:transparent}svg{display:block}</style><body>${svg}</body>`))
   await new Promise((r) => setTimeout(r, 500))
   const image = await win.webContents.capturePage()
   const dir = join(__dirname, '../resources')
