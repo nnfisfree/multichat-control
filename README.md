@@ -102,7 +102,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 ### Run it
 
-Download the portable exe from the [Releases](../../releases) page, when one is available, and run it from any folder. Or build it yourself:
+Download the portable exe from the [Releases](../../releases) page, or build it yourself:
 
 ```bash
 git clone https://github.com/nnfisfree/multistream-control.git
