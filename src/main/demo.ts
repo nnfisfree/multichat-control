@@ -30,21 +30,9 @@ const GROUP_ICON: Record<string, string> = {
   'StreamerFriend Emotes': emoteUrl('#27a9e8', 'S')
 }
 
-/** `--demo-emotes=N` adds N extra emotes, to measure the picker with a large collection. */
-const extraEmotes = (): Emote[] => {
-  const count = Number(process.argv.find((a) => a.startsWith('--demo-emotes='))?.split('=')[1]) || 0
-  return Array.from({ length: count }, (_, i) => ({
-    id: `extra${i}`, name: `extra${i}`, provider: 'twitch' as const, platform: 'twitch' as const, url: emoteUrl('#5b35f0', String(i % 10)),
-    group: `Channel${Math.floor(i / 40)} Emotes`, groupIcon: emoteUrl('#27a9e8', 'C')
-  }))
-}
-
-const emotesFor = (p: Platform): Emote[] => [
-  ...EMOTE_DEFS[p].map(([name, provider, group, bg, face]) => ({
-    id: name, name, provider, platform: p, group, groupIcon: GROUP_ICON[group], url: bg ? emoteUrl(bg, face) : ''
-  })),
-  ...(p === 'twitch' ? extraEmotes() : [])
-]
+const emotesFor = (p: Platform): Emote[] => EMOTE_DEFS[p].map(([name, provider, group, bg, face]) => ({
+  id: name, name, provider, platform: p, group, groupIcon: GROUP_ICON[group], url: bg ? emoteUrl(bg, face) : ''
+}))
 
 const CHATTERS: Record<Platform, string[]> = {
   twitch: ['PixelNomad', 'LunaByte', 'TurboTaco', 'NovaRush_', 'CosmicKiwi', 'QuietStorm'],
@@ -195,8 +183,6 @@ export class DemoConnector implements Connector {
   async logout(): Promise<void> {}
 
   async send(text: string): Promise<void> {
-    // Every Kick send fails in demo mode when asked to, to exercise partial-failure handling.
-    if (this.platform === 'kick' && text.includes('failkick')) throw new Error('Demo: Kick rejected the message.')
     this.ctx.message(this.msg('DemoStreamer', text, { author: { id: 'me', name: 'DemoStreamer', color: '#ffb454', badges: [{ id: 'broadcaster', title: 'Broadcaster' }], isBroadcaster: true } }))
   }
 

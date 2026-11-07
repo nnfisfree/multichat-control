@@ -162,7 +162,7 @@ else {
       iconPath,
       settingsChanged: () => win?.webContents.send('settings:changed', store.settings)
     })
-    panel = new TwitchPanel(() => win, () => (demo ? process.env.NNF_PANEL_CHANNEL : twitch?.channelLogin()))
+    panel = new TwitchPanel(() => win, () => twitch?.channelLogin())
     buildConnectors()
     registerIpc()
     createWindow()

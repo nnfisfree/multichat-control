@@ -30,7 +30,7 @@ Streaming to several platforms usually means juggling browser tabs, or running a
 It doesn't need OBS, a bot, a server or a runtime. Each person logs in with their own accounts, so it works for any streamer.
 
 > [!NOTE]
-> This is an early release. The interface and message handling are covered by automated tests, but live use on all three platforms is still being tested. Please report anything that doesn't work.
+> This is an early release, and live use on all three platforms is still being tested. Please report anything that doesn't work.
 
 ## Features
 
@@ -192,14 +192,9 @@ These limits come from the platforms.
 |---|---|
 | `npm run demo` | Run with simulated platforms |
 | `npm run dev` | Run with real connections |
-| `npm test` | Unit tests |
 | `npm run typecheck` | Type checking |
 | `npm run build` | Build the app |
-| `npm run test:ui` | Drive the built app through a UI test |
-| `npm run test:contracts` | Check external APIs, with no account needed |
 | `npm run dist` | Create the portable exe and zip |
-
-In demo mode, sending a message containing `failkick` shows a partial send failure.
 
 ```text
 src/
@@ -208,13 +203,13 @@ src/
   preload/    The narrow bridge between the app and the UI
   renderer/   React interface and theme
   shared/     Types and message parsing used on both sides
-tests/        Unit tests
-scripts/      UI test and contract checks
+resources/    Icon, logo and the YouTube chat definition
+docs/media/   README images
 ```
 
 To add a platform, implement the `Connector` interface in `src/main/platforms/connector.ts`, and convert its messages to the shared types. The UI needs no platform-specific changes.
 
-Contributions are welcome. Please run `npm test` and `npm run typecheck` before opening a pull request, and never include real chat logs, tokens or the `nnf-data` folder.
+Contributions are welcome. Please run `npm run typecheck` before opening a pull request, and never include real chat logs, tokens or the `nnf-data` folder.
 
 ## License
 
