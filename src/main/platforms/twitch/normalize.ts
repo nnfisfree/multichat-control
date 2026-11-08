@@ -138,8 +138,10 @@ export function hypeTrain(e: any): HypeTrain {
 export function eventFromSub(type: string, id: string, e: any, manageable: ReadonlySet<string>): StreamEvent | null {
   const mk = (partial: Parameters<typeof event>[1]): StreamEvent => event(id, partial)
   switch (type) {
-    case 'channel.follow':
-      return mk({ type: 'follow', actor: e.user_name, text: 'followed' })
+    case 'channel.follow': {
+      const ts = Date.parse(e.followed_at) || Date.now()
+      return { ...mk({ type: 'follow', actor: e.user_name, text: 'followed' }), id: `follow-${e.user_id}-${ts}`, ts }
+    }
     case 'channel.channel_points_custom_reward_redemption.add': {
       const canManage = e.status === 'unfulfilled' && manageable.has(e.reward.id)
       return mk({

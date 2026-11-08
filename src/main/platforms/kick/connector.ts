@@ -212,6 +212,7 @@ export class KickConnector implements Connector {
       { id: 'title', platform, group: 'Stream', label: 'Title', fields: [{ key: 'title', label: 'Stream title', type: 'text', required: true }] }
     ]
     for (const r of rewards?.data ?? []) {
+      if (!r.is_enabled) continue
       actions.push({ id: `reward.info.${r.id}`, platform, group: 'Rewards', label: `${r.title} (${r.cost})`, active: !!r.is_enabled, disabled: true, note: 'Shown for reference.' })
     }
     const pending = await this.api('GET', '/channels/rewards/redemptions?status=pending').catch(() => null)

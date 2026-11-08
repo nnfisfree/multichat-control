@@ -125,7 +125,7 @@ export class YouTubeConnector implements Connector {
       const r = normalize(item)
       const fresh = Date.parse(item.snippet?.publishedAt) >= since
       if (r.message && fresh) this.ctx.message(r.message)
-      if (r.event && fresh) this.ctx.event(r.event)
+      if (r.event) this.ctx.event(fresh ? r.event : { ...r.event, history: true })
       if (r.deleted) this.ctx.deleted(r.deleted)
       if (r.purgedUser) this.ctx.purged(r.purgedUser)
       ended ||= !!r.ended

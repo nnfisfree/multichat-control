@@ -70,6 +70,7 @@ export async function buildActions(helix: Helix, id: string): Promise<ActionDef[
 
   for (const r of rewards?.data ?? []) {
     const mine = own.has(r.id)
+    if (!mine && !r.is_enabled) continue
     actions.push({
       id: `reward.toggle.${r.id}`, platform, group: 'Rewards', label: `${r.title} (${r.cost})`, active: !!r.is_enabled,
       disabled: !mine, note: mine ? undefined : 'Made on the Twitch dashboard, so only the dashboard can change it.'

@@ -49,6 +49,6 @@ export async function refreshTokens(clientId: string, refresh: string): Promise<
   return toTokens(await fetchJson('https://id.twitch.tv/oauth2/token', form({ client_id: clientId, grant_type: 'refresh_token', refresh_token: refresh })))
 }
 
-export async function validate(access: string): Promise<{ login: string; user_id: string; scopes: string[] }> {
+export async function validate(access: string): Promise<{ login: string; user_id: string; scopes: string[]; expires_in: number }> {
   return fetchJson('https://id.twitch.tv/oauth2/validate', { headers: { Authorization: `OAuth ${access}` } })
 }

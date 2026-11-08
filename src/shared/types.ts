@@ -69,6 +69,8 @@ export interface StreamEvent {
   noChat?: boolean
   /** Large moments, such as gift bombs, get a stronger card. */
   big?: boolean
+  /** Loaded from an earlier session or the platform's history, so it never becomes a chat card. */
+  history?: boolean
 }
 
 export interface HypeTrain {
@@ -145,6 +147,8 @@ export type CloseAction = 'exit' | 'ask' | 'tray'
 
 export interface EmoteProviders { bttv: boolean; seventv: boolean; ffz: boolean }
 
+export interface EventFilter { platforms: Record<Platform, boolean>; hiddenTypes: EventType[] }
+
 export interface Settings {
   twitchClientId: string
   youtubeClientId: string
@@ -162,6 +166,7 @@ export interface Settings {
   emoteProviders: EmoteProviders
   chatEvents: Record<ChatEventGroup, boolean>
   closeAction: CloseAction
+  eventFilter: EventFilter
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -180,6 +185,7 @@ export const DEFAULT_SETTINGS: Settings = {
   emoteProviders: { bttv: true, seventv: true, ffz: true },
   // Follows start off because follow bots can flood chat.
   closeAction: 'ask',
+  eventFilter: { platforms: { twitch: true, youtube: true, kick: true }, hiddenTypes: [] },
   chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: false, paid: true, hype: true }
 }
 
@@ -213,6 +219,8 @@ export interface HubBatch {
   pronouns: Record<string, string>
   /** Latest train state; null ends it, undefined means no change. */
   hype?: HypeTrain | null
+  /** Platforms whose quick actions changed, such as a reward being turned on. */
+  actionsChanged?: Platform[]
 }
 
 export interface PanelBounds { x: number; y: number; width: number; height: number }

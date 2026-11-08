@@ -5,6 +5,7 @@ import type { ActionDef, ActionResult, Badge, Emote, ModerationRequest } from '.
 import { deviceLogin, refreshTokens, validate, type TwitchTokens } from '../../auth/twitch-device'
 import { loadEmoteCache, saveEmoteCache } from '../../emotes/cache'
 import { loadTwitchExtras, toLookup } from '../../emotes/third-party'
+import { log } from '../../log'
 import { errorText, HttpError, message, readBody } from '../../net'
 import { Pronouns } from '../../pronouns'
 import { store } from '../../store'
@@ -15,6 +16,11 @@ import { EventSub } from './eventsub'
 import { chatMessage, eventFromSub, hypeTrain, notification, type CheerMap } from './normalize'
 
 const HELIX = 'https://api.twitch.tv/helix'
+/** Twitch asks apps to check their login hourly; this also renews it well before it runs out. */
+const CHECK_MS = 55 * 60 * 1000
+const RENEW_BEFORE_MS = 40 * 60 * 1000
+/** After a refused renewal, wait before asking Twitch again. */
+const RETRY_MS = 5 * 60 * 1000
 
 export interface Helix {
   (method: string, path: string, query?: Record<string, string | undefined>, body?: unknown): Promise<any>
@@ -39,6 +45,8 @@ export class TwitchConnector implements Connector {
   private pronouns: Pronouns
   private cheers: CheerMap = new Map()
   private hypeLevel = 0
+  private checkTimer: NodeJS.Timeout | null = null
+  private renewBlockedUntil = 0
 
   constructor(private ctx: ConnectorContext) {
     this.pronouns = new Pronouns((login, label) => ctx.pronoun(login, label))
@@ -57,16 +65,45 @@ export class TwitchConnector implements Connector {
     store.setSecret('twitch.tokens', tokens ? JSON.stringify(tokens) : undefined)
   }
 
-  /** Refresh tokens are single-use, so concurrent callers must share one refresh. */
+  /**
+   * Renews the login. Refresh tokens are single-use, so concurrent callers share one renewal.
+   * The login is only dropped when Twitch rejects the renewal and the current login is dead too:
+   * network errors, rate limits or a briefly refused renewal never log the user out.
+   */
   private refresh(): Promise<void> {
     this.refreshing ??= (async () => {
+      const used = this.tokens!.refresh
       try {
-        this.save(await refreshTokens(this.clientId(), this.tokens!.refresh))
+        this.save(await refreshTokens(this.clientId(), used))
+        this.renewBlockedUntil = 0
+        log('twitch', 'login renewed')
       } catch (err) {
-        if (err instanceof HttpError && err.status < 500) {
+        const status = err instanceof HttpError ? err.status : 0
+        log('twitch', `login renewal failed (${status || 'network'}): ${message(err)}`)
+        // A newer login may already be saved, for example by an earlier renewal that raced this one.
+        const raw = store.getSecret('twitch.tokens')
+        const saved: TwitchTokens | null = raw ? JSON.parse(raw) : null
+        if (saved && saved.refresh !== used) {
+          this.tokens = saved
+          log('twitch', 'using the newer saved login')
+          return
+        }
+        this.renewBlockedUntil = Date.now() + RETRY_MS
+        if (/client secret/i.test(message(err))) {
+          // The Twitch app is registered as Confidential, so no renewal can ever succeed.
+          log('twitch', 'the Twitch Client ID belongs to a Confidential app; it must be Public')
+        }
+        if (status === 400 || status === 401) {
+          const still = await validate(this.tokens!.access).catch(() => null)
+          if (still) {
+            // The login still works for now, so keep going and try renewing again later.
+            this.tokens = { ...this.tokens!, expiresAt: Date.now() + still.expires_in * 1000 }
+            log('twitch', `current login still valid for ${Math.round(still.expires_in / 60)} min`)
+            return
+          }
           this.save(null)
           this.sub?.stop()
-          this.ctx.status({ status: 'needs-login', detail: 'Your Twitch login expired. Please log in again.' })
+          this.ctx.status({ status: 'needs-login', detail: 'Twitch ended this login. Please log in again.' })
         }
         throw err
       } finally {
@@ -76,9 +113,23 @@ export class TwitchConnector implements Connector {
     return this.refreshing
   }
 
+  /** Hourly login check, as Twitch requires, renewing early so it never lapses mid-stream. */
+  private async check(): Promise<void> {
+    if (!this.tokens) return
+    try {
+      const ok = await validate(this.tokens.access).catch((err) => {
+        if (err instanceof HttpError && err.status === 401) return null
+        throw err
+      })
+      if (!ok || Date.now() > this.tokens.expiresAt - RENEW_BEFORE_MS) await this.refresh()
+    } catch (err) {
+      log('twitch', `login check failed: ${message(err)}`)
+    }
+  }
+
   private helix: Helix = async (method, path, query, body) => {
     if (!this.tokens) throw new Error('Not logged in to Twitch.')
-    if (Date.now() > this.tokens.expiresAt - 60000) await this.refresh()
+    if (Date.now() > this.tokens.expiresAt - 60000 && Date.now() > this.renewBlockedUntil) await this.refresh()
     const url = new URL(HELIX + path)
     for (const [k, v] of Object.entries(query ?? {})) if (v !== undefined) url.searchParams.set(k, v)
     const request = (): Promise<Response> => fetch(url, {
@@ -122,12 +173,26 @@ export class TwitchConnector implements Connector {
       onState: (s, detail) => this.ctx.status({ status: s, account: this.displayName, detail })
     })
     this.sub.start()
+    if (this.checkTimer) clearInterval(this.checkTimer)
+    this.checkTimer = setInterval(() => void this.check(), CHECK_MS)
     // Ready before the picker is first opened.
     void this.refreshList()
+    void this.loadRecentFollows()
+  }
+
+  /** Twitch keeps a follower list, so recent follows can fill the Events list at start. */
+  private async loadRecentFollows(): Promise<void> {
+    const r = await this.helix('GET', '/channels/followers', { broadcaster_id: this.userId, first: '20' }).catch(() => null)
+    for (const f of [...(r?.data ?? [])].reverse()) {
+      const ts = Date.parse(f.followed_at) || Date.now()
+      this.ctx.event({ id: `follow-${f.user_id}-${ts}`, platform: 'twitch', ts, type: 'follow', actor: f.user_name, text: 'followed', details: {}, history: true })
+    }
   }
 
   async stop(): Promise<void> {
     this.loginRun++
+    if (this.checkTimer) clearInterval(this.checkTimer)
+    this.checkTimer = null
     this.sub?.stop()
     this.sub = null
   }
@@ -221,7 +286,8 @@ export class TwitchConnector implements Connector {
       ['channel.prediction.begin', '1', b], ['channel.prediction.lock', '1', b], ['channel.prediction.end', '1', b],
       ['channel.goal.begin', '1', b], ['channel.goal.end', '1', b],
       ['channel.ad_break.begin', '1', b],
-      ['stream.online', '1', b], ['stream.offline', '1', b]
+      ['stream.online', '1', b], ['stream.offline', '1', b],
+      ['channel.channel_points_custom_reward.add', '1', b], ['channel.channel_points_custom_reward.update', '1', b], ['channel.channel_points_custom_reward.remove', '1', b]
     ]
     const results = await Promise.allSettled(subs.map(([type, version, condition]) =>
       this.helix('POST', '/eventsub/subscriptions', undefined, { type, version, condition, transport: { method: 'websocket', session_id: sessionId } })))
@@ -260,6 +326,10 @@ export class TwitchConnector implements Connector {
         this.ctx.hype(null)
         this.hypeLevel = 0
         break
+      case 'channel.channel_points_custom_reward.add':
+      case 'channel.channel_points_custom_reward.update':
+      case 'channel.channel_points_custom_reward.remove':
+        return this.ctx.actionsChanged()
       case 'channel.chat.clear':
         return this.ctx.purged()
       case 'channel.chat.clear_user_messages':

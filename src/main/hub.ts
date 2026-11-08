@@ -6,6 +6,7 @@ import type {
   ActionResult, ChatMessage, ConnectionState, Emote, HubBatch, HypeTrain, ModerationRequest, Platform, SendResult, StreamEvent
 } from '../shared/types'
 import { PLATFORMS } from '../shared/types'
+import { log } from './log'
 import { message } from './net'
 
 const MAX_MESSAGES = 3000
@@ -23,6 +24,9 @@ export class Hub {
   private pending: HubBatch = emptyBatch()
   private timer: NodeJS.Timeout | null = null
   private window: BrowserWindow | null = null
+  private eventIds = new Set<string>()
+  private persist: ((events: StreamEvent[]) => void) | null = null
+  private persistTimer: NodeJS.Timeout | null = null
 
   register(connector: Connector): void {
     this.connectors.set(connector.platform, connector)
@@ -30,6 +34,21 @@ export class Hub {
 
   attach(window: BrowserWindow): void {
     this.window = window
+  }
+
+  /** Events from earlier sessions. They load before the window, so the first snapshot has them. */
+  restoreEvents(events: StreamEvent[], persist: (events: StreamEvent[]) => void): void {
+    this.persist = persist
+    this.events = [...events].sort((a, b) => a.ts - b.ts).slice(-MAX_EVENTS)
+    this.eventIds = new Set(this.events.map((e) => e.id))
+  }
+
+  private persistSoon(): void {
+    if (!this.persist) return
+    this.persistTimer ??= setTimeout(() => {
+      this.persistTimer = null
+      this.persist?.(this.events)
+    }, 3000)
   }
 
   private addMessage(m: ChatMessage): void {
@@ -43,8 +62,12 @@ export class Hub {
     return {
       message: (m) => this.addMessage(m),
       event: (e) => {
+        // History can overlap saved and live events, so each event is shown once.
+        if (this.eventIds.has(e.id)) return
+        this.eventIds.add(e.id)
         this.events.push(e)
-        if (this.events.length > MAX_EVENTS) this.events.splice(0, this.events.length - MAX_EVENTS)
+        if (this.events.length > MAX_EVENTS) for (const old of this.events.splice(0, this.events.length - MAX_EVENTS)) this.eventIds.delete(old.id)
+        this.persistSoon()
         this.pending.events.push(e)
         this.schedule()
         const card = eventToMessage(e)
@@ -66,6 +89,10 @@ export class Hub {
         this.pending.hype = train
         this.schedule()
       },
+      actionsChanged: () => {
+        this.pending.actionsChanged = [...new Set([...(this.pending.actionsChanged ?? []), platform])]
+        this.schedule()
+      },
       pronoun: (login, label) => {
         this.pronouns[login] = label
         this.pending.pronouns[login] = label
@@ -73,6 +100,8 @@ export class Hub {
       },
       status: (s) => {
         const state = { platform, ...s }
+        const before = this.statuses.get(platform)
+        if (before?.status !== state.status || before?.detail !== state.detail) log(platform, `${state.status}${state.detail ? `: ${state.detail}` : ''}`)
         this.statuses.set(platform, state)
         this.pending.statuses.push(state)
         this.schedule()
@@ -116,6 +145,8 @@ export class Hub {
   }
 
   async stopAll(): Promise<void> {
+    if (this.persistTimer) clearTimeout(this.persistTimer)
+    this.persist?.(this.events)
     await Promise.allSettled([...this.connectors.values()].map((c) => c.stop()))
   }
 

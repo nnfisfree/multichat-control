@@ -18,9 +18,10 @@ export interface State {
   unreadEvents: number
   pronouns: Record<string, string>
   hype: HypeTrain | null
+  actionsVersion: Partial<Record<Platform, number>>
 }
 
-let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null }
+let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {} }
 const listeners = new Set<() => void>()
 let eventsOpen = false
 /** While the user reads back through chat, old rows stay so their scroll position holds. */
@@ -53,7 +54,9 @@ function apply(b: HubBatch): void {
   for (const s of b.statuses) statuses[s.platform] = s
   const pronouns = Object.keys(b.pronouns).length ? { ...state.pronouns, ...b.pronouns } : state.pronouns
   const hype = b.hype === undefined ? state.hype : b.hype
-  set({ messages, events, statuses, pronouns, hype, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.length })
+  let actionsVersion = state.actionsVersion
+  for (const p of b.actionsChanged ?? []) actionsVersion = { ...actionsVersion, [p]: (actionsVersion[p] ?? 0) + 1 }
+  set({ messages, events, statuses, pronouns, hype, actionsVersion, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.length })
 }
 
 async function init(): Promise<void> {

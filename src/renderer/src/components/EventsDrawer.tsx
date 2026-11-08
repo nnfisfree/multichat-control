@@ -1,8 +1,17 @@
-import { useMemo, useState, type JSX } from 'react'
-import { EVENT_TYPE_LABEL, PLATFORMS, PLATFORM_LABEL, type EventType, type Platform, type StreamEvent } from '../../../shared/types'
+import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
+import { EVENT_TYPE_LABEL, PLATFORMS, PLATFORM_LABEL, type EventType, type StreamEvent } from '../../../shared/types'
 import { Icon, PlatformIcon } from '../Icons'
-import { useStore } from '../store'
+import { updateSettings, useStore } from '../store'
 import { EventBadge } from './EventCard'
+
+const ALL_TYPES = Object.keys(EVENT_TYPE_LABEL) as EventType[]
+
+/** Today's events show the time; older ones add the date. */
+function when(ts: number): string {
+  const d = new Date(ts)
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`
+}
 
 function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onToggle(): void }): JSX.Element {
   const [note, setNote] = useState('')
@@ -12,19 +21,20 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
     setNote(r.message ?? (r.ok ? 'Done.' : 'Failed.'))
   }
   return (
-    <li className={`event ${e.type}${open ? ' open' : ''}`}>
+    <li className={`event ${e.type}${open ? ' open' : ''}${e.history ? ' history' : ''}`}>
       <button className="event-head" aria-expanded={open} onClick={onToggle}>
         <span className={`pf ${e.platform}`}><PlatformIcon platform={e.platform} size={16} /></span>
         <span className="event-text">{e.actor && <b>{e.actor} </b>}{e.text}{e.subject && <b> {e.subject}</b>}</span>
         {e.amount && <span className="amount">{e.amount}</span>}
-        <EventBadge type={e.type} />
+        <EventBadge e={e} />
+        <time className="event-time">{when(e.ts)}</time>
         <span className={open ? 'chev open' : 'chev'}><Icon.chevron /></span>
       </button>
       {open && (
         <div className="event-body">
           {e.message && <p className="event-msg">{e.message}</p>}
           <dl>
-            <dt>Time</dt><dd>{new Date(e.ts).toLocaleTimeString()}</dd>
+            <dt>Time</dt><dd>{new Date(e.ts).toLocaleString()}</dd>
             <dt>Platform</dt><dd>{PLATFORM_LABEL[e.platform]}</dd>
             <dt>Type</dt><dd>{EVENT_TYPE_LABEL[e.type]}</dd>
             {details.map(([k, v]) => [<dt key={`k${k}`}>{k}</dt>, <dd key={`v${k}`}>{v}</dd>])}
@@ -41,14 +51,50 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
   )
 }
 
+/** A checklist of event types. Choices are saved, so they survive a restart. */
+function TypesMenu({ hidden, onChange }: { hidden: EventType[]; onChange(hidden: EventType[]): void }): JSX.Element {
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent): void => { if (!box.current?.contains(e.target as Node)) setOpen(false) }
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [open])
+  const shown = ALL_TYPES.length - hidden.length
+  const label = hidden.length === 0 ? 'All types' : shown === 0 ? 'No types' : `${shown} of ${ALL_TYPES.length} types`
+  const flip = (t: EventType): void => onChange(hidden.includes(t) ? hidden.filter((x) => x !== t) : [...hidden, t])
+  return (
+    <div className="types" ref={box}>
+      <button className={hidden.length ? 'types-btn filtered' : 'types-btn'} aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(!open)}>
+        {label} <Icon.chevron />
+      </button>
+      {open && (
+        <div className="popover types-menu" role="menu" aria-label="Event types">
+          <div className="types-quick">
+            <button onClick={() => onChange([])}>Select all</button>
+            <button onClick={() => onChange([...ALL_TYPES])}>Clear all</button>
+          </div>
+          {ALL_TYPES.map((t) => (
+            <label key={t} className="types-item">
+              <input type="checkbox" checked={!hidden.includes(t)} onChange={() => flip(t)} /> {EVENT_TYPE_LABEL[t]}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function EventsDrawer({ open, onClose }: { open: boolean; onClose(): void }): JSX.Element {
   const events = useStore((s) => s.events)
-  const [platforms, setPlatforms] = useState<Record<Platform, boolean>>({ twitch: true, youtube: true, kick: true })
-  const [type, setType] = useState<EventType | 'all'>('all')
+  const filter = useStore((s) => s.settings!.eventFilter)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const types = useMemo(() => [...new Set(events.map((e) => e.type))], [events])
-  const shown = useMemo(() => events.filter((e) => platforms[e.platform] && (type === 'all' || e.type === type)).slice(-300).reverse(), [events, platforms, type])
+  const shown = useMemo(() => events
+    .filter((e) => filter.platforms[e.platform] && !filter.hiddenTypes.includes(e.type))
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 300), [events, filter])
 
   const toggle = (id: string): void => setExpanded((s) => {
     const n = new Set(s)
@@ -63,18 +109,18 @@ export function EventsDrawer({ open, onClose }: { open: boolean; onClose(): void
           <h2>Events</h2>
           <div className="filters">
             {PLATFORMS.map((p) => (
-              <button key={p} className={platforms[p] ? `pf-toggle on ${p}` : `pf-toggle ${p}`} aria-pressed={platforms[p]} title={PLATFORM_LABEL[p]}
-                onClick={() => setPlatforms((s) => ({ ...s, [p]: !s[p] }))}><PlatformIcon platform={p} size={16} /></button>
+              <button key={p} className={filter.platforms[p] ? `pf-toggle on ${p}` : `pf-toggle ${p}`} aria-pressed={filter.platforms[p]}
+                title={`${filter.platforms[p] ? 'Showing' : 'Hiding'} ${PLATFORM_LABEL[p]} events`}
+                onClick={() => void updateSettings({ eventFilter: { ...filter, platforms: { ...filter.platforms, [p]: !filter.platforms[p] } } })}>
+                <PlatformIcon platform={p} size={16} />
+              </button>
             ))}
-            <select aria-label="Event type" value={type} onChange={(e) => setType(e.target.value as EventType | 'all')}>
-              <option value="all">All types</option>
-              {types.map((t) => <option key={t} value={t}>{EVENT_TYPE_LABEL[t]}</option>)}
-            </select>
+            <TypesMenu hidden={filter.hiddenTypes} onChange={(hiddenTypes) => void updateSettings({ eventFilter: { ...filter, hiddenTypes } })} />
           </div>
           <button className="icon-btn" aria-label="Back to chat" title="Back to chat (Esc)" onClick={onClose}><Icon.close /></button>
         </div>
         <ul className="event-list">
-          {shown.length === 0 && <li className="empty">No events yet.</li>}
+          {shown.length === 0 && <li className="empty">{events.length ? 'No events match these filters.' : 'No events yet.'}</li>}
           {shown.map((e) => <EventRow key={e.id} e={e} open={expanded.has(e.id)} onToggle={() => toggle(e.id)} />)}
         </ul>
       </div>

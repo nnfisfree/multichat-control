@@ -10,6 +10,8 @@ export interface ConnectorContext {
   purged(userId?: string): void
   pronoun(login: string, label: string): void
   hype(train: HypeTrain | null): void
+  /** Quick actions changed, such as a reward being turned on or off. */
+  actionsChanged(): void
   status(s: Omit<ConnectionState, 'platform'>): void
 }
 

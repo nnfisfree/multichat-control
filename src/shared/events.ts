@@ -7,6 +7,10 @@ export const EVENT_BADGE: Record<EventType, string> = {
   moderation: 'MOD', stream: 'LIVE', announcement: 'ANN', other: 'INFO'
 }
 
+/** A finished stream says OFF rather than LIVE. */
+export const eventBadge = (e: Pick<StreamEvent, 'type' | 'text'>): string =>
+  e.type === 'stream' && /offline|ended/i.test(e.text) ? 'OFF' : EVENT_BADGE[e.type]
+
 const GROUP: Partial<Record<EventType, ChatEventGroup>> = {
   sub: 'subs', gift: 'gifts', cheer: 'cheers', raid: 'raids', redemption: 'redemptions',
   powerup: 'powerups', follow: 'follows', paid: 'paid', hypetrain: 'hype'
@@ -16,7 +20,7 @@ export const chatEventGroup = (type: EventType): ChatEventGroup | undefined => G
 
 /** Puts an event into the chat stream. Returns null for events that stay in the drawer only. */
 export function eventToMessage(e: StreamEvent): ChatMessage | null {
-  if (e.noChat || !GROUP[e.type]) return null
+  if (e.noChat || e.history || !GROUP[e.type]) return null
   return {
     id: `event:${e.id}`,
     platform: e.platform,

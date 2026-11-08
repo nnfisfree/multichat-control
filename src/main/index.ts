@@ -6,6 +6,7 @@ import { PLATFORMS, type Bootstrap, type PanelBounds, type Platform, type Settin
 import { CloseToTray } from './close-to-tray'
 import { hasBuiltIn } from './credentials'
 import { DemoConnector } from './demo'
+import { loadEvents, saveEvents } from './event-log'
 import { Hub } from './hub'
 import type { Connector } from './platforms/connector'
 import { KickConnector } from './platforms/kick/connector'
@@ -154,6 +155,8 @@ else {
 
   void app.whenReady().then(async () => {
     store.load()
+    // Demo mode keeps its invented events out of the saved list.
+    if (!demo) hub.restoreEvents(loadEvents(), saveEvents)
     // Listing installed fonts is the only permission the app itself needs.
     session.defaultSession.setPermissionRequestHandler((_c, p, done) => done((p as string) === 'local-fonts'))
     session.defaultSession.setPermissionCheckHandler((_c, p) => (p as string) === 'local-fonts')

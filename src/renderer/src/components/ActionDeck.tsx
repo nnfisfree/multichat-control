@@ -17,11 +17,17 @@ export function ActionDeck({ scope, onClose, onRewards }: Props): JSX.Element {
   const [pendingConfirm, setPendingConfirm] = useState<ActionDef | null>(null)
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
   const confirmOn = useStore((s) => s.settings?.confirmActions)
+  const version = useStore((s) => s.actionsVersion[platform] ?? 0)
 
   const load = useCallback(() => {
     window.nnf.actions(platform).then(setActions, () => setActions([]))
   }, [platform])
-  useEffect(load, [load])
+  // Reloads when the platform reports a change, and every 30 seconds for platforms that can't.
+  useEffect(load, [load, version])
+  useEffect(() => {
+    const t = setInterval(load, 30000)
+    return () => clearInterval(t)
+  }, [load])
 
   const run = async (a: ActionDef, args: Record<string, string>): Promise<void> => {
     const r = await window.nnf.runAction(platform, a.id, args)

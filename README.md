@@ -158,7 +158,7 @@ Copy `.env.example` to `.env.local`, fill it in, and run `npm run dist`. People 
 
 Never commit `.env.local`. Anything built into an exe can be extracted from it, so only do this with apps made for this purpose, and don't reuse their credentials elsewhere.
 
-**Publishing your own builds?** Also register your own Twitch app as a **Public** client, and set its Client ID in `src/shared/app-config.ts`. A public Client ID isn't a secret.
+**Publishing your own builds?** Also register your own Twitch app as a **Public** client. A Confidential app can log in, but its logins drop after about 4 hours. Set its Client ID in `src/shared/app-config.ts`. A public Client ID isn't a secret.
 
 </details>
 
