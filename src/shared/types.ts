@@ -40,12 +40,12 @@ export interface ChatMessage {
 
 export type EventType =
   | 'follow' | 'sub' | 'gift' | 'cheer' | 'bits' | 'redemption' | 'powerup' | 'raid' | 'hypetrain'
-  | 'poll' | 'prediction' | 'goal' | 'ad' | 'shoutout' | 'moderation' | 'stream' | 'paid' | 'announcement' | 'other'
+  | 'poll' | 'prediction' | 'goal' | 'ad' | 'shoutout' | 'moderation' | 'stream' | 'paid' | 'donation' | 'announcement' | 'other'
 
 export const EVENT_TYPE_LABEL: Record<EventType, string> = {
   follow: 'Follows', sub: 'Subs', gift: 'Gifts', cheer: 'Cheers', bits: 'Bits', redemption: 'Redemptions',
   powerup: 'Power-ups', raid: 'Raids', hypetrain: 'Hype Train', poll: 'Polls', prediction: 'Predictions',
-  goal: 'Goals', ad: 'Ads', shoutout: 'Shoutouts', moderation: 'Moderation', stream: 'Stream', paid: 'Paid',
+  goal: 'Goals', ad: 'Ads', shoutout: 'Shoutouts', moderation: 'Moderation', stream: 'Stream', paid: 'Paid', donation: 'Donations',
   announcement: 'Announcements', other: 'Other'
 }
 
@@ -71,7 +71,23 @@ export interface StreamEvent {
   big?: boolean
   /** Loaded from an earlier session or the platform's history, so it never becomes a chat card. */
   history?: boolean
+  /** Reported by an alert service rather than the platform itself. */
+  source?: AlertSource
 }
+
+/** Alert and donation services that report events for the platforms. */
+export type AlertSource = 'streamelements' | 'streamlabs'
+export const ALERT_SOURCES: AlertSource[] = ['streamelements', 'streamlabs']
+export const ALERT_SOURCE_LABEL: Record<AlertSource, string> = { streamelements: 'StreamElements', streamlabs: 'Streamlabs' }
+
+export interface IntegrationState {
+  source: AlertSource
+  status: 'off' | 'needs-setup' | 'needs-login' | 'authorizing' | 'connecting' | 'connected' | 'reconnecting' | 'error'
+  account?: string
+  detail?: string
+}
+
+
 
 export interface HypeTrain {
   platform: Platform
@@ -141,13 +157,31 @@ export type ModerationRequest =
   | { kind: 'ban'; userId: string; userName: string }
   | { kind: 'shoutout'; userId: string; userName: string }
 
-export type ChatEventGroup = 'subs' | 'gifts' | 'cheers' | 'raids' | 'redemptions' | 'powerups' | 'follows' | 'paid' | 'hype'
+export type ChatEventGroup = 'subs' | 'gifts' | 'cheers' | 'raids' | 'redemptions' | 'powerups' | 'follows' | 'paid' | 'donations' | 'hype'
 
 export type CloseAction = 'exit' | 'ask' | 'tray'
 
 export interface EmoteProviders { bttv: boolean; seventv: boolean; ffz: boolean }
 
-export interface EventFilter { platforms: Record<Platform, boolean>; hiddenTypes: EventType[] }
+export interface UpdateInfo {
+  version: string
+  notes: string
+  page: string
+  /** False when this copy can't update itself, so the download page is offered instead. */
+  canInstall: boolean
+  size?: number
+}
+
+export interface UpdateState {
+  status: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'error'
+  current: string
+  info?: UpdateInfo
+  progress?: number
+  error?: string
+  checkedAt?: number
+}
+
+export interface EventFilter { platforms: Record<Platform, boolean>; hiddenTypes: EventType[]; oldestFirst?: boolean }
 
 export interface Settings {
   twitchClientId: string
@@ -167,6 +201,10 @@ export interface Settings {
   chatEvents: Record<ChatEventGroup, boolean>
   closeAction: CloseAction
   eventFilter: EventFilter
+  autoUpdate: boolean
+  updatePrereleases: boolean
+  /** The one alert service this streamer uses, if any. */
+  alertService: AlertSource | 'none'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -186,7 +224,10 @@ export const DEFAULT_SETTINGS: Settings = {
   // Follows start off because follow bots can flood chat.
   closeAction: 'ask',
   eventFilter: { platforms: { twitch: true, youtube: true, kick: true }, hiddenTypes: [] },
-  chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: false, paid: true, hype: true }
+  autoUpdate: true,
+  updatePrereleases: false,
+  alertService: 'none',
+  chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: false, paid: true, donations: true, hype: true }
 }
 
 /** Client secrets are write-only from the UI: it learns only whether one is stored. */
@@ -200,6 +241,8 @@ export interface Bootstrap {
   events: StreamEvent[]
   pronouns: Record<string, string>
   hype: HypeTrain | null
+  integrations: IntegrationState[]
+  update: UpdateState
   demo: boolean
   builtInTwitchId: boolean
   builtInYoutube: boolean
@@ -221,6 +264,7 @@ export interface HubBatch {
   hype?: HypeTrain | null
   /** Platforms whose quick actions changed, such as a reward being turned on. */
   actionsChanged?: Platform[]
+  integrations?: IntegrationState[]
 }
 
 export interface PanelBounds { x: number; y: number; width: number; height: number }
@@ -230,6 +274,8 @@ export interface NnfApi {
   bootstrap(): Promise<Bootstrap>
   onBatch(cb: (batch: HubBatch) => void): () => void
   onSettings(cb: (settings: Settings) => void): () => void
+  onUpdate(cb: (state: UpdateState) => void): () => void
+  updates: { check(): Promise<UpdateState>; download(): Promise<void>; install(): Promise<void>; openPage(): Promise<void> }
   send(targets: Platform[], text: string, replyTo?: { platform: Platform; messageId: string }): Promise<SendResult[]>
   moderate(platform: Platform, req: ModerationRequest): Promise<ActionResult>
   emotes(platform: Platform): Promise<Emote[]>
@@ -240,6 +286,11 @@ export interface NnfApi {
   reconnect(platform: Platform): Promise<void>
   saveSettings(patch: Partial<Settings>): Promise<Settings>
   saveSecret(key: 'youtubeSecret' | 'kickSecret', value: string): Promise<SecretState>
+  alerts: {
+    login(source: AlertSource): Promise<void>
+    logout(source: AlertSource): Promise<void>
+    reconnect(source: AlertSource): Promise<void>
+  }
   openExternal(url: string): Promise<void>
   showPanel(bounds: PanelBounds): Promise<ActionResult>
   hidePanel(): Promise<void>

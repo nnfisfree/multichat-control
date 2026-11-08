@@ -1,7 +1,7 @@
 {
   "name": "multistream-control",
   "productName": "NoName's Multichat Control",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Standalone multi-platform stream chat for Twitch, YouTube and Kick.",
   "author": "NoName's Multichat Control contributors",
   "private": true,
@@ -11,7 +11,8 @@
     "demo": "electron-vite dev -- --demo",
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit",
-    "dist": "electron-vite build && electron-builder --win"
+    "dist": "electron-vite build && electron-builder --win",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.7",

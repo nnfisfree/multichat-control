@@ -8,7 +8,9 @@ export class HttpError extends Error {
 export function errorText(body: unknown, fallback: string): string {
   if (body && typeof body === 'object') {
     const b = body as Record<string, any>
-    return b.message || b.error?.message || b.error_description || (typeof b.error === 'string' ? b.error : '') || fallback
+    const text = b.message || b.error?.message || b.error_description || (typeof b.error === 'string' ? b.error : '') || fallback
+    // OAuth servers often name the faulty field in a separate hint.
+    return typeof b.hint === 'string' && b.hint ? `${text} ${b.hint}` : text
   }
   return typeof body === 'string' && body ? body.slice(0, 200) : fallback
 }

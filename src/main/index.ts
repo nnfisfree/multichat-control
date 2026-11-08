@@ -2,12 +2,14 @@ import { BrowserWindow, app, ipcMain, session, shell } from 'electron'
 import { join } from 'node:path'
 import { APP_NAME, TWITCH_CLIENT_ID } from '../shared/app-config'
 import { safeUrl } from '../shared/parts'
-import { PLATFORMS, type Bootstrap, type PanelBounds, type Platform, type Settings } from '../shared/types'
+import { ALERT_SOURCES, PLATFORMS, type AlertSource, type Bootstrap, type PanelBounds, type Platform, type Settings } from '../shared/types'
 import { CloseToTray } from './close-to-tray'
 import { hasBuiltIn } from './credentials'
 import { DemoConnector } from './demo'
 import { loadEvents, saveEvents } from './event-log'
 import { Hub } from './hub'
+import { StreamElements } from './integrations/streamelements'
+import { Streamlabs } from './integrations/streamlabs'
 import type { Connector } from './platforms/connector'
 import { KickConnector } from './platforms/kick/connector'
 import { TwitchConnector } from './platforms/twitch/connector'
@@ -15,6 +17,7 @@ import { YouTubeConnector } from './platforms/youtube/connector'
 import { usePortableData } from './portable'
 import { store } from './store'
 import { TwitchPanel } from './twitch-panel'
+import { Updater } from './updater'
 
 const dataDir = usePortableData()
 const demo = process.argv.includes('--demo')
@@ -24,10 +27,15 @@ const MIN_OPACITY = 0.05
 const iconPath = app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'resources/icon.png')
 
 const hub = new Hub()
+const alerts = {
+  streamelements: new StreamElements(hub.alertContext('streamelements')),
+  streamlabs: new Streamlabs(hub.alertContext('streamlabs'))
+}
 let win: BrowserWindow | null = null
 let twitch: TwitchConnector | null = null
 let panel: TwitchPanel
 let closer: CloseToTray
+const updater = new Updater((state) => win?.webContents.send('update:state', state))
 
 function openExternal(url: string): void {
   const safe = safeUrl(url)
@@ -79,6 +87,17 @@ function buildConnectors(): void {
   }
 }
 
+/** Only the service the streamer picked runs; the other stays off. */
+async function startAlerts(): Promise<void> {
+  for (const s of ALERT_SOURCES) {
+    if (s === store.settings.alertService && !demo) await alerts[s].start().catch(() => {})
+    else {
+      alerts[s].stop()
+      hub.alertContext(s).status({ status: 'off' })
+    }
+  }
+}
+
 function registerIpc(): void {
   const handle = (ch: string, fn: (...args: any[]) => unknown): void => {
     ipcMain.handle(ch, (e, ...args) => {
@@ -96,7 +115,8 @@ function registerIpc(): void {
     builtInYoutube: hasBuiltIn('youtube'),
     builtInKick: hasBuiltIn('kick'),
     dataDir,
-    version: app.getVersion()
+    version: app.getVersion(),
+    update: updater.get()
   }))
   handle('send', (targets: Platform[], text: string, replyTo) => hub.send(targets, text, replyTo))
   handle('moderate', (p: Platform, req) => hub.moderate(p, req))
@@ -121,6 +141,7 @@ function registerIpc(): void {
     if (!demo && before.twitchClientId !== next.twitchClientId) await restart('twitch')
     if (!demo && before.youtubeClientId !== next.youtubeClientId) await restart('youtube')
     if (!demo && before.kickClientId !== next.kickClientId) await restart('kick')
+    if (before.alertService !== next.alertService) await startAlerts()
     return next
   })
   handle('saveSecret', async (key: 'youtubeSecret' | 'kickSecret', value: string) => {
@@ -132,9 +153,23 @@ function registerIpc(): void {
     }
     return store.secretState()
   })
+  handle('alerts:login', (source: AlertSource) => {
+    if (!ALERT_SOURCES.includes(source) || demo) throw new Error('Not available here.')
+    return alerts[source].login()
+  })
+  handle('alerts:logout', (source: AlertSource) => {
+    if (ALERT_SOURCES.includes(source)) alerts[source].logout()
+  })
+  handle('alerts:reconnect', async (source: AlertSource) => {
+    if (ALERT_SOURCES.includes(source) && !demo) await alerts[source].start()
+  })
   handle('openExternal', openExternal)
   handle('showPanel', (b: PanelBounds) => panel.show(b))
   handle('hidePanel', () => panel.hide())
+  handle('update:check', () => updater.check(true))
+  handle('update:download', () => updater.download())
+  handle('update:install', () => updater.installAndRestart())
+  handle('update:openPage', () => updater.openPage())
   ipcMain.on('window', (e, action: string) => {
     if (!win || e.sender !== win.webContents) return
     if (action === 'minimize') win.minimize()
@@ -169,12 +204,15 @@ else {
     buildConnectors()
     registerIpc()
     createWindow()
-    await hub.startAll()
+    // Demo copies are for trying the app, so they never update themselves.
+    if (!demo) updater.start()
+    await Promise.all([hub.startAll(), startAlerts()])
   })
 
   app.on('window-all-closed', () => app.quit())
   app.on('before-quit', () => {
     panel?.destroy()
+    for (const s of ALERT_SOURCES) alerts[s].stop()
     void hub.stopAll()
   })
 }

@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
-import logo from '../../../../resources/logo.webp'
 import { KICK_REDIRECT_URI } from '../../../shared/app-config'
-import { PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type Platform } from '../../../shared/types'
+import { ALERT_SOURCE_LABEL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform } from '../../../shared/types'
 import { Icon, PlatformIcon } from '../Icons'
 import { setSecrets, updateSettings, useStore } from '../store'
+import { About } from './About'
 import { statusText } from './Tabs'
-
-const LOGIN_LABEL: Record<Platform, string> = { twitch: 'Log in with Twitch', youtube: 'Log in with Google', kick: 'Log in with Kick' }
 
 const GUIDE: Record<Platform, { title: string; url: string; steps: string[] }> = {
   twitch: {
@@ -45,11 +43,6 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
   const showFields = !(platform === 'twitch' && builtIn)
   const live = st?.status === 'connected' || st?.status === 'waiting' || st?.status === 'reconnecting'
 
-  const login = (): void => {
-    if (st?.status === 'needs-setup') setErr(`This copy of the app has no ${PLATFORM_LABEL[platform]} login built in yet.`)
-    else act(() => window.nnf.login(platform))()
-  }
-
   const act = (fn: () => Promise<unknown>) => () => {
     setErr('')
     fn().catch((e) => {
@@ -57,13 +50,23 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
       if (!/cancelled/i.test(text)) setErr(text)
     })
   }
+  const login = (): void => {
+    if (st?.status === 'needs-setup') setErr(`This copy of the app has no ${PLATFORM_LABEL[platform]} login built in yet.`)
+    else act(() => window.nnf.login(platform))()
+  }
 
   return (
     <article className="account">
       <header>
-        <span className={`pf ${platform}`}><PlatformIcon platform={platform} size={22} /></span>
+        <span className={`pf ${platform}`}><PlatformIcon platform={platform} size={18} /></span>
         <h3>{PLATFORM_LABEL[platform]}</h3>
-        <span className="state">{st?.account ? `${st.account} · ` : ''}{statusText(st)}</span>
+        <span className="state" title={statusText(st)}>{st?.account ? `${st.account} · ` : ''}{statusText(st)}</span>
+        <div className="row-btns">
+          {live && <button className="btn ghost sm" onClick={act(() => window.nnf.reconnect(platform))}>Reconnect</button>}
+          {live
+            ? <button className="btn ghost sm" onClick={act(() => window.nnf.logout(platform))}>Log out</button>
+            : <button className="btn sm" disabled={st?.status === 'connecting' || (st?.status === 'authorizing' && platform !== 'twitch')} onClick={login}>{st?.status === 'authorizing' && platform === 'twitch' ? 'New code' : 'Log in'}</button>}
+        </div>
       </header>
       {st?.device && (
         <div className="notice good">
@@ -72,12 +75,6 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
         </div>
       )}
       {err && <div className="notice bad" role="alert">{err}</div>}
-      <div className="row-btns">
-        {live
-          ? <button className="btn ghost" onClick={act(() => window.nnf.logout(platform))}>Log out</button>
-          : <button className="btn" disabled={st?.status === 'connecting' || (st?.status === 'authorizing' && platform !== 'twitch')} onClick={login}>{st?.status === 'authorizing' && platform === 'twitch' ? 'Get a new code' : LOGIN_LABEL[platform]}</button>}
-        {live && <button className="btn ghost" onClick={act(() => window.nnf.reconnect(platform))}>Reconnect</button>}
-      </div>
       {showFields && !live && (
         <details className="advanced">
           <summary>Advanced: use my own developer app</summary>
@@ -100,6 +97,52 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
   )
 }
 
+const ALERT_STATUS: Record<IntegrationState['status'], string> = {
+  off: 'Off', 'needs-setup': 'Coming soon', 'needs-login': 'Not logged in', authorizing: 'Finish logging in in your browser…',
+  connecting: 'Connecting…', connected: 'Connected', reconnecting: 'Reconnecting…', error: 'Needs attention'
+}
+
+/** Streamers use one alert service, so they pick it and log in. That's all. */
+function AlertsPicker(): JSX.Element {
+  const choice = useStore((s) => s.settings!.alertService)
+  const st = useStore((s) => (choice === 'none' ? undefined : s.integrations[choice]))
+  const [err, setErr] = useState('')
+  const act = (fn: () => Promise<unknown>) => () => {
+    setErr('')
+    fn().catch((e) => {
+      const text = String(e?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+      if (!/cancelled/i.test(text)) setErr(text)
+    })
+  }
+  const live = st?.status === 'connected' || st?.status === 'reconnecting' || st?.status === 'connecting'
+  return (
+    <article className="account alerts">
+      <header>
+        <div className="seg" role="radiogroup" aria-label="Alert service">
+          {(['none', 'streamelements', 'streamlabs'] as const).map((v) => (
+            <button key={v} role="radio" aria-checked={choice === v} className={choice === v ? 'on' : ''} onClick={() => { setErr(''); void updateSettings({ alertService: v }) }}>
+              {v === 'none' ? 'None' : ALERT_SOURCE_LABEL[v]}
+            </button>
+          ))}
+        </div>
+        {choice !== 'none' && (
+          <>
+            <span className="state">{st?.account && st.status === 'connected' ? `${st.account} · ` : ''}{st ? ALERT_STATUS[st.status] : 'Starting…'}</span>
+            <div className="row-btns">
+              {live && <button className="btn ghost sm" onClick={act(() => window.nnf.alerts.reconnect(choice))}>Reconnect</button>}
+              {live
+                ? <button className="btn ghost sm" onClick={act(() => window.nnf.alerts.logout(choice))}>Log out</button>
+                : st?.status !== 'needs-setup' && <button className="btn sm" disabled={st?.status === 'authorizing'} onClick={act(() => window.nnf.alerts.login(choice))}>Log in</button>}
+            </div>
+          </>
+        )}
+      </header>
+      {st?.detail && st.status !== 'needs-setup' && <div className={st.status === 'error' || st.status === 'needs-login' ? 'notice bad' : 'notice'} role="status">{st.detail}</div>}
+      {err && err !== st?.detail && <div className="notice bad" role="alert">{err}</div>}
+    </article>
+  )
+}
+
 const CHAT_EVENT_ROWS: [ChatEventGroup, string, string][] = [
   ['subs', 'Subs', 'New subs, resubs and memberships'],
   ['gifts', 'Gifted Subs', 'Single gifts and gift bombs'],
@@ -108,32 +151,27 @@ const CHAT_EVENT_ROWS: [ChatEventGroup, string, string][] = [
   ['redemptions', 'Redemptions', 'Channel point rewards'],
   ['powerups', 'Power-ups', 'On-Screen Celebrations and custom Power-ups'],
   ['paid', 'Super Stickers and KICKs', 'Paid messages already appear in chat'],
+  ['donations', 'Donations', 'Tips from StreamElements and Streamlabs'],
   ['cheers', 'Kick Cheers', 'Twitch cheers always show as messages'],
   ['follows', 'Follows', 'Off by default, because follow bots can flood chat']
 ]
 
-const LINKS: [string, string][] = [
-  ['Twitch', 'https://www.twitch.tv/nonamefound'],
-  ['YouTube', 'https://www.youtube.com/nonamefoundDCUO'],
-  ['Kick', 'https://kick.com/nonameonlive'],
-  ['Discord', 'https://discord.com/invite/Jg8qjrsTtb'],
-  ['Shop', 'https://www.nonamefound.lol/']
-]
-
-function About(): JSX.Element {
+function UpdatesRow(): JSX.Element {
+  const u = useStore((s) => s.update)
+  const boot = useStore((s) => s.boot!)
+  const busy = u?.status === 'checking' || u?.status === 'downloading'
+  const text = boot.demo ? 'Updates are off in demo mode.'
+    : u?.status === 'checking' ? 'Checking…'
+    : u?.status === 'none' ? 'You have the latest version.'
+    : u?.status === 'available' ? `Version ${u.info?.version} is available. See the banner at the top.`
+    : u?.status === 'downloading' ? `Downloading… ${u.progress ?? 0}%`
+    : u?.status === 'ready' ? 'Ready to install. See the banner at the top.'
+    : u?.status === 'error' ? `Couldn't check: ${u.error}`
+    : 'Not checked yet.'
   return (
-    <Section title="About this App" desc="Who made it, and why">
-      <div className="about">
-        <img className="about-logo" src={logo} alt="NoNameFound logo" />
-        <div className="about-text">
-          <p>Hi, I'm <b>NoNameFound</b>: a streamer, IT engineer and Linux enthusiast. I've played DC Universe Online since the beta, on both the EU and US PC servers. I love sharing top-level competitive gameplay, entertaining my audience and constantly interacting with them. I also stream other games, mainly MMORPGs like Guild Wars 2.</p>
-          <p>I stream on several platforms at once, and I wanted one chat with every control a click away. So I made this app, and I'm sharing it so other streamers can use it too.</p>
-          <div className="about-links">
-            {LINKS.map(([label, url]) => <button key={label} className="btn ghost" onClick={() => void window.nnf.openExternal(url)}>{label}</button>)}
-          </div>
-        </div>
-      </div>
-    </Section>
+    <Row title={`Version ${boot.version}`} desc={text}>
+      <button className="btn" disabled={busy || boot.demo} onClick={() => void window.nnf.updates.check()}>Check for updates</button>
+    </Row>
   )
 }
 
@@ -181,6 +219,7 @@ export function Settings({ onClose }: { onClose(): void }): JSX.Element {
   const providers = s.emoteProviders
   const setProvider = (key: keyof typeof providers, on: boolean): void => void updateSettings({ emoteProviders: { ...providers, [key]: on } })
   const percent = Math.round(s.windowOpacity * 100)
+  const [view, setView] = useState<'settings' | 'about'>('settings')
   const modal = useRef<HTMLDivElement>(null)
   const followLight = (e: MouseEvent): void => {
     const box = modal.current!
@@ -193,14 +232,21 @@ export function Settings({ onClose }: { onClose(): void }): JSX.Element {
     <div className="modal-back">
       <div className="modal" role="dialog" aria-label="Settings" ref={modal} onMouseMove={followLight}>
         <div className="drawer-head">
-          <h2>Settings</h2>
+          <nav className="settings-nav" role="tablist" aria-label="Settings pages">
+            <button role="tab" aria-selected={view === 'settings'} className={view === 'settings' ? 'on' : ''} onClick={() => setView('settings')}>Settings</button>
+            <button role="tab" aria-selected={view === 'about'} className={view === 'about' ? 'on' : ''} onClick={() => setView('about')}>About</button>
+          </nav>
           <div className="grow" />
           <button className="icon-btn" aria-label="Close settings" onClick={() => { void updateSettings({ setupDismissed: true }); onClose() }}><Icon.close /></button>
         </div>
-        <div className="modal-scroll">
+        {view === 'about' ? <About /> : <div className="modal-scroll">
           {!s.setupDismissed && <p className="lead">Welcome! Log in to each platform you stream on. You can do this later from the gear icon.</p>}
           <Section title="Accounts" desc="Connect the platforms you stream on">
             {(['twitch', 'youtube', 'kick'] as Platform[]).map((p) => <Account key={p} platform={p} />)}
+          </Section>
+
+          <Section title="Alerts & Donations" desc="Pick only the one you use. It adds donations, plus past subs, gifts and Bits the platforms don't share.">
+            <AlertsPicker />
           </Section>
 
           <Section title="Window" desc="Choose what happens when you close the app">
@@ -250,7 +296,7 @@ export function Settings({ onClose }: { onClose(): void }): JSX.Element {
           <Section title="Events in Chat" desc="Show these as cards in chat. They always appear in the Events drop-down.">
             {CHAT_EVENT_ROWS.map(([key, title, desc]) => (
               <Row key={key} title={title} desc={desc}>
-                <Toggle label={`${title} in chat`} on={s.chatEvents[key]} onChange={(v) => void updateSettings({ chatEvents: { ...s.chatEvents, [key]: v } })} />
+                <Toggle label={`${title} in chat`} on={s.chatEvents[key] ?? true} onChange={(v) => void updateSettings({ chatEvents: { ...s.chatEvents, [key]: v } })} />
               </Row>
             ))}
           </Section>
@@ -267,16 +313,24 @@ export function Settings({ onClose }: { onClose(): void }): JSX.Element {
             </Row>
           </Section>
 
+          <Section title="Updates" desc="New versions come from the project's GitHub page">
+            <UpdatesRow />
+            <Row title="Check Automatically" desc="Look for a new version at start and every few hours. Only GitHub is contacted.">
+              <Toggle label="Check for updates automatically" on={s.autoUpdate} onChange={(v) => void updateSettings({ autoUpdate: v })} />
+            </Row>
+            <Row title="Include Test Versions" desc="Also offer pre-releases, which may be less stable">
+              <Toggle label="Include test versions" on={s.updatePrereleases} onChange={(v) => void updateSettings({ updatePrereleases: v })} />
+            </Row>
+          </Section>
+
           <Section title="Safety" desc="Protect against accidental clicks">
             <Row title="Confirm Big Actions" desc="Ask before running an ad, raid or chat clear">
               <Toggle label="Confirm big actions" on={s.confirmActions} onChange={(v) => void updateSettings({ confirmActions: v })} />
             </Row>
           </Section>
 
-          <About />
-
           <p className="fine">Version {boot.version}. Data is stored in {boot.dataDir}. Keep that folder private: it holds your logins.</p>
-        </div>
+        </div>}
       </div>
     </div>
   )

@@ -47,7 +47,11 @@ export async function loopbackLogin(o: LoopbackOptions): Promise<{ code: string;
       const ok = !!code && url.searchParams.get('state') === state
       res.writeHead(ok ? 200 : 400, { 'Content-Type': 'text/html; charset=utf-8', Connection: 'close' }).end(PAGE(ok))
       if (ok) finish(() => resolve({ code: code!, verifier, redirectUri }))
-      else if (url.searchParams.get('error')) finish(() => reject(new Error(url.searchParams.get('error_description') || url.searchParams.get('error')!)))
+      else if (url.searchParams.get('error')) {
+        // StreamElements only says error=true when the user declines.
+        const why = url.searchParams.get('error_description') || url.searchParams.get('error')!
+        finish(() => reject(new Error(why === 'true' || why === 'access_denied' ? 'Login was declined in the browser.' : why)))
+      }
     })
     const timer = setTimeout(() => finish(() => reject(new Error('Login timed out.'))), o.timeoutMs ?? 300000)
     server.on('error', (err: NodeJS.ErrnoException) => {

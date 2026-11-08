@@ -102,6 +102,7 @@ export class KickConnector implements Connector {
       const d = await fetchChannel(this.slug)
       if (run !== this.run) return
       this.found = d
+      this.loadPast(d)
       await this.loadSeven()
       if (run !== this.run) return
       const channels = [`chatrooms.${d.chatroomId}.v2`, `chatrooms.${d.chatroomId}`, `chatroom_${d.chatroomId}`, `channel.${d.channelId}`, `channel_${d.channelId}`]
@@ -116,6 +117,14 @@ export class KickConnector implements Connector {
       this.ctx.status({ status: 'reconnecting', account: this.name, detail: `Kick read failed: ${message(err)} Sending still works.` })
       await sleep(30000)
       if (run === this.run) await this.connectSocket(run)
+    }
+  }
+
+  /** Kick's official API keeps no event history, but the channel page lists past streams. */
+  private loadPast(d: KickChannel): void {
+    for (const v of d.past) {
+      this.ctx.event({ id: `kick-stream-${v.id}-on`, platform: 'kick', ts: v.start, type: 'stream', text: 'Stream went live', subject: v.title || undefined, details: {}, history: true })
+      if (v.seconds > 0) this.ctx.event({ id: `kick-stream-${v.id}-off`, platform: 'kick', ts: v.start + v.seconds * 1000, type: 'stream', text: 'Stream went offline', details: {}, history: true })
     }
   }
 

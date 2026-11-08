@@ -11,11 +11,22 @@ export interface KickChannel {
   channelId: number
   userId?: number
   emotes: { id: string; name: string; group: string }[]
+  /** Past streams, newest first, when Kick lists them. */
+  past: { id: string; start: number; seconds: number; title: string }[]
 }
 
 export interface KickRealtime { url: string; token: string }
 
-function parseChannel(channel: any, emotes: any): KickChannel {
+function parsePast(videos: any): KickChannel['past'] {
+  return (Array.isArray(videos) ? videos : []).slice(0, 20).map((v: any) => ({
+    id: String(v.id ?? v.slug ?? ''),
+    start: Date.parse(String(v.start_time ?? v.created_at ?? '').replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(v.start_time ?? v.created_at ?? '')) ? '' : 'Z')),
+    seconds: Math.round(Number(v.duration ?? 0) / 1000),
+    title: String(v.session_title ?? '')
+  })).filter((v) => v.id && v.start)
+}
+
+function parseChannel(channel: any, emotes: any, videos?: any): KickChannel {
   if (!channel?.chatroom?.id) throw new Error('Kick returned no chatroom for this channel.')
   return {
     chatroomId: channel.chatroom.id,
@@ -23,7 +34,8 @@ function parseChannel(channel: any, emotes: any): KickChannel {
     userId: channel.user_id,
     emotes: (Array.isArray(emotes) ? emotes : []).flatMap((set: any) => (set.emotes ?? []).map((e: any) => ({
       id: String(e.id), name: e.name, group: set.name === 'Global' || set.name === 'Emojis' ? `Kick ${set.name}` : 'Kick Channel'
-    })))
+    }))),
+    past: parsePast(videos ?? channel.previous_livestreams)
   }
 }
 
@@ -34,12 +46,12 @@ async function viaPage(slug: string): Promise<KickChannel> {
   const win = new BrowserWindow({ show: false, webPreferences: { session: ses, sandbox: true, contextIsolation: true } })
   try {
     await win.loadURL(`https://kick.com/${slug}`)
-    const { channel, emotes } = await win.webContents.executeJavaScript(`(async () => {
+    const { channel, emotes, videos } = await win.webContents.executeJavaScript(`(async () => {
       const get = async (p) => { try { const r = await fetch(p); return r.ok ? await r.json() : null } catch { return null } };
-      const [channel, emotes] = await Promise.all([get('/api/v2/channels/${slug}'), get('/emotes/${slug}')]);
-      return { channel, emotes };
+      const [channel, emotes, videos] = await Promise.all([get('/api/v2/channels/${slug}'), get('/emotes/${slug}'), get('/api/v2/channels/${slug}/videos')]);
+      return { channel, emotes, videos };
     })()`)
-    return parseChannel(channel, emotes)
+    return parseChannel(channel, emotes, videos)
   } finally {
     win.destroy()
   }
@@ -48,11 +60,12 @@ async function viaPage(slug: string): Promise<KickChannel> {
 export async function fetchChannel(slug: string): Promise<KickChannel> {
   if (!/^[a-z0-9_-]+$/i.test(slug)) throw new Error('Invalid Kick channel name.')
   try {
-    const [channel, emotes] = await Promise.all([
+    const [channel, emotes, videos] = await Promise.all([
       fetchJson(`https://kick.com/api/v2/channels/${slug}`, { headers: HEADERS }),
-      fetchJson(`https://kick.com/emotes/${slug}`, { headers: HEADERS }).catch(() => [])
+      fetchJson(`https://kick.com/emotes/${slug}`, { headers: HEADERS }).catch(() => []),
+      fetchJson(`https://kick.com/api/v2/channels/${slug}/videos`, { headers: HEADERS }).catch(() => null)
     ])
-    return parseChannel(channel, emotes)
+    return parseChannel(channel, emotes, videos)
   } catch {
     return viaPage(slug)
   }

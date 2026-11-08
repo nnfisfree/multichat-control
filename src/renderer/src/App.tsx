@@ -11,6 +11,7 @@ import { RewardsPanel } from './components/RewardsPanel'
 import { Settings } from './components/Settings'
 import { Tabs, type Tab } from './components/Tabs'
 import { TitleBar } from './components/TitleBar'
+import { UpdateBanner } from './components/UpdateBanner'
 import { setEventsOpen, updateSettings, useFiltered, useInit, useStore } from './store'
 
 export function App(): JSX.Element {
@@ -71,6 +72,7 @@ function Main(): JSX.Element {
   return (
     <div className="app" style={{ '--chat-scale': settings.fontScale, '--ui-font': `"${settings.uiFont}"`, '--chat-font': `"${settings.chatFont}"` } as React.CSSProperties}>
       <TitleBar demo={boot.demo} />
+      <UpdateBanner />
       <div className="shell">
         <Tabs tab={tab} eventsOpen={events} onTab={(t) => { setTab(t); openEvents(false) }} onEvents={() => openEvents(!events)} onSettings={() => setSettingsOpen(true)} />
         <main className="stage">

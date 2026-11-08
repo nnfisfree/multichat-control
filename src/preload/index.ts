@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { HubBatch, NnfApi, Settings } from '../shared/types'
+import type { HubBatch, NnfApi, Settings, UpdateState } from '../shared/types'
 
 const call = (ch: string) => (...args: unknown[]) => ipcRenderer.invoke(ch, ...args)
 
@@ -20,9 +20,25 @@ const api: NnfApi = {
   reconnect: call('reconnect') as NnfApi['reconnect'],
   saveSettings: call('saveSettings') as NnfApi['saveSettings'],
   saveSecret: call('saveSecret') as NnfApi['saveSecret'],
+  alerts: {
+    login: call('alerts:login') as NnfApi['alerts']['login'],
+    logout: call('alerts:logout') as NnfApi['alerts']['logout'],
+    reconnect: call('alerts:reconnect') as NnfApi['alerts']['reconnect']
+  },
   openExternal: call('openExternal') as NnfApi['openExternal'],
   showPanel: call('showPanel') as NnfApi['showPanel'],
   hidePanel: call('hidePanel') as NnfApi['hidePanel'],
+  onUpdate(cb) {
+    const listener = (_e: unknown, s: UpdateState): void => cb(s)
+    ipcRenderer.on('update:state', listener)
+    return () => ipcRenderer.removeListener('update:state', listener)
+  },
+  updates: {
+    check: call('update:check') as NnfApi['updates']['check'],
+    download: call('update:download') as NnfApi['updates']['download'],
+    install: call('update:install') as NnfApi['updates']['install'],
+    openPage: call('update:openPage') as NnfApi['updates']['openPage']
+  },
   onSettings(cb) {
     const listener = (_e: unknown, s: Settings): void => cb(s)
     ipcRenderer.on('settings:changed', listener)

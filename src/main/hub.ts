@@ -1,9 +1,10 @@
 import type { BrowserWindow } from 'electron'
+import type { AlertContext } from './integrations/alerts'
 import type { Connector, ConnectorContext } from './platforms/connector'
 import { eventToMessage } from '../shared/events'
 import { serializeFor } from '../shared/parts'
 import type {
-  ActionResult, ChatMessage, ConnectionState, Emote, HubBatch, HypeTrain, ModerationRequest, Platform, SendResult, StreamEvent
+  ActionResult, AlertSource, ChatMessage, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
 } from '../shared/types'
 import { PLATFORMS } from '../shared/types'
 import { log } from './log'
@@ -12,11 +13,16 @@ import { message } from './net'
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
 const FLUSH_MS = 60
+/** The same sub or raid reported by Twitch and by an alert service lands within this window. */
+const TWIN_MS = 120000
+
+const sameKind = (t: string): string => (t === 'bits' ? 'cheer' : t)
 
 /** Merges connectors into one stream and batches updates so busy chats don't flood the UI. */
 export class Hub {
   private connectors = new Map<Platform, Connector>()
   private statuses = new Map<Platform, ConnectionState>()
+  private integrations = new Map<AlertSource, IntegrationState>()
   private messages: ChatMessage[] = []
   private events: StreamEvent[] = []
   private pronouns: Record<string, string> = {}
@@ -58,21 +64,57 @@ export class Hub {
     this.schedule()
   }
 
+  /**
+   * True when another source already reported this event: Twitch and StreamElements both see
+   * the same sub, for example. Only events from different sources can be twins.
+   */
+  private twin(e: StreamEvent): boolean {
+    const actor = e.actor?.toLowerCase()
+    if (!actor) return false
+    for (let i = this.events.length - 1, n = 0; i >= 0 && n < 800; i--, n++) {
+      const o = this.events[i]
+      if ((o.source ?? '') === (e.source ?? '') || o.platform !== e.platform || sameKind(o.type) !== sameKind(e.type)) continue
+      if (o.actor?.toLowerCase() === actor && Math.abs(o.ts - e.ts) < TWIN_MS) return true
+    }
+    return false
+  }
+
+  private addEvent(e: StreamEvent): void {
+    // History can overlap saved and live events, so each event is shown once.
+    if (this.eventIds.has(e.id) || this.twin(e)) return
+    this.eventIds.add(e.id)
+    this.events.push(e)
+    if (this.events.length > MAX_EVENTS) for (const old of this.events.splice(0, this.events.length - MAX_EVENTS)) this.eventIds.delete(old.id)
+    this.persistSoon()
+    this.pending.events.push(e)
+    this.schedule()
+    const card = eventToMessage(e)
+    if (card) this.addMessage(card)
+  }
+
+  /** How StreamElements and Streamlabs report in. */
+  alertContext(source: AlertSource): AlertContext {
+    return {
+      event: (e) => this.addEvent(e),
+      status: (s) => {
+        const state = { source, ...s }
+        const before = this.integrations.get(source)
+        if (before?.status !== state.status || before?.detail !== state.detail) log(source, `${state.status}${state.detail ? `: ${state.detail}` : ''}`)
+        this.integrations.set(source, state)
+        this.pending.integrations = [...(this.pending.integrations ?? []).filter((x) => x.source !== source), state]
+        this.schedule()
+      },
+      home: () => {
+        const live = (p: Platform): boolean => ['connected', 'waiting', 'reconnecting'].includes(this.statuses.get(p)?.status ?? '')
+        return PLATFORMS.find(live) ?? 'twitch'
+      }
+    }
+  }
+
   context(platform: Platform): ConnectorContext {
     return {
       message: (m) => this.addMessage(m),
-      event: (e) => {
-        // History can overlap saved and live events, so each event is shown once.
-        if (this.eventIds.has(e.id)) return
-        this.eventIds.add(e.id)
-        this.events.push(e)
-        if (this.events.length > MAX_EVENTS) for (const old of this.events.splice(0, this.events.length - MAX_EVENTS)) this.eventIds.delete(old.id)
-        this.persistSoon()
-        this.pending.events.push(e)
-        this.schedule()
-        const card = eventToMessage(e)
-        if (card) this.addMessage(card)
-      },
+      event: (e) => this.addEvent(e),
       deleted: (id) => {
         const m = this.messages.find((x) => x.id === id)
         if (m) m.deleted = true
@@ -124,7 +166,8 @@ export class Hub {
       messages: this.messages,
       events: this.events,
       pronouns: this.pronouns,
-      hype: this.hype
+      hype: this.hype,
+      integrations: [...this.integrations.values()]
     }
   }
 

@@ -1,5 +1,8 @@
 export const APP_NAME = "NoName's Multichat Control"
 
+/** The public GitHub repository that updates come from. */
+export const UPDATE_REPO = 'nnfisfree/multistream-control'
+
 /**
  * Public Twitch Client ID built into release builds. The app must be registered as Public:
  * a Confidential app logs in fine but can never renew, so it drops after about 4 hours.
@@ -11,3 +14,7 @@ export const TWITCH_CLIENT_ID = '4m3nuqjxsh7i77pmmhicljsoomghwd'
 /** Kick needs an exact redirect match, so this port is fixed. Register this URL in the Kick app. */
 export const KICK_REDIRECT_PORT = 53682
 export const KICK_REDIRECT_URI = `http://localhost:${KICK_REDIRECT_PORT}/callback`
+/** StreamElements and Streamlabs need an exact redirect address too. */
+export const ALERTS_REDIRECT_PORT = 53683
+export const STREAMELEMENTS_REDIRECT_URI = `http://localhost:${ALERTS_REDIRECT_PORT}/streamelements`
+export const STREAMLABS_REDIRECT_URI = `http://localhost:${ALERTS_REDIRECT_PORT}/streamlabs`

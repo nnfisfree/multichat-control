@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
-import { EVENT_TYPE_LABEL, PLATFORMS, PLATFORM_LABEL, type EventType, type StreamEvent } from '../../../shared/types'
+import { ALERT_SOURCE_LABEL, EVENT_TYPE_LABEL, PLATFORMS, PLATFORM_LABEL, type EventType, type StreamEvent } from '../../../shared/types'
 import { Icon, PlatformIcon } from '../Icons'
 import { updateSettings, useStore } from '../store'
-import { EventBadge } from './EventCard'
+import { EventBadge, SourceTag } from './EventCard'
 
 const ALL_TYPES = Object.keys(EVENT_TYPE_LABEL) as EventType[]
 
@@ -25,6 +25,7 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
       <button className="event-head" aria-expanded={open} onClick={onToggle}>
         <span className={`pf ${e.platform}`}><PlatformIcon platform={e.platform} size={16} /></span>
         <span className="event-text">{e.actor && <b>{e.actor} </b>}{e.text}{e.subject && <b> {e.subject}</b>}</span>
+        <SourceTag e={e} />
         {e.amount && <span className="amount">{e.amount}</span>}
         <EventBadge e={e} />
         <time className="event-time">{when(e.ts)}</time>
@@ -35,7 +36,8 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
           {e.message && <p className="event-msg">{e.message}</p>}
           <dl>
             <dt>Time</dt><dd>{new Date(e.ts).toLocaleString()}</dd>
-            <dt>Platform</dt><dd>{PLATFORM_LABEL[e.platform]}</dd>
+            {e.type !== 'donation' && <><dt>Platform</dt><dd>{PLATFORM_LABEL[e.platform]}</dd></>}
+            {e.source && <><dt>From</dt><dd>{ALERT_SOURCE_LABEL[e.source]}</dd></>}
             <dt>Type</dt><dd>{EVENT_TYPE_LABEL[e.type]}</dd>
             {details.map(([k, v]) => [<dt key={`k${k}`}>{k}</dt>, <dd key={`v${k}`}>{v}</dd>])}
           </dl>
@@ -91,10 +93,11 @@ export function EventsDrawer({ open, onClose }: { open: boolean; onClose(): void
   const filter = useStore((s) => s.settings!.eventFilter)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
+  const oldest = !!filter.oldestFirst
   const shown = useMemo(() => events
-    .filter((e) => filter.platforms[e.platform] && !filter.hiddenTypes.includes(e.type))
-    .sort((a, b) => b.ts - a.ts)
-    .slice(0, 300), [events, filter])
+    .filter((e) => (e.type === 'donation' || filter.platforms[e.platform]) && !filter.hiddenTypes.includes(e.type))
+    .sort((a, b) => (oldest ? a.ts - b.ts : b.ts - a.ts))
+    .slice(0, 500), [events, filter, oldest])
 
   const toggle = (id: string): void => setExpanded((s) => {
     const n = new Set(s)
@@ -116,6 +119,11 @@ export function EventsDrawer({ open, onClose }: { open: boolean; onClose(): void
               </button>
             ))}
             <TypesMenu hidden={filter.hiddenTypes} onChange={(hiddenTypes) => void updateSettings({ eventFilter: { ...filter, hiddenTypes } })} />
+            <button className="types-btn sort-btn" aria-label={oldest ? 'Oldest first. Click for newest first' : 'Newest first. Click for oldest first'}
+              title={oldest ? 'Showing oldest first' : 'Showing newest first'}
+              onClick={() => void updateSettings({ eventFilter: { ...filter, oldestFirst: !oldest } })}>
+              <span className={oldest ? 'sort-arrow up' : 'sort-arrow'}><Icon.chevron /></span> {oldest ? 'Oldest' : 'Newest'}
+            </button>
           </div>
           <button className="icon-btn" aria-label="Back to chat" title="Back to chat (Esc)" onClick={onClose}><Icon.close /></button>
         </div>

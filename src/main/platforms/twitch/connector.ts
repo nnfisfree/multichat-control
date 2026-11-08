@@ -1,7 +1,7 @@
 import { shell } from 'electron'
 import { TWITCH_CLIENT_ID } from '../../../shared/app-config'
 import type { EmoteLookup } from '../../../shared/parts'
-import type { ActionDef, ActionResult, Badge, Emote, ModerationRequest } from '../../../shared/types'
+import type { ActionDef, ActionResult, Badge, Emote, ModerationRequest, StreamEvent } from '../../../shared/types'
 import { deviceLogin, refreshTokens, validate, type TwitchTokens } from '../../auth/twitch-device'
 import { loadEmoteCache, saveEmoteCache } from '../../emotes/cache'
 import { loadTwitchExtras, toLookup } from '../../emotes/third-party'
@@ -177,15 +177,59 @@ export class TwitchConnector implements Connector {
     this.checkTimer = setInterval(() => void this.check(), CHECK_MS)
     // Ready before the picker is first opened.
     void this.refreshList()
-    void this.loadRecentFollows()
+    void this.loadHistory()
   }
 
-  /** Twitch keeps a follower list, so recent follows can fill the Events list at start. */
-  private async loadRecentFollows(): Promise<void> {
-    const r = await this.helix('GET', '/channels/followers', { broadcaster_id: this.userId, first: '20' }).catch(() => null)
-    for (const f of [...(r?.data ?? [])].reverse()) {
-      const ts = Date.parse(f.followed_at) || Date.now()
-      this.ctx.event({ id: `follow-${f.user_id}-${ts}`, platform: 'twitch', ts, type: 'follow', actor: f.user_name, text: 'followed', details: {}, history: true })
+  /**
+   * Fills the Events list with everything Twitch keeps a date for: follows, past streams, polls,
+   * predictions and the Hype Train record. Twitch keeps no dated history of subs, gifts, Bits,
+   * raids or redemptions; those are saved as they happen and appear here on later starts.
+   */
+  private async loadHistory(): Promise<void> {
+    const b = this.userId
+    const get = (path: string, q: Record<string, string>): Promise<any[]> => this.helix('GET', path, q).then((r) => r?.data ?? [], () => [])
+    const [follows, videos, polls, predictions, hype] = await Promise.all([
+      get('/channels/followers', { broadcaster_id: b, first: '50' }),
+      get('/videos', { user_id: b, type: 'archive', first: '20' }),
+      get('/polls', { broadcaster_id: b, first: '20' }),
+      get('/predictions', { broadcaster_id: b, first: '20' }),
+      get('/hypetrain/status', { broadcaster_id: b })
+    ])
+    const add = (e: Omit<StreamEvent, 'platform' | 'history' | 'details'> & { details?: Record<string, string> }): void => {
+      if (Number.isFinite(e.ts) && e.ts > 0) this.ctx.event({ details: {}, ...e, platform: 'twitch', history: true })
+    }
+    for (const f of follows) {
+      const ts = Date.parse(f.followed_at)
+      add({ id: `follow-${f.user_id}-${ts}`, ts, type: 'follow', actor: f.user_name, text: 'followed' })
+    }
+    for (const v of videos) {
+      const start = Date.parse(v.created_at)
+      add({ id: `stream-${v.stream_id ?? v.id}-on`, ts: start, type: 'stream', text: 'Stream went live', subject: v.title || undefined })
+      const secs = durationSeconds(v.duration)
+      // A VOD of the stream still running has no end yet.
+      if (secs && start + secs * 1000 < Date.now() - 5 * 60000) {
+        add({ id: `stream-${v.stream_id ?? v.id}-off`, ts: start + secs * 1000, type: 'stream', text: 'Stream went offline', details: { Length: v.duration, Views: String(v.view_count ?? '') } })
+      }
+    }
+    for (const p of polls) {
+      const done = p.status !== 'ACTIVE'
+      add({
+        id: `poll-${p.id}`, ts: Date.parse((done && p.ended_at) || p.started_at), type: 'poll', text: `Poll ${done ? 'ended' : 'started'}: ${p.title}`,
+        details: Object.fromEntries((p.choices ?? []).map((c: any) => [c.title, `${c.votes ?? 0} votes`]))
+      })
+    }
+    for (const p of predictions) {
+      const winner = (p.outcomes ?? []).find((o: any) => o.id === p.winning_outcome_id)?.title
+      const done = p.status === 'RESOLVED' || p.status === 'CANCELED'
+      add({
+        id: `prediction-${p.id}`, ts: Date.parse((done && p.ended_at) || p.locked_at || p.created_at), type: 'prediction',
+        text: `Prediction ${p.status === 'CANCELED' ? 'canceled' : done ? 'ended' : 'started'}: ${p.title}`,
+        details: { ...(winner ? { Winner: winner } : {}), ...Object.fromEntries((p.outcomes ?? []).map((o: any) => [o.title, `${o.users ?? 0} people, ${o.channel_points ?? 0} points`])) }
+      })
+    }
+    const best = hype[0]?.all_time_high
+    if (best?.achieved_at) {
+      add({ id: `hype-record-${best.achieved_at}`, ts: Date.parse(best.achieved_at), type: 'hypetrain', text: 'Hype Train record reached', amount: `Level ${best.level}`, details: { Total: String(best.total ?? '') } })
     }
   }
 
@@ -413,4 +457,10 @@ export class TwitchConnector implements Connector {
     if (actionId === 'reward.create') await this.loadManageable()
     return r
   }
+}
+
+/** Twitch writes VOD lengths like "3h2m10s". */
+function durationSeconds(d: string | undefined): number {
+  const m = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(d ?? '')
+  return m ? Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0) : 0
 }

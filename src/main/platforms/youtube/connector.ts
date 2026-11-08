@@ -86,6 +86,19 @@ export class YouTubeConnector implements Connector {
     const me = await this.api('GET', '/channels', { part: 'snippet', mine: 'true' })
     this.channelName = me.items?.[0]?.snippet?.title ?? 'YouTube'
     void this.loop(++this.run)
+    void this.loadPastBroadcasts()
+  }
+
+  /** YouTube keeps no event history outside a live chat, but it does list past broadcasts. */
+  private async loadPastBroadcasts(): Promise<void> {
+    const r = await this.api('GET', '/liveBroadcasts', { part: 'snippet', broadcastStatus: 'completed', broadcastType: 'all', maxResults: '20' }).catch(() => null)
+    for (const b of r?.items ?? []) {
+      const s = b.snippet ?? {}
+      const start = Date.parse(s.actualStartTime)
+      const end = Date.parse(s.actualEndTime)
+      if (start) this.ctx.event({ id: `yt-stream-${b.id}-on`, platform: 'youtube', ts: start, type: 'stream', text: 'Stream went live', subject: s.title || undefined, details: {}, history: true })
+      if (end) this.ctx.event({ id: `yt-stream-${b.id}-off`, platform: 'youtube', ts: end, type: 'stream', text: 'Stream went offline', details: {}, history: true })
+    }
   }
 
   async stop(): Promise<void> {

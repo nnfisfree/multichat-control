@@ -18,14 +18,16 @@ html.nnf-rewards [role="dialog"]:not(.nnf-root), html.nnf-rewards [role="dialog"
 html.nnf-rewards .ReactModalPortal, html.nnf-rewards .ReactModalPortal *,
 html.nnf-rewards [role="tooltip"], html.nnf-rewards [role="tooltip"] * { visibility: visible !important; }
 html.nnf-rewards .ReactModalPortal { position: relative; z-index: 2147483647; }
-html.nnf-rewards, html.nnf-rewards body { background: #18181b !important; overflow: hidden !important; }
+html.nnf-rewards, html.nnf-rewards body { background: #120d5c !important; overflow: hidden !important; }
+html.nnf-rewards .nnf-root, html.nnf-rewards .nnf-fill { background: transparent !important; border-radius: 0 !important; }
+html.nnf-rewards .nnf-root .reward-center__content { background: linear-gradient(135deg, #090b3f, #120d5c 45%, #1e1180 75%, #163a9c) !important; border-radius: 0 !important; }
 html.nnf-rewards .nnf-flat { transform: none !important; overflow: visible !important; contain: none !important; filter: none !important; }
 html.nnf-rewards .nnf-root { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; max-width: none !important; max-height: none !important; margin: 0 !important; transform: none !important; z-index: 2147483646 !important; }
 html.nnf-rewards .nnf-fill { width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; }
 html.nnf-rewards .nnf-root .reward-center-body { max-height: none !important; }
 html.nnf-rewards .nnf-root :focus { outline: none !important; box-shadow: none !important; }
 html.nnf-rewards .rewards-popover-header button[aria-label="Close"] { display: none !important; }
-#nnf-notice { position: fixed; inset: 0; display: grid; place-content: center; gap: 14px; padding: 24px; text-align: center; font: 15px 'Segoe UI', sans-serif; color: #efeff1; background: #18181b; z-index: 2147483647; }
+#nnf-notice { position: fixed; inset: 0; display: grid; place-content: center; gap: 14px; padding: 24px; text-align: center; font: 15px 'Segoe UI', sans-serif; color: #efeff1; background: linear-gradient(135deg, #090b3f, #120d5c 45%, #1e1180 75%, #163a9c); z-index: 2147483647; }
 #nnf-notice button { justify-self: center; padding: 8px 18px; font: 600 14px 'Segoe UI', sans-serif; color: #fff; background: #9147ff; border: 0; border-radius: 8px; cursor: pointer; }
 #nnf-notice button:hover { background: #a970ff; }
 `
@@ -78,10 +80,12 @@ const ISOLATE_JS = `(() => {
     }
   }
   const isolate = (dialog, content) => {
-    if (dialog.classList.contains('nnf-root')) return
-    document.querySelectorAll('.nnf-root, .nnf-flat, .nnf-fill').forEach((e) => e.classList.remove('nnf-root', 'nnf-flat', 'nnf-fill'))
-    dialog.classList.add('nnf-root')
-    for (let n = dialog.parentElement; n && n !== document.body; n = n.parentElement) n.classList.add('nnf-flat')
+    if (!dialog.classList.contains('nnf-root')) {
+      document.querySelectorAll('.nnf-root, .nnf-flat, .nnf-fill').forEach((e) => e.classList.remove('nnf-root', 'nnf-flat', 'nnf-fill'))
+      dialog.classList.add('nnf-root')
+      for (let n = dialog.parentElement; n && n !== document.body; n = n.parentElement) n.classList.add('nnf-flat')
+    }
+    // Twitch rebuilds the popover's inside after opening, so the stretch is reapplied every time.
     // Only the chain down to the rewards content stretches, so no other layer can cover the tiles.
     for (let n = content; n && n !== dialog; n = n.parentElement) n.classList.add('nnf-fill')
   }
@@ -179,7 +183,7 @@ export class TwitchPanel {
     if (!url) return { ok: false, message: 'Log in to Twitch first, so the app knows which channel to open.' }
     if (!this.view) {
       this.view = new WebContentsView({ webPreferences: { session: this.session(), sandbox: true, contextIsolation: true } })
-      this.view.setBackgroundColor('#18181b')
+      this.view.setBackgroundColor('#120d5c')
       const contents = this.view.webContents
       lockToTwitch(contents, this.window)
       contents.on('dom-ready', () => this.isolate(contents))

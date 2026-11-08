@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { chatEventGroup } from '../../shared/events'
-import type { Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, Platform, Settings, StreamEvent, SecretState } from '../../shared/types'
+import type { AlertSource, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
 
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
@@ -19,9 +19,11 @@ export interface State {
   pronouns: Record<string, string>
   hype: HypeTrain | null
   actionsVersion: Partial<Record<Platform, number>>
+  update: UpdateState | null
+  integrations: Partial<Record<AlertSource, IntegrationState>>
 }
 
-let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {} }
+let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {} }
 const listeners = new Set<() => void>()
 let eventsOpen = false
 /** While the user reads back through chat, old rows stay so their scroll position holds. */
@@ -56,17 +58,20 @@ function apply(b: HubBatch): void {
   const hype = b.hype === undefined ? state.hype : b.hype
   let actionsVersion = state.actionsVersion
   for (const p of b.actionsChanged ?? []) actionsVersion = { ...actionsVersion, [p]: (actionsVersion[p] ?? 0) + 1 }
-  set({ messages, events, statuses, pronouns, hype, actionsVersion, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.length })
+  const integrations = b.integrations?.length ? { ...state.integrations, ...Object.fromEntries(b.integrations.map((i) => [i.source, i])) } : state.integrations
+  set({ messages, events, statuses, pronouns, hype, actionsVersion, integrations, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.filter((e) => !e.history).length })
 }
 
 async function init(): Promise<void> {
   window.nnf.onBatch(apply)
   window.nnf.onSettings((settings) => set({ settings }))
+  window.nnf.onUpdate((update) => set({ update }))
   const boot = await window.nnf.bootstrap()
   snapshotIds = new Set([...boot.messages, ...boot.events].map((x) => x.id))
   set({
-    ready: true, boot, settings: boot.settings, secrets: boot.secrets, messages: boot.messages, events: boot.events, pronouns: boot.pronouns, hype: boot.hype,
-    statuses: Object.fromEntries(boot.statuses.map((s) => [s.platform, s]))
+    ready: true, boot, settings: boot.settings, secrets: boot.secrets, messages: boot.messages, events: boot.events, pronouns: boot.pronouns, hype: boot.hype, update: boot.update,
+    statuses: Object.fromEntries(boot.statuses.map((s) => [s.platform, s])),
+    integrations: Object.fromEntries(boot.integrations.map((i) => [i.source, i]))
   })
 }
 
@@ -103,7 +108,8 @@ export function useFiltered(items: ChatMessage[], tab: Platform | 'all', on: Rec
   return useMemo(() => items.filter((m) => {
     if (tab !== 'all' && m.platform !== tab) return false
     const group = m.event && chatEventGroup(m.event.type)
-    return !group || on[group]
+    // Groups added after a settings file was saved start on.
+    return !group || (on[group] ?? true)
   }), [items, tab, on])
 }
 
