@@ -14,7 +14,7 @@ A single portable app with nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control showing live chat, the events drop-down, the emote picker, sending a message and quick actions" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: platforms connecting, merged live chat, the connections menu, recent events with a test redeem and the Clear menu, chat from a past stream, the Commands list and the emote picker" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
