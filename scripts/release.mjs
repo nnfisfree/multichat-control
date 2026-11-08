@@ -36,8 +36,21 @@ if (!existsSync(join(root, '.env.local'))) console.warn('  Note: no .env.local, 
 const token = /^password=(.*)$/m.exec(execSync('git credential fill', { input: 'protocol=https\nhost=github.com\n\n', encoding: 'utf8', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }))?.[1]
 if (!token) stop('No GitHub login found. Push once with git to sign in.')
 const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'multichat-release' }
+// The build takes minutes, and GitHub drops idle connections meanwhile, so a dropped
+// connection is retried. A request that never got an answer is safe to send again.
+const send = async (url, init) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(url, init)
+    } catch (err) {
+      if (attempt >= 4) throw err
+      console.log(`  connection dropped (${err.cause?.code ?? err.message}), retrying…`)
+      await new Promise((r) => setTimeout(r, 2000 * attempt))
+    }
+  }
+}
 const api = async (method, path, body) => {
-  const r = await fetch(`https://api.github.com/repos/${repo}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined })
+  const r = await send(`https://api.github.com/repos/${repo}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined })
   return { status: r.status, json: await r.json().catch(() => null) }
 }
 if ((await api('GET', `/releases/tags/${tag}`)).status === 200) stop(`${tag} already exists. Raise the version in package.json first.`)
@@ -84,7 +97,7 @@ const made = await api('POST', '/releases', {
 if (made.status !== 201) stop(`GitHub refused the release: ${made.json?.message}`)
 for (const f of files) {
   const data = readFileSync(join(root, 'release', f))
-  const r = await fetch(`https://uploads.github.com/repos/${repo}/releases/${made.json.id}/assets?name=${encodeURIComponent(f)}`, {
+  const r = await send(`https://uploads.github.com/repos/${repo}/releases/${made.json.id}/assets?name=${encodeURIComponent(f)}`, {
     method: 'POST', headers: { ...headers, 'Content-Type': 'application/octet-stream', 'Content-Length': String(data.length) }, body: data
   })
   const asset = await r.json()
