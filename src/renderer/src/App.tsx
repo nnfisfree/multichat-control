@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX, type MouseEvent } from 'react'
+import { useCallback, useEffect, useState, type JSX, type MouseEvent, useMemo } from 'react'
 import type { ActionResult, ChatMessage } from '../../shared/types'
 import { ActionDeck } from './components/ActionDeck'
 import { ChatList } from './components/ChatList'
@@ -32,7 +32,9 @@ function Main(): JSX.Element {
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
   const [insert, setInsert] = useState<{ text: string; n: number } | null>(null)
   const [toast, setToast] = useState<ActionResult | null>(null)
-  const shown = useFiltered(messages, tab, settings.chatEvents)
+  const history = useStore((s) => s.history)
+  const all = useMemo(() => (history.length ? [...history, ...messages] : messages), [history, messages])
+  const shown = useFiltered(all, tab, settings.chatEvents)
 
   const openEvents = useCallback((open: boolean) => {
     setEvents(open)

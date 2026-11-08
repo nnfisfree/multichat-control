@@ -73,7 +73,7 @@ try {
   asar.extractAll(join(work, 'resources', 'app.asar'), join(work, '_app'))
   const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]))
   const all = walk(work).filter((f) => !f.endsWith('app.asar'))
-  const badPath = /nnf-data|\.env|screenshots|e2e|\.log$|secrets\.json|settings\.json|cookies|emote-cache|[\\/]tests?[\\/]/i
+  const badPath = /user-data|nnf-data|\.env|screenshots|e2e|\.log$|secrets\.json|settings\.json|cookies|emote-cache|[\\/]tests?[\\/]/i
   const forbidden = all.map((f) => relative(work, f)).filter((f) => badPath.test(f))
   if (forbidden.length) stop(`Files that must not ship:\n  ${forbidden.slice(0, 10).join('\n  ')}`)
   const needles = [homedir(), homedir().replace(/\\/g, '/'), root, root.replace(/\\/g, '/'), `\\Users\\${userInfo().username}\\`].map((s) => s.toLowerCase())

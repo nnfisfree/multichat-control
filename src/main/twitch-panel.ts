@@ -35,12 +35,13 @@ html.nnf-rewards .rewards-popover-header button[aria-label="Close"] { display: n
 /**
  * Opens the popover only when the panel opens, never while the user is busy in it, so the app
  * can't fight Twitch over clicks. If Twitch closes the popover, an Open button brings it back.
- * Signed out, the whole page shows, because Twitch's sign-in lives there.
+ * Signed out, Twitch still offers a reduced popover without custom Power-ups or points, so the
+ * panel asks for a sign-in instead. The app tells the page whether its session is signed in.
  */
 const ISOLATE_JS = `(() => {
   if (window.__nnfPanel) return
   const root = document.documentElement
-  const state = window.__nnfPanel = { loadedAt: Date.now(), autoUntil: Date.now() + 10000, lastInput: 0, lastClick: 0 }
+  const state = window.__nnfPanel = { loadedAt: Date.now(), autoUntil: Date.now() + 10000, lastInput: 0, lastClick: 0, signedIn: null, hadDialog: false, missingSince: 0, reloading: false }
   const input = () => { state.lastInput = Date.now() }
   document.addEventListener('pointerdown', input, true)
   document.addEventListener('keydown', input, true)
@@ -58,7 +59,9 @@ const ISOLATE_JS = `(() => {
     button.click()
   }
   state.open = () => { state.autoUntil = Date.now() + 8000 }
-  const notice = (text, withButton) => {
+  const signIn = { label: 'Sign in to Twitch', run: () => window.open('https://www.twitch.tv/login', '_blank') }
+  const reopen = { label: 'Open Rewards & Power-ups', run: () => { state.lastClick = 0; state.autoUntil = Date.now() + 5000; openPopover() } }
+  const notice = (text, action) => {
     let box = document.getElementById('nnf-notice')
     if (!text) return box && box.remove()
     if (!box) {
@@ -72,10 +75,10 @@ const ISOLATE_JS = `(() => {
     const p = document.createElement('div')
     p.textContent = text
     box.appendChild(p)
-    if (withButton) {
+    if (action) {
       const b = document.createElement('button')
-      b.textContent = 'Open Rewards & Power-ups'
-      b.addEventListener('click', () => { state.lastClick = 0; state.autoUntil = Date.now() + 5000; openPopover() })
+      b.textContent = action.label
+      b.addEventListener('click', action.run)
       box.appendChild(b)
     }
   }
@@ -90,12 +93,31 @@ const ISOLATE_JS = `(() => {
     for (let n = content; n && n !== dialog; n = n.parentElement) n.classList.add('nnf-fill')
   }
   const tick = () => {
+    if (state.signedIn === false) {
+      root.classList.remove('nnf-rewards')
+      notice('Sign in to Twitch here once to see your custom Power-ups and your points. You stay signed in.', signIn)
+      return
+    }
     const content = document.querySelector('.reward-center__content')
     const dialog = content && content.closest('[role="dialog"]')
     if (dialog) {
       isolate(dialog, content)
       root.classList.add('nnf-rewards')
       notice(null)
+      state.hadDialog = true
+      state.missingSince = 0
+      return
+    }
+    // Twitch closes the popover after a redeem, and reopening it can leave it blank, so the page
+    // reloads and opens straight back on the main menu, ready for the next one.
+    if (state.reloading) return
+    if (state.hadDialog) {
+      state.missingSince = state.missingSince || Date.now()
+      if (Date.now() - state.missingSince < 800) return
+      state.reloading = true
+      root.classList.remove('nnf-rewards')
+      notice('Refreshing…')
+      setTimeout(() => location.reload(), 300)
       return
     }
     const button = balance()
@@ -103,15 +125,15 @@ const ISOLATE_JS = `(() => {
       // Signed out, or Twitch is still loading: after a moment, show the page so sign-in is possible.
       const consent = document.querySelector('[data-a-target="consent-banner-accept"]')
       if (consent || Date.now() - state.loadedAt > 6000) { root.classList.remove('nnf-rewards'); notice(null) }
-      else notice('Loading Twitch…', false)
+      else notice('Loading Twitch…')
       return
     }
     root.classList.remove('nnf-rewards')
     const userBusy = Date.now() - state.lastInput < 1500
     if (Date.now() < state.autoUntil && !userBusy) {
-      notice('Opening Rewards & Power-ups…', false)
+      notice('Opening Rewards & Power-ups…')
       openPopover()
-    } else notice('Rewards & Power-ups closed.', true)
+    } else notice('Rewards & Power-ups closed.', reopen)
   }
   setInterval(tick, 400)
   tick()
@@ -153,6 +175,10 @@ export class TwitchPanel {
   private view: WebContentsView | null = null
   private ses: Session | null = null
   private shown = false
+  private popups = new Set<BrowserWindow>()
+  private reloadTimer: NodeJS.Timeout | undefined
+  private wasSignedIn: boolean | undefined
+  private listener: ((signedIn: boolean) => void) | null = null
 
   constructor(private window: () => BrowserWindow | null, private channel: () => string | undefined) {}
 
@@ -167,13 +193,39 @@ export class TwitchPanel {
       this.ses.setUserAgent(USER_AGENT(this.ses.getUserAgent()))
       // The panel needs no device access, so everything is refused.
       this.ses.setPermissionRequestHandler((_c, _p, done) => done(false))
+      // Signing in or out on Twitch changes this cookie: close the sign-in window and reload.
+      void this.signedIn().then((yes) => { this.wasSignedIn ??= yes })
+      this.ses.cookies.on('changed', (_e, cookie) => {
+        if (cookie.name !== 'auth-token' || !/twitch\.tv$/.test(cookie.domain ?? '')) return
+        clearTimeout(this.reloadTimer)
+        // Twitch rewrites this cookie on every page load, so only a real sign-in or sign-out
+        // reloads the panel. Reloading on every rewrite would loop forever.
+        this.reloadTimer = setTimeout(() => void this.signedIn().then((now) => {
+          if (now === this.wasSignedIn) return
+          this.wasSignedIn = now
+          this.listener?.(now)
+          for (const w of this.popups) if (!w.isDestroyed()) w.close()
+          this.popups.clear()
+          const url = this.url()
+          if (this.view && url) void this.view.webContents.loadURL(url)
+        }), 1500)
+      })
     }
     return this.ses
   }
 
+  /** Twitch's sign-in cookie can't be read by the page, but the app can see it. */
+  private async signedIn(): Promise<boolean> {
+    const found = await this.session().cookies.get({ url: 'https://www.twitch.tv', name: 'auth-token' }).catch(() => [])
+    return found.some((c) => !!c.value)
+  }
+
   private isolate(contents: WebContents): void {
     void contents.insertCSS(ISOLATE_CSS).catch(() => {})
-    void contents.executeJavaScript(ISOLATE_JS).catch(() => {})
+    void contents.executeJavaScript(ISOLATE_JS)
+      .then(() => this.signedIn())
+      .then((yes) => contents.executeJavaScript(`window.__nnfPanel && (window.__nnfPanel.signedIn = ${yes})`))
+      .catch(() => {})
   }
 
   show(bounds: PanelBounds): ActionResult {
@@ -187,6 +239,10 @@ export class TwitchPanel {
       const contents = this.view.webContents
       lockToTwitch(contents, this.window)
       contents.on('dom-ready', () => this.isolate(contents))
+      contents.on('did-create-window', (w) => {
+        this.popups.add(w)
+        w.on('closed', () => this.popups.delete(w))
+      })
       void contents.loadURL(url)
     }
     this.view.setBounds(bounds)
@@ -197,6 +253,15 @@ export class TwitchPanel {
     }
     this.shown = true
     return { ok: true }
+  }
+
+  /** Reports whether the panel is signed in to Twitch, now and whenever it changes. */
+  watch(cb: (signedIn: boolean) => void): void {
+    this.listener = cb
+    void this.signedIn().then((yes) => {
+      this.wasSignedIn ??= yes
+      cb(yes)
+    })
   }
 
   hide(): void {

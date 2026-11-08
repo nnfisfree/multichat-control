@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { ALERT_SOURCE_LABEL, EVENT_TYPE_LABEL, PLATFORMS, PLATFORM_LABEL, type EventType, type StreamEvent } from '../../../shared/types'
 import { Icon, PlatformIcon } from '../Icons'
-import { updateSettings, useStore } from '../store'
+import { removeEvents, updateSettings, useStore } from '../store'
 import { EventBadge, SourceTag } from './EventCard'
 
 const ALL_TYPES = Object.keys(EVENT_TYPE_LABEL) as EventType[]
@@ -13,7 +13,7 @@ function when(ts: number): string {
   return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`
 }
 
-function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onToggle(): void }): JSX.Element {
+function EventRow({ e, open, own, onToggle }: { e: StreamEvent; open: boolean; own: boolean; onToggle(): void }): JSX.Element {
   const [note, setNote] = useState('')
   const details = Object.entries(e.details).filter(([, v]) => v)
   const run = async (actionId: string, args: Record<string, string>): Promise<void> => {
@@ -26,6 +26,7 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
         <span className={`pf ${e.platform}`}><PlatformIcon platform={e.platform} size={16} /></span>
         <span className="event-text">{e.actor && <b>{e.actor} </b>}{e.text}{e.subject && <b> {e.subject}</b>}</span>
         <SourceTag e={e} />
+        {own && <span className="test-tag" title="You did this yourself, so it counts as a test">TEST</span>}
         {e.amount && <span className="amount">{e.amount}</span>}
         <EventBadge e={e} />
         <time className="event-time">{when(e.ts)}</time>
@@ -41,6 +42,9 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
             <dt>Type</dt><dd>{EVENT_TYPE_LABEL[e.type]}</dd>
             {details.map(([k, v]) => [<dt key={`k${k}`}>{k}</dt>, <dd key={`v${k}`}>{v}</dd>])}
           </dl>
+          <div className="event-actions">
+            <button className="btn ghost sm" onClick={() => void removeEvents([e.id])}><Icon.trash /> Remove</button>
+          </div>
           {e.actions && (
             <div className="event-actions">
               {e.actions.map((a) => <button key={a.actionId} className={`btn ${a.tone ?? ''}`} onClick={() => void run(a.actionId, a.args)}>{a.label}</button>)}
@@ -50,6 +54,51 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
         </div>
       )}
     </li>
+  )
+}
+
+/** Events the streamer triggered on their own channel, such as redeeming their own reward. */
+function useOwnCheck(): (e: StreamEvent) => boolean {
+  const statuses = useStore((s) => s.statuses)
+  return (e) => {
+    const me = statuses[e.platform]?.account?.toLowerCase()
+    return !!me && !!e.actor && e.actor.toLowerCase() === me
+  }
+}
+
+/** Clears test events, or everything after a second click. Removed events never come back. */
+function ClearMenu({ testIds, allIds }: { testIds: string[]; allIds: string[] }): JSX.Element {
+  const [open, setOpen] = useState(false)
+  const [confirmAll, setConfirmAll] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return setConfirmAll(false)
+    const close = (e: MouseEvent): void => { if (!box.current?.contains(e.target as Node)) setOpen(false) }
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [open])
+  const clear = (ids: string[]): void => {
+    setOpen(false)
+    void removeEvents(ids)
+  }
+  return (
+    <div className="types" ref={box}>
+      <button className="types-btn" aria-expanded={open} aria-haspopup="true" title="Clear events" onClick={() => setOpen(!open)}>
+        <Icon.trash /> Clear <Icon.chevron />
+      </button>
+      {open && (
+        <div className="popover types-menu clear-menu" role="menu" aria-label="Clear events">
+          <button role="menuitem" disabled={!testIds.length} onClick={() => clear(testIds)}>
+            Clear my test events{testIds.length ? ` (${testIds.length})` : ''}
+            <small>Only what you did yourself, like redeeming your own rewards</small>
+          </button>
+          <button role="menuitem" className={confirmAll ? 'danger' : ''} disabled={!allIds.length} onClick={() => (confirmAll ? clear(allIds) : setConfirmAll(true))}>
+            {confirmAll ? 'Click again to clear everything' : 'Clear all events…'}
+            <small>{confirmAll ? "This can't be undone" : 'Empties the whole list. New events keep arriving'}</small>
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -92,6 +141,8 @@ export function EventsDrawer({ open, onClose }: { open: boolean; onClose(): void
   const events = useStore((s) => s.events)
   const filter = useStore((s) => s.settings!.eventFilter)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const isOwn = useOwnCheck()
+  const testIds = useMemo(() => events.filter(isOwn).map((e) => e.id), [events, isOwn])
 
   const oldest = !!filter.oldestFirst
   const shown = useMemo(() => events
@@ -124,12 +175,13 @@ export function EventsDrawer({ open, onClose }: { open: boolean; onClose(): void
               onClick={() => void updateSettings({ eventFilter: { ...filter, oldestFirst: !oldest } })}>
               <span className={oldest ? 'sort-arrow up' : 'sort-arrow'}><Icon.chevron /></span> {oldest ? 'Oldest' : 'Newest'}
             </button>
+            <ClearMenu testIds={testIds} allIds={events.map((e) => e.id)} />
           </div>
           <button className="icon-btn" aria-label="Back to chat" title="Back to chat (Esc)" onClick={onClose}><Icon.close /></button>
         </div>
         <ul className="event-list">
           {shown.length === 0 && <li className="empty">{events.length ? 'No events match these filters.' : 'No events yet.'}</li>}
-          {shown.map((e) => <EventRow key={e.id} e={e} open={expanded.has(e.id)} onToggle={() => toggle(e.id)} />)}
+          {shown.map((e) => <EventRow key={e.id} e={e} own={isOwn(e)} open={expanded.has(e.id)} onToggle={() => toggle(e.id)} />)}
         </ul>
       </div>
     </section>

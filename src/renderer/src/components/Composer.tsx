@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type JSX, type KeyboardEvent } from 'react'
 import { PLATFORMS, PLATFORM_LABEL, type ChatMessage, type Platform, type SendResult } from '../../../shared/types'
 import { composerPlaceholder, plainText } from '../../../shared/parts'
+import { COMMANDS, findCommand, matchCommands } from '../commands'
 import { Icon, PlatformIcon } from '../Icons'
 import { connected, updateSettings, useStore } from '../store'
 import type { Tab } from './Tabs'
 
-export type Pop = 'emotes' | 'actions' | 'rewards' | 'menu' | null
+export type Pop = 'emotes' | 'actions' | 'rewards' | 'menu' | 'commands' | null
 
 interface Props {
   tab: Tab
@@ -23,6 +24,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
   const [text, setText] = useState('')
   const [results, setResults] = useState<SendResult[]>([])
   const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
   const statuses = useStore((s) => s.statuses)
   const targets = useStore((s) => s.settings!.sendTargets)
 
@@ -50,6 +52,12 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
   }, [replyTo])
 
   useEffect(() => {
+    if (!note) return
+    const t = setTimeout(() => setNote(null), 5000)
+    return () => clearTimeout(t)
+  }, [note])
+
+  useEffect(() => {
     if (!results.length) return
     const t = setTimeout(() => setResults([]), results.some((r) => !r.ok) ? 9000 : 2500)
     return () => clearTimeout(t)
@@ -57,6 +65,15 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
 
   const send = async (): Promise<void> => {
     const body = text.trim()
+    // The app's own commands run here and never reach a platform.
+    const command = findCommand(body)
+    if (command) {
+      setText('')
+      setPop(null)
+      setNote(await command.run().catch((e) => String(e?.message ?? e)))
+      input.current?.focus()
+      return
+    }
     if (!body || busy || !destinations.length) return
     setBusy(true)
     const r = await window.nnf.send(destinations, body, replyTo ? { platform: replyTo.platform, messageId: replyTo.id } : undefined)
@@ -77,6 +94,14 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     } else if (e.key === 'Escape' && replyTo) clearReply()
   }
 
+  const pick = (name: string): void => {
+    setText(`${name} `)
+    setPop(null)
+    requestAnimationFrame(() => input.current?.focus())
+  }
+  const suggestions = matchCommands(text)
+  const commandList = pop === 'commands' ? COMMANDS : suggestions
+
   const placeholder = replyTo ? `Reply to ${replyTo.author.name}…`
     : composerPlaceholder(tab, destinations, PLATFORMS.some((p) => connected(statuses, p)))
 
@@ -88,6 +113,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
           <button className="icon-btn" aria-label="Cancel reply" onClick={clearReply}><Icon.close /></button>
         </div>
       )}
+      {note && <div className="send-results" role="status"><span className="chip good">{note}</span></div>}
       {results.length > 0 && (
         <div className="send-results" role="status">
           {results.map((r) => (
@@ -111,9 +137,22 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
           </div>
         )}
         <button className={pop === 'emotes' ? 'icon-btn on' : 'icon-btn'} aria-label="Emotes" title="Emotes" onClick={() => setPop(pop === 'emotes' ? null : 'emotes')}><Icon.smile /></button>
+        <button className={pop === 'commands' ? 'icon-btn on' : 'icon-btn'} aria-label="Commands" title="Commands" onClick={() => setPop(pop === 'commands' ? null : 'commands')}><Icon.slash /></button>
         <button className={pop === 'actions' ? 'icon-btn on' : 'icon-btn'} aria-label="Actions" title="Quick actions" onClick={() => setPop(pop === 'actions' ? null : 'actions')}><Icon.bolt /></button>
-        <button className="send" aria-label="Send" disabled={!text.trim() || busy || !destinations.length} onClick={() => void send()}><Icon.send /></button>
+        <button className="send" aria-label="Send" disabled={!text.trim() || (!findCommand(text) && (busy || !destinations.length))} onClick={() => void send()}><Icon.send /></button>
       </div>
+      {commandList.length > 0 && (
+        <div className="popover commands" role="menu" aria-label="Commands">
+          <h3>Commands</h3>
+          <p className="commands-hint">Type them in the message box. They run in this app and are never sent to your chat.</p>
+          {commandList.map((c) => (
+            <button key={c.name} role="menuitem" onClick={() => pick(c.name)}>
+              <code>{c.name}</code>
+              <small>{c.description}</small>
+            </button>
+          ))}
+        </div>
+      )}
       {pop === 'menu' && (
         <div className="popover menu" role="menu">
           <button role="menuitem" onClick={() => { setPop(null); onSettings() }}>Settings &amp; accounts</button>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { chatEventGroup } from '../../shared/events'
-import type { AlertSource, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
+import type { AlertSource, HistorySession, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
 
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
@@ -21,9 +21,15 @@ export interface State {
   actionsVersion: Partial<Record<Platform, number>>
   update: UpdateState | null
   integrations: Partial<Record<AlertSource, IntegrationState>>
+  panelSignedIn: boolean | null
+  /** Chat from past streams, oldest first, with a divider before each stream. */
+  history: ChatMessage[]
+  historySessions: HistorySession[]
+  /** How many of the saved streams are shown, counted from the newest. */
+  historyShown: number
 }
 
-let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {} }
+let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0 }
 const listeners = new Set<() => void>()
 let eventsOpen = false
 /** While the user reads back through chat, old rows stay so their scroll position holds. */
@@ -66,13 +72,52 @@ async function init(): Promise<void> {
   window.nnf.onBatch(apply)
   window.nnf.onSettings((settings) => set({ settings }))
   window.nnf.onUpdate((update) => set({ update }))
+  window.nnf.onPanelSignedIn((panelSignedIn) => set({ panelSignedIn }))
   const boot = await window.nnf.bootstrap()
   snapshotIds = new Set([...boot.messages, ...boot.events].map((x) => x.id))
   set({
     ready: true, boot, settings: boot.settings, secrets: boot.secrets, messages: boot.messages, events: boot.events, pronouns: boot.pronouns, hype: boot.hype, update: boot.update,
     statuses: Object.fromEntries(boot.statuses.map((s) => [s.platform, s])),
-    integrations: Object.fromEntries(boot.integrations.map((i) => [i.source, i]))
+    integrations: Object.fromEntries(boot.integrations.map((i) => [i.source, i])),
+    panelSignedIn: boot.panelSignedIn
   })
+  // The latest past stream shows above this one; older ones load on request.
+  const sessions = await window.nnf.history.sessions().catch((): HistorySession[] => [])
+  set({ historySessions: sessions })
+  if (sessions.length) await loadOlderHistory()
+}
+
+const when = (ts: number): string => new Date(ts).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const divider = (id: string, ts: number, text: string): ChatMessage => ({
+  id: `divider-${id}`, platform: 'twitch', ts, kind: 'system', divider: text, author: { id: '', name: '', badges: [] }, parts: []
+})
+
+/** Shows the stream before the ones already shown. The first call shows the latest stream. */
+export async function loadOlderHistory(): Promise<void> {
+  const sessions = state.historySessions
+  const next = sessions[sessions.length - 1 - state.historyShown]
+  if (!next) return
+  const live = new Set(state.messages.map((m) => m.id))
+  const msgs = (await window.nnf.history.load(next.id)).filter((m) => !live.has(m.id))
+  const count = `${next.count.toLocaleString()} message${next.count === 1 ? '' : 's'}`
+  const rows = [divider(next.id, next.start, `Stream of ${when(next.start)} · ${count}`), ...msgs]
+  // The first stream shown also gets a line marking where this session starts.
+  const now = state.historyShown === 0 ? [divider('now', Date.now(), 'This session')] : []
+  set({ history: [...rows, ...state.history, ...now], historyShown: state.historyShown + 1 })
+}
+
+/** Clears chat here and deletes the saved history of past streams. Viewers' chat isn't touched. */
+export async function clearHistory(): Promise<void> {
+  await window.nnf.history.clear()
+  set({ history: [], historySessions: [], historyShown: 0, messages: [] })
+}
+
+/** Removes events for good, here and in the saved list. */
+export async function removeEvents(ids: string[]): Promise<void> {
+  if (!ids.length) return
+  await window.nnf.removeEvents(ids)
+  const gone = new Set(ids)
+  set({ events: state.events.filter((e) => !gone.has(e.id)) })
 }
 
 export const setEventsOpen = (open: boolean): void => {
@@ -106,6 +151,7 @@ export function useInit(): void {
 
 export function useFiltered(items: ChatMessage[], tab: Platform | 'all', on: Record<ChatEventGroup, boolean>): ChatMessage[] {
   return useMemo(() => items.filter((m) => {
+    if (m.divider) return true
     if (tab !== 'all' && m.platform !== tab) return false
     const group = m.event && chatEventGroup(m.event.type)
     // Groups added after a settings file was saved start on.

@@ -27,3 +27,25 @@ export function saveEvents(events: StreamEvent[]): void {
     // Only a convenience: live events still work without it.
   }
 }
+
+const removedFile = (): string => join(app.getPath('userData'), 'events-removed.json')
+const KEEP_REMOVED = 5000
+
+/** Events the user removed, so history reloaded from the platforms doesn't bring them back. */
+export function loadRemoved(): string[] {
+  try {
+    const list = JSON.parse(readFileSync(removedFile(), 'utf8'))
+    return Array.isArray(list) ? list.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+export function saveRemoved(ids: string[]): void {
+  try {
+    writeFileSync(`${removedFile()}.tmp`, JSON.stringify(ids.slice(-KEEP_REMOVED)))
+    renameSync(`${removedFile()}.tmp`, removedFile())
+  } catch {
+    // Only a convenience: the worst case is a removed history row coming back.
+  }
+}

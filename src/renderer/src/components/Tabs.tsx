@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { PLATFORMS, PLATFORM_LABEL, type ConnectionState, type Platform } from '../../../shared/types'
 import { Icon, PlatformIcon } from '../Icons'
 import { useStore } from '../store'
+import { ConnectBar, ConnectionsMenu } from './Connections'
 
 export type Tab = Platform | 'all'
 
@@ -47,7 +48,8 @@ export function Tabs({ tab, eventsOpen, onTab, onEvents, onSettings }: Props): J
         {unread > 0 && <span className="count">{unread > 99 ? '99+' : unread}</span>}
         <span className={eventsOpen ? 'chev open' : 'chev'}><Icon.chevron /></span>
       </button>
-      <div className="grow" />
+      <div className="grow connect-slot"><ConnectBar /></div>
+      <ConnectionsMenu />
       <button className="icon-btn" aria-label="Settings" title="Settings" onClick={onSettings}><Icon.gear /></button>
     </nav>
   )

@@ -31,6 +31,9 @@ export class Hub {
   private timer: NodeJS.Timeout | null = null
   private window: BrowserWindow | null = null
   private eventIds = new Set<string>()
+  private recorder: { add(m: ChatMessage): void; deleted(id: string): void; purged(platform: Platform, userId?: string): void } | null = null
+  private removed = new Set<string>()
+  private persistRemoved: ((ids: string[]) => void) | null = null
   private persist: ((events: StreamEvent[]) => void) | null = null
   private persistTimer: NodeJS.Timeout | null = null
 
@@ -49,6 +52,27 @@ export class Hub {
     this.eventIds = new Set(this.events.map((e) => e.id))
   }
 
+  /** Events the user removed earlier. They stay out even when history reloads them. */
+  restoreRemoved(ids: string[], persist: (ids: string[]) => void): void {
+    this.removed = new Set(ids)
+    this.persistRemoved = persist
+    this.events = this.events.filter((e) => !this.removed.has(e.id))
+    this.eventIds = new Set(this.events.map((e) => e.id))
+  }
+
+  /** Removes events from the list for good, such as test redemptions. */
+  removeEvents(ids: string[]): void {
+    const gone = new Set(ids.filter((id) => typeof id === 'string'))
+    if (!gone.size) return
+    for (const id of gone) {
+      this.removed.add(id)
+      this.eventIds.delete(id)
+    }
+    this.events = this.events.filter((e) => !gone.has(e.id))
+    this.persistRemoved?.([...this.removed])
+    this.persistSoon()
+  }
+
   private persistSoon(): void {
     if (!this.persist) return
     this.persistTimer ??= setTimeout(() => {
@@ -57,7 +81,18 @@ export class Hub {
     }, 3000)
   }
 
+  /** Saves chat for the history of past streams. */
+  record(recorder: { add(m: ChatMessage): void; deleted(id: string): void; purged(platform: Platform, userId?: string): void }): void {
+    this.recorder = recorder
+  }
+
+  /** Empties the chat kept in memory, as part of clearing the history. */
+  clearMessages(): void {
+    this.messages = []
+  }
+
   private addMessage(m: ChatMessage): void {
+    this.recorder?.add(m)
     this.messages.push(m)
     if (this.messages.length > MAX_MESSAGES) this.messages.splice(0, this.messages.length - MAX_MESSAGES)
     this.pending.messages.push(m)
@@ -81,7 +116,7 @@ export class Hub {
 
   private addEvent(e: StreamEvent): void {
     // History can overlap saved and live events, so each event is shown once.
-    if (this.eventIds.has(e.id) || this.twin(e)) return
+    if (this.eventIds.has(e.id) || this.removed.has(e.id) || this.twin(e)) return
     this.eventIds.add(e.id)
     this.events.push(e)
     if (this.events.length > MAX_EVENTS) for (const old of this.events.splice(0, this.events.length - MAX_EVENTS)) this.eventIds.delete(old.id)
@@ -116,12 +151,14 @@ export class Hub {
       message: (m) => this.addMessage(m),
       event: (e) => this.addEvent(e),
       deleted: (id) => {
+        this.recorder?.deleted(id)
         const m = this.messages.find((x) => x.id === id)
         if (m) m.deleted = true
         this.pending.deleted.push(id)
         this.schedule()
       },
       purged: (userId) => {
+        this.recorder?.purged(platform, userId)
         for (const m of this.messages) if (m.platform === platform && (!userId || m.author.id === userId)) m.deleted = true
         this.pending.purged.push({ platform, userId })
         this.schedule()

@@ -28,7 +28,7 @@ export function linkify(text: string): MessagePart[] {
   return out
 }
 
-export type EmoteLookup = ReadonlyMap<string, { name: string; url: string }>
+export type EmoteLookup = ReadonlyMap<string, { name: string; url: string; overlay?: boolean }>
 
 function emoteWords(text: string, emotes: EmoteLookup): MessagePart[] {
   if (!emotes.size) return text ? [{ type: 'text', text }] : []
@@ -39,7 +39,7 @@ function emoteWords(text: string, emotes: EmoteLookup): MessagePart[] {
     if (hit) {
       if (buf) out.push({ type: 'text', text: buf })
       buf = ''
-      out.push({ type: 'emote', name: hit.name, url: hit.url })
+      out.push(hit.overlay ? { type: 'emote', name: hit.name, url: hit.url, overlay: true } : { type: 'emote', name: hit.name, url: hit.url })
     } else buf += tok
   }
   if (buf) out.push({ type: 'text', text: buf })

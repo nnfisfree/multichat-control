@@ -40,7 +40,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 ### 💬 Unified chat
 - **All, Twitch, YouTube and Kick** tabs
 - On All, choose exactly where a message goes
-- Each platform reports sent or failed on its own
+- **Chat from your last 5 streams**, so you can read what you missed
 - Pauses when you scroll, with a new-message count
 - Reply, delete, time out, ban or shout out from any message
 
@@ -51,6 +51,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - Subs, gifts, raids and redemptions as coloured cards in chat
 - **Recent events from every platform, in time order**, kept between sessions
 - Filter by platform and type, sort newest or oldest first
+- Your own test redeems are tagged, and cleared in one click
 - Gift bombs become one big card, not fifty rows
 - Hype Train banner with level, progress and countdown
 
@@ -69,7 +70,8 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td valign="top">
 
 ### 🎛️ One-click control
-- Twitch's real Rewards & Power-ups panel inside the app
+- Twitch's real Rewards & Power-ups panel, custom Power-ups included
+- Back on the main menu after every redeem
 - Announcements, shoutouts, raids, ads and clips
 - Slow, follower-only, sub-only and emote-only modes
 - Shield mode, polls, predictions, stream title and category
@@ -82,17 +84,18 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 ### 😀 Emotes and media
 - Picker that follows the active tab, with search
 - Twitch, BetterTTV, 7TV, FrankerFaceZ and Kick emotes
+- Overlay emotes like 7TV's RainTime sit on top, as in other chat apps
 - Animated cheermotes and Twitch chat GIFs
 - Pronouns beside Twitch chatters
 
 </td>
 <td valign="top">
 
-### 🔄 Always up to date
-- Checks GitHub for new versions and installs them in one click
-- Every download is checked against GitHub's checksum
+### 🔄 Always connected, always up to date
+- A progress bar while platforms connect, and a status menu for every connection
+- Reconnect or log in from that menu, without opening Settings
+- Installs new versions in one click, checked against GitHub's checksum
 - Your settings and logins are never touched by an update
-- Keep running in the tray when you close the window
 
 </td>
 </tr>
@@ -103,7 +106,11 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <table>
 <tr>
 <td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards and a Hype Train banner" /><br /><b>Every chat in one place, with live events</b></td>
-<td align="center"><img src="docs/media/events.png" alt="Events drop-down with platform filters, type filter, sort button and an expanded Super Chat" /><br /><b>Recent events, filtered and sorted your way</b></td>
+<td align="center"><img src="docs/media/events.png" alt="Events drop-down with platform filters, type filter, sort and Clear buttons, and a redeem tagged TEST" /><br /><b>Recent events, filtered, sorted and tidy</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/media/history.png" alt="Chat from a past stream under a divider, with a button to show the stream before and the Commands list open" /><br /><b>Read what you missed in your last streams</b></td>
+<td align="center"><img src="docs/media/connections.png" alt="Connections menu listing Twitch, YouTube and Kick with their state, Reconnect and Log out" /><br /><b>Every connection at a glance</b></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/media/emotes.png" alt="Emote picker grouped by provider, with search" /><br /><b>Emote picker for every provider</b></td>
@@ -129,8 +136,17 @@ That's it. Future versions arrive through the app's own update banner.
 Open the gear icon and click **Log in** beside each platform you stream on. You sign in on the platform's own page: Twitch, your Google account for YouTube, or your Kick account. There's nothing else to set up.
 
 - **Twitch** expires its logins after about 30 days, so the app may ask you to log in again.
-- **Rewards panel:** click the gem icon and sign in to Twitch inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in.
+- **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in. Your custom Power-ups and points only show once you're signed in.
 - **Alerts & Donations:** pick the one service you use and click **Log in**.
+- **The status menu** next to the gear shows every connection. Click a row to reconnect or log in.
+
+### Commands
+
+Type these in the message box. They run in the app and are never sent to your chat. The **/** button next to Quick actions lists them.
+
+| Command | What it does |
+|---|---|
+| `/clearhistory` | Clears the chat in the app and deletes the saved chat of past streams. Your viewers' chat isn't affected. |
 
 ### Try it without an account
 
@@ -207,9 +223,11 @@ These limits come from the platforms.
 
 ## Privacy and security
 
-- **Your data stays with you.** Settings, logins and saved events live in an `nnf-data` folder beside the exe, and the app has no server of its own. **Keep that folder private, because it holds your logins.**
+- **Your data stays with you.** Settings, logins, saved events and chat history live in a `user-data` folder beside the exe, and the app has no server of its own. **Keep that folder private, because it holds your logins.**
 - **Logins are encrypted** for your Windows user, so moving to another PC means logging in again.
-- **Updates are verified.** The app only installs a download that matches GitHub's checksum, and never touches `nnf-data`.
+- **Chat history stays on your PC.** The last 5 streams are kept in `user-data`, with deleted messages saved only as deleted. Turn it off under Settings → Chat, or type `/clearhistory` to delete it.
+- **Coming from version 0.1.2 or earlier?** The data folder used to be called `nnf-data`. The app renames it to `user-data` on first start, so your logins and settings carry over.
+- **Updates are verified.** The app only installs a download that matches GitHub's checksum, and never touches `user-data`.
 - **Twitch's panel is isolated.** It runs in its own session and never sees the app's tokens.
 - **Chat can't run code.** Messages are displayed as plain text, and links open only in your browser.
 - **Third parties:** the app contacts the platforms and alert service you connect, GitHub to check for updates, plus BetterTTV, 7TV, FrankerFaceZ and pronouns.alejo.io for the features you leave on. Each can be turned off in Settings.
@@ -254,7 +272,7 @@ docs/media/      README images
 
 To add a platform, implement the `Connector` interface in `src/main/platforms/connector.ts`, and convert its messages to the shared types. The UI needs no platform-specific changes.
 
-Contributions are welcome. Please run `npm run typecheck` before opening a pull request, and never include real chat logs, tokens or the `nnf-data` folder.
+Contributions are welcome. Please run `npm run typecheck` before opening a pull request, and never include real chat logs, tokens or the `user-data` folder.
 
 ## License
 

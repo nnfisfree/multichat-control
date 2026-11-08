@@ -36,14 +36,14 @@ const cmdText = (s: string): string => s.replace(/%/g, '%%')
 
 /**
  * A plain Windows batch file that waits for the app to close, copies the new files over the old
- * ones (never touching nnf-data), then reopens the app. Batch files run on every Windows PC,
+ * ones (never touching the user-data folder, or nnf-data from older versions), then reopens the app. Batch files run on every Windows PC,
  * with no PowerShell policy involved, and the user sees a short "Updating" window.
  */
 function helperScript(o: { pid: number; kind: 'portable' | 'folder'; source: string; target: string; exe: string; log: string }): string {
   const q = (s: string): string => `"${cmdText(s)}"`
   const copy = o.kind === 'portable'
     ? `copy /y ${q(o.source)} ${q(o.target)} >nul 2>&1 && goto done`
-    : `robocopy ${q(o.source)} ${q(o.target)} /E /R:2 /W:1 /XD nnf-data /NFL /NDL /NJH /NJS /NP >nul 2>&1\r\nif %errorlevel% lss 8 goto done`
+    : `robocopy ${q(o.source)} ${q(o.target)} /E /R:2 /W:1 /XD user-data nnf-data /NFL /NDL /NJH /NJS /NP >nul 2>&1\r\nif %errorlevel% lss 8 goto done`
   return [
     '@echo off',
     'title Updating Multichat Control',

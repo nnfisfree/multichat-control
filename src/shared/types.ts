@@ -4,7 +4,7 @@ export const PLATFORM_LABEL: Record<Platform, string> = { twitch: 'Twitch', yout
 
 export type MessagePart =
   | { type: 'text'; text: string }
-  | { type: 'emote'; name: string; url: string }
+  | { type: 'emote'; name: string; url: string; overlay?: boolean }
   | { type: 'link'; url: string; text: string }
   | { type: 'gif'; url: string; alt: string }
 
@@ -36,7 +36,14 @@ export interface ChatMessage {
   firstTime?: boolean
   /** Short tag shown on highlighted rows, such as a Super Chat amount. */
   label?: string
+  /** From a past stream's saved history. */
+  history?: boolean
+  /** A line between past streams and this one, rather than a message. */
+  divider?: string
 }
+
+/** One saved past stream's chat. */
+export interface HistorySession { id: string; start: number; end: number; count: number }
 
 export type EventType =
   | 'follow' | 'sub' | 'gift' | 'cheer' | 'bits' | 'redemption' | 'powerup' | 'raid' | 'hypetrain'
@@ -123,6 +130,8 @@ export interface Emote {
   /** Avatar shown beside the group's heading. */
   groupIcon?: string
   animated?: boolean
+  /** Drawn on top of the emote before it, like 7TV's RainTime. */
+  zeroWidth?: boolean
 }
 
 interface ActionField {
@@ -205,6 +214,8 @@ export interface Settings {
   updatePrereleases: boolean
   /** The one alert service this streamer uses, if any. */
   alertService: AlertSource | 'none'
+  /** Saves chat from the last five streams on this PC. */
+  keepChatHistory: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -227,6 +238,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoUpdate: true,
   updatePrereleases: false,
   alertService: 'none',
+  keepChatHistory: true,
   chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: false, paid: true, donations: true, hype: true }
 }
 
@@ -243,6 +255,7 @@ export interface Bootstrap {
   hype: HypeTrain | null
   integrations: IntegrationState[]
   update: UpdateState
+  panelSignedIn: boolean | null
   demo: boolean
   builtInTwitchId: boolean
   builtInYoutube: boolean
@@ -275,6 +288,7 @@ export interface NnfApi {
   onBatch(cb: (batch: HubBatch) => void): () => void
   onSettings(cb: (settings: Settings) => void): () => void
   onUpdate(cb: (state: UpdateState) => void): () => void
+  onPanelSignedIn(cb: (signedIn: boolean) => void): () => void
   updates: { check(): Promise<UpdateState>; download(): Promise<void>; install(): Promise<void>; openPage(): Promise<void> }
   send(targets: Platform[], text: string, replyTo?: { platform: Platform; messageId: string }): Promise<SendResult[]>
   moderate(platform: Platform, req: ModerationRequest): Promise<ActionResult>
@@ -286,6 +300,12 @@ export interface NnfApi {
   reconnect(platform: Platform): Promise<void>
   saveSettings(patch: Partial<Settings>): Promise<Settings>
   saveSecret(key: 'youtubeSecret' | 'kickSecret', value: string): Promise<SecretState>
+  removeEvents(ids: string[]): Promise<void>
+  history: {
+    sessions(): Promise<HistorySession[]>
+    load(id: string): Promise<ChatMessage[]>
+    clear(): Promise<void>
+  }
   alerts: {
     login(source: AlertSource): Promise<void>
     logout(source: AlertSource): Promise<void>

@@ -20,6 +20,12 @@ const api: NnfApi = {
   reconnect: call('reconnect') as NnfApi['reconnect'],
   saveSettings: call('saveSettings') as NnfApi['saveSettings'],
   saveSecret: call('saveSecret') as NnfApi['saveSecret'],
+  removeEvents: call('events:remove') as NnfApi['removeEvents'],
+  history: {
+    sessions: call('history:sessions') as NnfApi['history']['sessions'],
+    load: call('history:load') as NnfApi['history']['load'],
+    clear: call('history:clear') as NnfApi['history']['clear']
+  },
   alerts: {
     login: call('alerts:login') as NnfApi['alerts']['login'],
     logout: call('alerts:logout') as NnfApi['alerts']['logout'],
@@ -28,6 +34,11 @@ const api: NnfApi = {
   openExternal: call('openExternal') as NnfApi['openExternal'],
   showPanel: call('showPanel') as NnfApi['showPanel'],
   hidePanel: call('hidePanel') as NnfApi['hidePanel'],
+  onPanelSignedIn(cb) {
+    const listener = (_e: unknown, v: boolean): void => cb(v)
+    ipcRenderer.on('panel:signedIn', listener)
+    return () => ipcRenderer.removeListener('panel:signedIn', listener)
+  },
   onUpdate(cb) {
     const listener = (_e: unknown, s: UpdateState): void => cb(s)
     ipcRenderer.on('update:state', listener)

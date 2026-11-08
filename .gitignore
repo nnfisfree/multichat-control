@@ -3,6 +3,9 @@ out/
 release/
 
 # Local app data holds logins and browser sessions. Never commit it.
+.user-data/
+user-data/
+# The folder's name up to version 0.1.2.
 .nnf-data/
 nnf-data/
 

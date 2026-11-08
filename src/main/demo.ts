@@ -1,4 +1,5 @@
 import { parseText } from '../shared/parts'
+import { PLATFORMS, type HistorySession } from '../shared/types'
 import type {
   ActionDef, ActionResult, ChatMessage, Emote, EventType, HypeTrain, ModerationRequest, Platform, StreamEvent
 } from '../shared/types'
@@ -147,7 +148,17 @@ export class DemoConnector implements Connector {
   }
 
   async start(): Promise<void> {
-    this.ctx.status({ status: 'connected', account: 'DemoStreamer' })
+    // Platforms connect one after another, as they do for real, so the progress bar shows.
+    this.ctx.status({ status: 'connecting' })
+    const order = ['twitch', 'youtube', 'kick'].indexOf(this.platform)
+    this.timers.push(setTimeout(() => this.ctx.status({ status: 'connected', account: 'DemoStreamer' }), 2500 + order * 1800))
+    // The streamer testing their own reward, so the TEST tag and Clear menu have something to show.
+    if (this.platform === 'twitch') {
+      this.timers.push(setTimeout(() => this.ctx.event({
+        id: `twitch-test-${Date.now()}`, platform: 'twitch', ts: Date.now(), type: 'redemption', actor: 'DemoStreamer',
+        text: 'redeemed', subject: 'Hydrate!', amount: '500', details: {}
+      }), 4000))
+    }
     this.timers.push(setInterval(() => this.tickChat(), 60000 / this.ratePerMinute))
     this.timers.push(setInterval(() => this.tickEvent(), 5000 + Math.random() * 2000))
     if (this.platform === 'twitch') {
@@ -213,3 +224,30 @@ export class DemoConnector implements Connector {
     return { ok: true, message: `Demo: ${actionId} done.` }
   }
 }
+
+/** Two invented past streams, so demo mode can show the chat history. */
+export const demoHistory = (() => {
+  let cleared = false
+  const day = 24 * 60 * 60 * 1000
+  const make = (id: string, start: number, count: number): ChatMessage[] => Array.from({ length: count }, (_, i) => {
+    const platform = PLATFORMS[i % 3]
+    const name = CHATTERS[platform][(i * 7) % CHATTERS[platform].length]
+    return {
+      id: `${id}-${i}`, platform, ts: start + i * 45000, kind: 'chat' as const, history: true,
+      author: { id: name, name, login: name.toLowerCase(), color: COLORS[(i * 5) % COLORS.length], badges: [] },
+      parts: [{ type: 'text' as const, text: LINES[(i * 3) % LINES.length] }]
+    }
+  })
+  const sessions = (): HistorySession[] => (cleared ? [] : [
+    { id: 'stream-demo-1', start: Date.now() - 3 * day, end: Date.now() - 3 * day + 30 * 45000, count: 30 },
+    { id: 'stream-demo-2', start: Date.now() - day, end: Date.now() - day + 30 * 45000, count: 30 }
+  ])
+  return {
+    sessions,
+    load: (id: string): ChatMessage[] => {
+      const s = sessions().find((x) => x.id === id)
+      return s ? make(id, s.start, s.count) : []
+    },
+    clear: () => { cleared = true }
+  }
+})()

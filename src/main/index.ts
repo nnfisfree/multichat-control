@@ -6,7 +6,9 @@ import { ALERT_SOURCES, PLATFORMS, type AlertSource, type Bootstrap, type PanelB
 import { CloseToTray } from './close-to-tray'
 import { hasBuiltIn } from './credentials'
 import { DemoConnector } from './demo'
-import { loadEvents, saveEvents } from './event-log'
+import { ChatLog } from './chat-log'
+import { demoHistory } from './demo'
+import { loadEvents, loadRemoved, saveEvents, saveRemoved } from './event-log'
 import { Hub } from './hub'
 import { StreamElements } from './integrations/streamelements'
 import { Streamlabs } from './integrations/streamlabs'
@@ -27,6 +29,9 @@ const MIN_OPACITY = 0.05
 const iconPath = app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'resources/icon.png')
 
 const hub = new Hub()
+const chatLog = new ChatLog(() => store.settings.keepChatHistory)
+/** Whether Twitch's rewards panel is signed in; null until known. */
+let panelSignedIn: boolean | null = null
 const alerts = {
   streamelements: new StreamElements(hub.alertContext('streamelements')),
   streamlabs: new Streamlabs(hub.alertContext('streamlabs'))
@@ -116,7 +121,8 @@ function registerIpc(): void {
     builtInKick: hasBuiltIn('kick'),
     dataDir,
     version: app.getVersion(),
-    update: updater.get()
+    update: updater.get(),
+    panelSignedIn
   }))
   handle('send', (targets: Platform[], text: string, replyTo) => hub.send(targets, text, replyTo))
   handle('moderate', (p: Platform, req) => hub.moderate(p, req))
@@ -134,6 +140,8 @@ function registerIpc(): void {
     const next = store.saveSettings(patch)
     if (patch.windowOpacity !== undefined) applyOpacity()
     if (patch.emoteProviders) await hub.refreshEmotes()
+    // Turning history off also deletes what was saved.
+    if (patch.keepChatHistory === false && !demo) chatLog.clear()
     const restart = async (p: Platform): Promise<void> => {
       await hub.get(p).stop()
       await hub.get(p).start()
@@ -163,6 +171,15 @@ function registerIpc(): void {
   handle('alerts:reconnect', async (source: AlertSource) => {
     if (ALERT_SOURCES.includes(source) && !demo) await alerts[source].start()
   })
+  // Demo mode shows invented past streams and never touches the real files.
+  handle('history:sessions', () => (demo ? demoHistory.sessions() : chatLog.sessions()))
+  handle('history:load', (id: string) => (demo ? demoHistory.load(id) : chatLog.load(String(id))))
+  handle('history:clear', () => {
+    hub.clearMessages()
+    if (!demo) chatLog.clear()
+    else demoHistory.clear()
+  })
+  handle('events:remove', (ids: string[]) => hub.removeEvents(Array.isArray(ids) ? ids : []))
   handle('openExternal', openExternal)
   handle('showPanel', (b: PanelBounds) => panel.show(b))
   handle('hidePanel', () => panel.hide())
@@ -191,7 +208,12 @@ else {
   void app.whenReady().then(async () => {
     store.load()
     // Demo mode keeps its invented events out of the saved list.
-    if (!demo) hub.restoreEvents(loadEvents(), saveEvents)
+    if (!demo) {
+      hub.restoreEvents(loadEvents(), saveEvents)
+      hub.restoreRemoved(loadRemoved(), saveRemoved)
+      chatLog.init()
+      hub.record(chatLog)
+    }
     // Listing installed fonts is the only permission the app itself needs.
     session.defaultSession.setPermissionRequestHandler((_c, p, done) => done((p as string) === 'local-fonts'))
     session.defaultSession.setPermissionCheckHandler((_c, p) => (p as string) === 'local-fonts')
@@ -201,6 +223,10 @@ else {
       settingsChanged: () => win?.webContents.send('settings:changed', store.settings)
     })
     panel = new TwitchPanel(() => win, () => twitch?.channelLogin())
+    panel.watch((signedIn) => {
+      panelSignedIn = signedIn
+      win?.webContents.send('panel:signedIn', signedIn)
+    })
     buildConnectors()
     registerIpc()
     createWindow()
@@ -213,6 +239,7 @@ else {
   app.on('before-quit', () => {
     panel?.destroy()
     for (const s of ALERT_SOURCES) alerts[s].stop()
+    chatLog.flush()
     void hub.stopAll()
   })
 }
