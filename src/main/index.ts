@@ -2,12 +2,13 @@ import { BrowserWindow, app, ipcMain, session, shell } from 'electron'
 import { join } from 'node:path'
 import { APP_NAME, TWITCH_CLIENT_ID } from '../shared/app-config'
 import { safeUrl } from '../shared/parts'
-import { ALERT_SOURCES, PLATFORMS, type AlertSource, type Bootstrap, type PanelBounds, type Platform, type Settings } from '../shared/types'
+import { ALERT_SOURCES, PLATFORMS, type AlertSource, type Bootstrap, type ObsState, type UserEntry, type PanelBounds, type Platform, type Settings } from '../shared/types'
 import { CloseToTray } from './close-to-tray'
 import { hasBuiltIn } from './credentials'
 import { DemoConnector } from './demo'
 import { ChatLog } from './chat-log'
-import { demoHistory } from './demo'
+import { ObsLink } from './obs'
+import { demoHistory, startDemoObs } from './demo'
 import { loadEvents, loadRemoved, saveEvents, saveRemoved } from './event-log'
 import { Hub } from './hub'
 import { StreamElements } from './integrations/streamelements'
@@ -41,6 +42,9 @@ let twitch: TwitchConnector | null = null
 let panel: TwitchPanel
 let closer: CloseToTray
 const updater = new Updater((state) => win?.webContents.send('update:state', state))
+const obs = new ObsLink((state) => win?.webContents.send('obs:state', state))
+// Demo copies show invented OBS stats instead of connecting to OBS.
+const demoObsState = { current: { status: 'off' } as ObsState }
 
 function openExternal(url: string): void {
   const safe = safeUrl(url)
@@ -122,6 +126,7 @@ function registerIpc(): void {
     dataDir,
     version: app.getVersion(),
     update: updater.get(),
+    obs: demo ? demoObsState.current : obs.get(),
     panelSignedIn
   }))
   handle('send', (targets: Platform[], text: string, replyTo) => hub.send(targets, text, replyTo))
@@ -142,6 +147,7 @@ function registerIpc(): void {
     if (patch.emoteProviders) await hub.refreshEmotes()
     // Turning history off also deletes what was saved.
     if (patch.keepChatHistory === false && !demo) chatLog.clear()
+    if (!demo && (before.obsEnabled !== next.obsEnabled || before.obsPort !== next.obsPort)) obs.start()
     const restart = async (p: Platform): Promise<void> => {
       await hub.get(p).stop()
       await hub.get(p).start()
@@ -179,6 +185,14 @@ function registerIpc(): void {
     if (!demo) chatLog.clear()
     else demoHistory.clear()
   })
+  handle('obs:password', (password: string) => {
+    store.setSecret('obs.password', typeof password === 'string' && password ? password : undefined)
+    if (!demo) obs.start()
+    return store.secretState()
+  })
+  handle('obs:reconnect', () => { if (!demo) obs.start() })
+  handle('users:list', (p: Platform) => hub.users(p))
+  handle('users:card', (p: Platform, u: UserEntry) => hub.userCard(p, { id: String(u?.id ?? ''), name: String(u?.name ?? ''), login: u?.login, color: u?.color }))
   handle('events:remove', (ids: string[]) => hub.removeEvents(Array.isArray(ids) ? ids : []))
   handle('openExternal', openExternal)
   handle('showPanel', (b: PanelBounds) => panel.show(b))
@@ -232,6 +246,11 @@ else {
     createWindow()
     // Demo copies are for trying the app, so they never update themselves.
     if (!demo) updater.start()
+    if (!demo) obs.start()
+    else startDemoObs((state) => {
+      demoObsState.current = state
+      win?.webContents.send('obs:state', state)
+    })
     await Promise.all([hub.startAll(), startAlerts()])
   })
 
@@ -240,6 +259,7 @@ else {
     panel?.destroy()
     for (const s of ALERT_SOURCES) alerts[s].stop()
     chatLog.flush()
+    obs.stop()
     void hub.stopAll()
   })
 }

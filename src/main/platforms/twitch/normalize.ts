@@ -44,7 +44,8 @@ function author(e: any, map: BadgeMap): ChatMessage['author'] {
     color: e.color || undefined,
     badges: badgesOf(badges, map),
     isBroadcaster: badges.some((b: any) => b.set_id === 'broadcaster'),
-    isMod: badges.some((b: any) => b.set_id === 'moderator')
+    isMod: badges.some((b: any) => b.set_id === 'moderator'),
+    isVip: badges.some((b: any) => b.set_id === 'vip')
   }
 }
 

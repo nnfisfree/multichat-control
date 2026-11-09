@@ -144,6 +144,19 @@ export class ChatLog {
     return out
   }
 
+  /** One user's messages across the saved streams, and in how many streams they chatted. */
+  messagesBy(platform: Platform, userId: string): { messages: ChatMessage[]; streams: Set<string>; total: number } {
+    this.flush()
+    const streams = new Set<string>()
+    const messages: ChatMessage[] = []
+    for (const id of this.ids()) {
+      const mine = this.messages(parse(fileOf(id))).filter((m) => m.platform === platform && m.author.id === userId && m.kind !== 'event')
+      if (mine.length) streams.add(id)
+      messages.push(...mine.map((m) => ({ ...m, history: true })))
+    }
+    return { messages, streams, total: messages.length }
+  }
+
   /** The saved streams, newest last. */
   sessions(): HistorySession[] {
     this.flush()

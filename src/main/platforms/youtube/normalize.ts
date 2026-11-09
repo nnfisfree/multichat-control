@@ -32,7 +32,8 @@ export function normalize(item: any): YtResult {
       ...(a.isChatSponsor ? [{ id: 'member', title: 'Member' }] : [])
     ],
     isBroadcaster: !!a.isChatOwner,
-    isMod: !!a.isChatModerator
+    isMod: !!a.isChatModerator,
+    isMember: !!a.isChatSponsor
   }
   const msg = (text: string, over: Partial<ChatMessage> = {}): ChatMessage => ({
     id: item.id, platform: 'youtube', ts, author, kind: 'chat', parts: parseText(text), ...over

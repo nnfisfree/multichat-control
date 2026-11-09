@@ -4,7 +4,7 @@ import type { Connector, ConnectorContext } from './platforms/connector'
 import { eventToMessage } from '../shared/events'
 import { serializeFor } from '../shared/parts'
 import type {
-  ActionResult, AlertSource, ChatMessage, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
+  ActionResult, AlertSource, ChatMessage, PlatformUsers, UserCard, UserEntry, UserGroups, UserProfile, UsersInfo, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
 } from '../shared/types'
 import { PLATFORMS } from '../shared/types'
 import { log } from './log'
@@ -17,6 +17,15 @@ const FLUSH_MS = 60
 const TWIN_MS = 120000
 
 const sameKind = (t: string): string => (t === 'bits' ? 'cheer' : t)
+
+/** Saves chat for past streams, and finds one user's saved messages for the user card. */
+interface Recorder {
+  add(m: ChatMessage): void
+  deleted(id: string): void
+  purged(platform: Platform, userId?: string): void
+  messagesBy?(platform: Platform, userId: string): { messages: ChatMessage[]; streams: Set<string>; total: number }
+  sessions?(): { id: string }[]
+}
 
 /** Merges connectors into one stream and batches updates so busy chats don't flood the UI. */
 export class Hub {
@@ -31,7 +40,9 @@ export class Hub {
   private timer: NodeJS.Timeout | null = null
   private window: BrowserWindow | null = null
   private eventIds = new Set<string>()
-  private recorder: { add(m: ChatMessage): void; deleted(id: string): void; purged(platform: Platform, userId?: string): void } | null = null
+  /** Everyone who chatted this stream, per platform, with their role. */
+  private seen = new Map<Platform, Map<string, { entry: UserEntry; role: keyof UserGroups }>>()
+  private recorder: Recorder | null = null
   private removed = new Set<string>()
   private persistRemoved: ((ids: string[]) => void) | null = null
   private persist: ((events: StreamEvent[]) => void) | null = null
@@ -82,7 +93,7 @@ export class Hub {
   }
 
   /** Saves chat for the history of past streams. */
-  record(recorder: { add(m: ChatMessage): void; deleted(id: string): void; purged(platform: Platform, userId?: string): void }): void {
+  record(recorder: Recorder): void {
     this.recorder = recorder
   }
 
@@ -91,7 +102,67 @@ export class Hub {
     this.messages = []
   }
 
+  private noteChatter(m: ChatMessage): void {
+    if (m.kind === 'event' || m.kind === 'system' || !m.author.id) return
+    let list = this.seen.get(m.platform)
+    if (!list) this.seen.set(m.platform, (list = new Map()))
+    const a = m.author
+    const role: keyof UserGroups = a.isBroadcaster ? 'broadcaster' : a.isMod ? 'moderators' : a.isVip ? 'vips' : a.isMember ? 'members' : 'users'
+    list.delete(a.id)
+    list.set(a.id, { entry: { id: a.id, name: a.name, login: a.login, color: a.color }, role })
+    // The oldest chatters drop off first, so a huge stream can't grow this without limit.
+    if (list.size > 5000) list.delete(list.keys().next().value!)
+  }
+
+  /** Everything known about one user: their profile and their history in this channel. */
+  async userCard(platform: Platform, user: UserEntry): Promise<UserCard> {
+    const c = this.connectors.get(platform)
+    const profile: UserProfile = c?.profile ? await c.profile(user).catch((): UserProfile => ({})) : {}
+    const live = this.messages.filter((m) => m.platform === platform && m.author.id === user.id && m.kind !== 'event' && !m.divider)
+    const saved = this.recorder?.messagesBy?.(platform, user.id)
+    // Messages from this stream are also in the saved file, so each message counts once.
+    const seen = new Set<string>()
+    const all = [...(saved?.messages ?? []), ...live].filter((m) => !seen.has(m.id) && seen.add(m.id)).sort((a, b) => b.ts - a.ts)
+    const ofStreams = Math.max(1, this.recorder?.sessions?.().length ?? 0)
+    const name = user.name.toLowerCase()
+    const mod = this.events.filter((e) => e.platform === platform && e.type === 'moderation' && e.text.toLowerCase().endsWith(` ${name}`))
+    const latest = all[0]?.author
+    return {
+      platform, id: user.id, name: latest?.name ?? user.name, login: user.login ?? latest?.login, color: user.color ?? latest?.color,
+      ...profile,
+      messages: all.slice(0, 1000),
+      total: all.length,
+      firstSeen: all.at(-1)?.ts,
+      streams: Math.max(saved?.streams.size ?? 0, live.length ? 1 : 0),
+      ofStreams,
+      deleted: all.filter((m) => m.deleted).length,
+      timeouts: mod.filter((e) => /timed out/i.test(e.text)).length,
+      bans: mod.filter((e) => /\bbanned\b/i.test(e.text)).length
+    }
+  }
+
+  /** Who is in chat on one platform: the platform's own list where it has one, else who chatted. */
+  async users(platform: Platform): Promise<PlatformUsers> {
+    const seen = this.seen.get(platform) ?? new Map<string, { entry: UserEntry; role: keyof UserGroups }>()
+    const groups: UserGroups = { broadcaster: [], moderators: [], vips: [], members: [], users: [] }
+    for (const { entry, role } of seen.values()) groups[role].push(entry)
+    const c = this.connectors.get(platform)
+    const offline: UsersInfo = { live: false }
+    const info: UsersInfo = c?.users ? await c.users().catch(() => offline) : offline
+    if (info.groups) {
+      // Names from the platform's list get the colours they use in chat.
+      for (const g of Object.values(info.groups) as UserEntry[][]) for (const u of g) u.color ??= seen.get(u.id)?.entry.color
+    }
+    const sort = (g: UserGroups): UserGroups => {
+      const out = { ...g }
+      for (const k of Object.keys(out) as (keyof UserGroups)[]) out[k] = [...out[k]].sort((a, b) => a.name.localeCompare(b.name))
+      return out
+    }
+    return { platform, ...info, source: info.groups ? 'chatters' : 'chat', groups: sort(info.groups ?? groups), updatedAt: Date.now() }
+  }
+
   private addMessage(m: ChatMessage): void {
+    this.noteChatter(m)
     this.recorder?.add(m)
     this.messages.push(m)
     if (this.messages.length > MAX_MESSAGES) this.messages.splice(0, this.messages.length - MAX_MESSAGES)
@@ -118,6 +189,8 @@ export class Hub {
     // History can overlap saved and live events, so each event is shown once.
     if (this.eventIds.has(e.id) || this.removed.has(e.id) || this.twin(e)) return
     this.eventIds.add(e.id)
+    // A new stream starts a fresh list of who chatted.
+    if (e.type === 'stream' && !e.history && /went live/i.test(e.text)) this.seen.delete(e.platform)
     this.events.push(e)
     if (this.events.length > MAX_EVENTS) for (const old of this.events.splice(0, this.events.length - MAX_EVENTS)) this.eventIds.delete(old.id)
     this.persistSoon()
@@ -246,6 +319,15 @@ export class Hub {
 
   async moderate(platform: Platform, req: ModerationRequest): Promise<ActionResult> {
     try {
+      // Kick only times out in whole minutes, so a short timeout (used to clear someone's
+      // messages) deletes their recent messages one by one instead.
+      if (platform === 'kick' && req.kind === 'timeout' && req.seconds < 60) {
+        const theirs = this.messages.filter((m) => m.platform === 'kick' && m.author.id === req.userId && m.kind !== 'event' && !m.deleted).slice(-50)
+        const c = this.get(platform)
+        let done = 0
+        for (const m of theirs) if ((await c.moderate({ kind: 'delete', messageId: m.id }).catch(() => ({ ok: false }))).ok) done++
+        return { ok: done > 0 || theirs.length === 0, message: theirs.length ? `Deleted ${done} message${done === 1 ? '' : 's'} from ${req.userName} on Kick.` : `${req.userName} has no messages to clear.` }
+      }
       return await this.get(platform).moderate(req)
     } catch (err) {
       return { ok: false, message: message(err) }

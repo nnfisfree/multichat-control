@@ -1,7 +1,7 @@
 import { shell } from 'electron'
 import { TWITCH_CLIENT_ID } from '../../../shared/app-config'
 import type { EmoteLookup } from '../../../shared/parts'
-import type { ActionDef, ActionResult, Badge, Emote, ModerationRequest, StreamEvent } from '../../../shared/types'
+import type { ActionDef, ActionResult, Badge, Emote, ModerationRequest, StreamEvent, UserEntry, UserGroups, UserProfile, UsersInfo } from '../../../shared/types'
 import { deviceLogin, refreshTokens, validate, type TwitchTokens } from '../../auth/twitch-device'
 import { loadEmoteCache, saveEmoteCache } from '../../emotes/cache'
 import { loadTwitchExtras, toLookup } from '../../emotes/third-party'
@@ -161,6 +161,9 @@ export class TwitchConnector implements Connector {
       who = await validate(this.tokens!.access)
     }
     this.userId = who.user_id
+    // A fresh login may carry the permissions the full chatter list needs.
+    this.chattersBlocked = false
+    this.usersCache = null
     this.login_ = who.login
     const users = await this.helix('GET', '/users', { id: who.user_id })
     this.displayName = users.data?.[0]?.display_name ?? who.login
@@ -230,6 +233,110 @@ export class TwitchConnector implements Connector {
     const best = hype[0]?.all_time_high
     if (best?.achieved_at) {
       add({ id: `hype-record-${best.achieved_at}`, ts: Date.parse(best.achieved_at), type: 'hypetrain', text: 'Hype Train record reached', amount: `Level ${best.level}`, details: { Total: String(best.total ?? '') } })
+    }
+  }
+
+  private chattersBlocked = false
+  private usersCache: { at: number; info: UsersInfo } | null = null
+  private roles: { at: number; mods: Set<string>; vips: Set<string> } | null = null
+
+  /** Each user's chosen chat colour, kept for 30 minutes. Empty means they never picked one. */
+  private colors = new Map<string, { color: string; at: number }>()
+
+  /** Looks up the name colours people picked on Twitch, 100 users per request. */
+  private async paintNames(ids: string[]): Promise<void> {
+    const stale = ids.filter((id) => (Date.now() - (this.colors.get(id)?.at ?? 0)) > 30 * 60000)
+    for (let i = 0; i < stale.length; i += 100) {
+      const batch = stale.slice(i, i + 100)
+      const url = batch.map((id) => `user_id=${encodeURIComponent(id)}`).join('&')
+      const r = await this.helix('GET', `/chat/color?${url}`).catch(() => null)
+      for (const c of r?.data ?? []) this.colors.set(c.user_id, { color: c.color ?? '', at: Date.now() })
+    }
+  }
+
+  /** Account age, follow, sub and ban state, for the user card. */
+  async profile(user: UserEntry): Promise<UserProfile> {
+    const b = this.userId
+    const id = user.id
+    const first = (r: any): any => r?.data?.[0]
+    const [u, follow, sub, ban] = await Promise.all([
+      this.helix('GET', '/users', { id }).then(first, () => null),
+      this.helix('GET', '/channels/followers', { broadcaster_id: b, user_id: id }).then((r) => r, () => undefined),
+      this.helix('GET', '/subscriptions', { broadcaster_id: b, user_id: id }).then((r) => r, () => undefined),
+      this.helix('GET', '/moderation/banned', { broadcaster_id: b, user_id: id }).then((r) => r, () => undefined)
+    ])
+    if (!this.roles || Date.now() - this.roles.at > 5 * 60000) await this.users().catch(() => null)
+    const f = first(follow)
+    const s = first(sub)
+    const x = first(ban)
+    const tier: Record<string, string> = { 1000: 'Tier 1', 2000: 'Tier 2', 3000: 'Tier 3' }
+    return {
+      avatar: u?.profile_image_url,
+      createdAt: Date.parse(u?.created_at) || undefined,
+      about: u?.description || undefined,
+      url: u?.login ? `https://www.twitch.tv/${u.login}` : undefined,
+      // undefined means Twitch didn't say (for example a missing permission); null means "no".
+      followedAt: follow === undefined ? undefined : f ? Date.parse(f.followed_at) : null,
+      sub: sub === undefined ? undefined : s ? { tier: tier[s.tier] ?? s.tier, gift: !!s.is_gift } : null,
+      banned: ban === undefined ? undefined : x ? { until: x.expires_at ? Date.parse(x.expires_at) : undefined } : null,
+      roles: [
+        ...(id === b ? ['Broadcaster'] : []),
+        ...(this.roles?.mods.has(id) ? ['Moderator'] : []),
+        ...(this.roles?.vips.has(id) ? ['VIP'] : [])
+      ]
+    }
+  }
+
+  /** Every page of a Helix list, up to a limit. */
+  private async all(path: string, query: Record<string, string>, limit: number): Promise<any[]> {
+    const out: any[] = []
+    let after: string | undefined
+    do {
+      const r = await this.helix('GET', path, { ...query, ...(after ? { after } : {}) })
+      out.push(...(r?.data ?? []))
+      after = r?.pagination?.cursor
+    } while (after && out.length < limit)
+    return out
+  }
+
+  /**
+   * Twitch's own list of who is in chat (signed-in users only), grouped by role. Without the
+   * newer permissions, it reports that a new login is needed instead of failing.
+   */
+  async users(): Promise<UsersInfo> {
+    if (!this.userId) return { live: false }
+    if (this.usersCache && Date.now() - this.usersCache.at < 30000) return this.usersCache.info
+    const b = this.userId
+    const stream = (await this.helix('GET', '/streams', { user_id: b }).catch(() => null))?.data?.[0]
+    const base: UsersInfo = { live: !!stream, viewers: stream?.viewer_count }
+    if (this.chattersBlocked) return { ...base, needsRelogin: true }
+    try {
+      const chatters = await this.all('/chat/chatters', { broadcaster_id: b, moderator_id: b, first: '1000' }, 5000)
+      if (!this.roles || Date.now() - this.roles.at > 5 * 60000) {
+        const [mods, vips] = await Promise.all([
+          this.all('/moderation/moderators', { broadcaster_id: b, first: '100' }, 1000).catch((): any[] => []),
+          this.all('/channels/vips', { broadcaster_id: b, first: '100' }, 1000).catch((): any[] => [])
+        ])
+        this.roles = { at: Date.now(), mods: new Set(mods.map((m) => m.user_id)), vips: new Set(vips.map((v) => v.user_id)) }
+      }
+      const groups: UserGroups = { broadcaster: [], moderators: [], vips: [], members: [], users: [] }
+      for (const c of chatters) {
+        const entry: UserEntry = { id: c.user_id, name: c.user_name || c.user_login, login: c.user_login }
+        const role: keyof UserGroups = c.user_id === b ? 'broadcaster' : this.roles.mods.has(c.user_id) ? 'moderators' : this.roles.vips.has(c.user_id) ? 'vips' : 'users'
+        groups[role].push(entry)
+      }
+      await this.paintNames(chatters.map((c) => c.user_id))
+      for (const g of Object.values(groups) as UserEntry[][]) for (const u of g) u.color = this.colors.get(u.id)?.color || undefined
+      const info = { ...base, groups }
+      this.usersCache = { at: Date.now(), info }
+      return info
+    } catch (err) {
+      if (err instanceof HttpError && (err.status === 401 || err.status === 403)) {
+        // Asking again would only renew the login for nothing until the user logs in again.
+        this.chattersBlocked = true
+        return { ...base, needsRelogin: true }
+      }
+      return base
     }
   }
 

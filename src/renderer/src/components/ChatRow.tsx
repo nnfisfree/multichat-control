@@ -34,7 +34,7 @@ function stackParts(parts: MessagePart[]): Piece[] {
   return out
 }
 
-function Pieces({ parts }: { parts: MessagePart[] }): JSX.Element {
+export function Pieces({ parts }: { parts: MessagePart[] }): JSX.Element {
   return (
     <>
       {stackParts(parts).map((x, i) => x.kind === 'part'
@@ -73,7 +73,7 @@ export const ChatRow = memo(function ChatRow({ m, showPlatform, showTime, onMenu
           ? <img key={i} className="badge" src={b.url} alt={b.title} title={b.title} />
           : <span key={i} className="badge-text" title={b.title}>{b.title.slice(0, 1)}</span>))}
         {pronoun && <span className="pronoun" title="Pronouns">{pronoun}</span>}
-        <button className="name" style={{ color: m.author.color }} onClick={(e) => onMenu(e, m)}>{m.author.name}</button>
+        <button className="name" style={{ color: m.author.color }} title="Click for user card, right-click for moderation" onClick={(e) => onMenu(e, m)}>{m.author.name}</button>
         <span className="colon">: </span>
         {m.deleted
           ? <span className="deleted" title={plainText(m.parts)}>[message deleted]</span>

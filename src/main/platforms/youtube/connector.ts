@@ -1,4 +1,4 @@
-import type { ActionDef, ActionResult, Emote, ModerationRequest } from '../../../shared/types'
+import type { ActionDef, ActionResult, Emote, ModerationRequest, UserEntry, UserProfile, UsersInfo } from '../../../shared/types'
 import { loopbackLogin } from '../../auth/loopback-pkce'
 import { credentials, type AppCredentials } from '../../credentials'
 import { emojiSet } from '../../emotes/emoji'
@@ -101,6 +101,32 @@ export class YouTubeConnector implements Connector {
     }
   }
 
+  /** Channel picture and age for the user card (1 quota unit). YouTube shares nothing about follows. */
+  async profile(user: UserEntry): Promise<UserProfile> {
+    const r = await this.api('GET', '/channels', { part: 'snippet', id: user.id }).catch(() => null)
+    const s = r?.items?.[0]?.snippet
+    return {
+      avatar: s?.thumbnails?.default?.url,
+      createdAt: Date.parse(s?.publishedAt) || undefined,
+      about: s?.description || undefined,
+      url: `https://www.youtube.com/channel/${encodeURIComponent(user.id)}`
+    }
+  }
+
+  private broadcastId = ''
+  private viewerCache: { at: number; info: UsersInfo } | null = null
+
+  /** YouTube lists no viewers, only how many are watching. Checked at most once a minute (1 quota unit). */
+  async users(): Promise<UsersInfo> {
+    if (!this.liveChatId || !this.broadcastId) return { live: false }
+    if (this.viewerCache && Date.now() - this.viewerCache.at < 60000) return this.viewerCache.info
+    const r = await this.api('GET', '/videos', { part: 'liveStreamingDetails', id: this.broadcastId }).catch(() => null)
+    const n = Number(r?.items?.[0]?.liveStreamingDetails?.concurrentViewers)
+    const info: UsersInfo = { live: true, viewers: Number.isFinite(n) ? n : undefined }
+    this.viewerCache = { at: Date.now(), info }
+    return info
+  }
+
   async stop(): Promise<void> {
     this.run++
     this.cancelStream?.()
@@ -114,6 +140,7 @@ export class YouTubeConnector implements Connector {
       try {
         const r = await this.api('GET', '/liveBroadcasts', { part: 'snippet', broadcastStatus: 'active', broadcastType: 'all' })
         const id = r.items?.[0]?.snippet?.liveChatId
+        this.broadcastId = r.items?.[0]?.id ?? ''
         if (!id) {
           this.liveChatId = ''
           this.ctx.status({ status: 'waiting', account: this.channelName, detail: 'Waiting for a live broadcast' })

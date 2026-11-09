@@ -143,6 +143,87 @@ function AlertsPicker(): JSX.Element {
   )
 }
 
+/** Connects to OBS's WebSocket server to show stream health in the title bar. */
+function ObsSettings(): JSX.Element {
+  const s = useStore((x) => x.settings!)
+  const saved = useStore((x) => x.secrets.obsPassword)
+  const obs = useStore((x) => x.obs)
+  const [password, setPassword] = useState('')
+  const [show, setShow] = useState(false)
+  /** Set right after saving, so the result of that attempt shows under the field. */
+  const [checking, setChecking] = useState<number | null>(null)
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  useEffect(() => {
+    if (checking === null) return
+    if (obs.status === 'connected') { setResult({ ok: true, text: 'Connected to OBS. Your stats are in the title bar.' }); setChecking(null) }
+    else if (obs.status === 'error') { setResult({ ok: false, text: obs.detail ?? 'OBS refused the connection.' }); setChecking(null) }
+  }, [obs.status, obs.detail, checking])
+  // OBS that never answers is most often closed, or its WebSocket server is off.
+  useEffect(() => {
+    if (checking === null) return
+    const t = setTimeout(() => {
+      setResult({ ok: false, text: `OBS didn't answer on port ${s.obsPort}. Is OBS open, with Enable WebSocket server ticked?` })
+      setChecking(null)
+    }, 8000)
+    return () => clearTimeout(t)
+  }, [checking, s.obsPort])
+
+  const save = async (value: string): Promise<void> => {
+    setResult(null)
+    setSecrets(await window.nnf.obs.setPassword(value))
+    setPassword('')
+    setShow(false)
+    setChecking(Date.now())
+  }
+  const state = !s.obsEnabled ? 'Off' : obs.status === 'connected' ? 'Connected' : obs.status === 'error' ? 'Needs attention' : 'Waiting for OBS…'
+  return (
+    <div id="obs-settings">
+      <Row title="Show OBS Stats" desc="Bitrate, dropped frames, FPS, CPU and your encoder from OBS, in the title bar. Only reads: the app never changes anything in OBS.">
+        <Toggle label="Show OBS stats" on={s.obsEnabled} onChange={(v) => { void updateSettings({ obsEnabled: v }); if (v) setChecking(Date.now()) }} />
+      </Row>
+      {s.obsEnabled && (
+        <article className="account obs-setup">
+          <header>
+            <span className="src-tag obs">OBS</span>
+            <h3>OBS Studio</h3>
+            <span className="state">{state}</span>
+            {obs.status !== 'off' && <div className="row-btns"><button className="btn ghost sm" onClick={() => { setResult(null); setChecking(Date.now()); void window.nnf.obs.reconnect() }}>Test connection</button></div>}
+          </header>
+          {result
+            ? <div className={result.ok ? 'notice good' : 'notice bad'} role="status">{result.ok ? '✓ ' : '✗ '}{result.text}</div>
+            : checking !== null
+              ? <div className="notice" role="status">Connecting to OBS…</div>
+              : obs.detail && obs.status !== 'connected' && <div className={obs.status === 'error' ? 'notice bad' : 'notice'}>{obs.detail}</div>}
+          <details className="advanced" open={obs.status !== 'connected'}>
+            <summary>How to connect</summary>
+            <ol>
+              <li>In OBS (version 28 or newer), open <b>Tools → WebSocket Server Settings</b>.</li>
+              <li>Tick <b>Enable WebSocket server</b>. Leave the port at 4455 unless you changed it.</li>
+              <li>If <b>Enable Authentication</b> is ticked, click <b>Show Connect Info</b>, copy the <b>Server Password</b> and paste it below. If it isn't ticked, no password is needed.</li>
+            </ol>
+            <div className="obs-fields">
+              <label>Port
+                <input type="number" min={1} max={65535} defaultValue={s.obsPort} onBlur={(e) => { const v = Number(e.target.value); if (v && v !== s.obsPort) { void updateSettings({ obsPort: v }); setResult(null); setChecking(Date.now()) } }} />
+              </label>
+              <label>Server password {saved ? <em>(saved, encrypted on this PC)</em> : <em>(none saved)</em>}
+                <div className="row-btns">
+                  <input type={show ? 'text' : 'password'} autoComplete="off" spellCheck={false} value={password} onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && password.trim()) void save(password.trim()) }}
+                    placeholder={saved ? 'Paste a new one to replace it' : 'Paste the Server Password from OBS'} />
+                  <button className="btn ghost sm" type="button" aria-pressed={show} title={show ? 'Hide password' : 'Show password'} onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
+                  <button className="btn" disabled={!password.trim()} onClick={() => void save(password.trim())}>Save</button>
+                  {saved && <button className="btn ghost" title="For OBS without a password" onClick={() => void save('')}>Remove</button>}
+                </div>
+              </label>
+            </div>
+          </details>
+        </article>
+      )}
+    </div>
+  )
+}
+
 const CHAT_EVENT_ROWS: [ChatEventGroup, string, string][] = [
   ['subs', 'Subs', 'New subs, resubs and memberships'],
   ['gifts', 'Gifted Subs', 'Single gifts and gift bombs'],
@@ -212,7 +293,12 @@ function Section({ title, desc, children }: { title: string; desc: string; child
   )
 }
 
-export function Settings({ onClose }: { onClose(): void }): JSX.Element {
+export function Settings({ onClose, focus }: { onClose(): void; focus?: 'obs' }): JSX.Element {
+  // Opened from the OBS capsule: go straight to the OBS section.
+  useEffect(() => {
+    if (focus !== 'obs') return
+    requestAnimationFrame(() => document.getElementById('obs-settings')?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+  }, [focus])
   const boot = useStore((s) => s.boot!)
   const s = useStore((x) => x.settings!)
   const fonts = useFonts()
@@ -247,6 +333,10 @@ export function Settings({ onClose }: { onClose(): void }): JSX.Element {
 
           <Section title="Alerts & Donations" desc="Pick only the one you use. It adds donations, plus past subs, gifts and Bits the platforms don't share.">
             <AlertsPicker />
+          </Section>
+
+          <Section title="OBS Studio" desc="See your stream's health at a glance, like OBS's Stats dock">
+            <ObsSettings />
           </Section>
 
           <Section title="Window" desc="Choose what happens when you close the app">

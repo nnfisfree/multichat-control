@@ -38,7 +38,7 @@ export function normalize(rawName: string, d: any, third: EmoteLookup): KickResu
               ...badges.map((b: any) => ({ id: b.type, title: BADGE_TITLE[b.type] ?? b.text ?? b.type })),
               ...(d.sender.identity?.badges_v2 ?? []).filter((b: any) => b.selected && b.image_url).map((b: any) => ({ id: b.name, title: b.name, url: b.image_url }))
             ],
-            isBroadcaster: has('broadcaster'), isMod: has('moderator')
+            isBroadcaster: has('broadcaster'), isMod: has('moderator'), isVip: has('vip')
           },
           parts: parseKickContent(d.content ?? '', third),
           reply: d.type === 'reply' && d.metadata?.original_sender

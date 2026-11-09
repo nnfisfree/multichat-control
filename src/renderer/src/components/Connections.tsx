@@ -69,6 +69,8 @@ function useServices(): Service[] {
   const choice = useStore((s) => s.settings?.alertService ?? 'none')
   const panelSignedIn = useStore((s) => s.panelSignedIn)
   const demo = useStore((s) => !!s.boot?.demo)
+  const obs = useStore((s) => s.obs)
+  const obsEnabled = useStore((s) => s.settings?.obsEnabled ?? false)
   const list = PLATFORMS.map((p) => platformService(p, statuses[p]))
   // The rewards panel only matters once Twitch itself is logged in. Not everyone uses it, so
   // it only counts toward the total once it's signed in.
@@ -81,6 +83,16 @@ function useServices(): Service[] {
     })
   }
   if (choice !== 'none') list.push(alertService(choice, integrations[choice]))
+  // OBS only appears once the streamer turned it on in Settings.
+  if (obsEnabled && !demo) {
+    const tone: Tone = obs.status === 'connected' ? 'good' : obs.status === 'error' ? 'bad' : 'warn'
+    const text = obs.status === 'connected' ? (obs.stats?.stream.active ? 'Connected · live' : 'Connected') : obs.status === 'error' ? (obs.detail ?? 'Error') : 'Waiting for OBS…'
+    list.push({
+      key: 'obs', label: 'OBS Studio', icon: <span className="src-tag obs">OBS</span>, tone, text, tracked: true, pending: false,
+      hint: obs.status === 'connected' ? undefined : obs.detail,
+      actions: [{ label: 'Reconnect', run: () => window.nnf.obs.reconnect() }]
+    })
+  }
   return list
 }
 
@@ -90,7 +102,7 @@ const counts = (list: Service[]): { tracked: number; up: number; pending: number
 }
 
 /** A thin bar that fills as services connect, then says how it went and fades away. */
-export function ConnectBar(): JSX.Element | null {
+export function ConnectBar({ fallback }: { fallback?: ReactNode }): JSX.Element | null {
   const { tracked, up, pending } = counts(useServices())
   const [phase, setPhase] = useState<'hidden' | 'progress' | 'done'>(pending ? 'progress' : 'hidden')
   useEffect(() => {
@@ -100,7 +112,7 @@ export function ConnectBar(): JSX.Element | null {
     const t = setTimeout(() => setPhase('hidden'), 2500)
     return () => clearTimeout(t)
   }, [pending])
-  if (phase === 'hidden' || tracked === 0) return null
+  if (phase === 'hidden' || tracked === 0) return <>{fallback}</>
   const settled = tracked - pending
   const allUp = phase === 'done' && up === tracked
   const label = phase === 'progress' ? `Connecting… ${settled} of ${tracked}` : allUp ? 'All connected' : `${up} of ${tracked} connected`

@@ -9,7 +9,8 @@ const TWITCH_SCOPES = [
   'moderator:read:followers', 'channel:moderate',
   'channel:manage:redemptions', 'channel:manage:polls', 'channel:manage:predictions', 'channel:manage:raids',
   'channel:manage:broadcast', 'channel:edit:commercial', 'channel:read:subscriptions', 'channel:read:hype_train',
-  'channel:read:goals', 'channel:read:ads', 'bits:read', 'clips:edit'
+  'channel:read:goals', 'channel:read:ads', 'bits:read', 'clips:edit',
+  'moderator:read:chatters', 'moderation:read', 'channel:read:vips'
 ]
 
 const form = (data: Record<string, string>): RequestInit => ({

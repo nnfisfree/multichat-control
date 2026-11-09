@@ -18,6 +18,62 @@ interface Author {
   badges: Badge[]
   isBroadcaster?: boolean
   isMod?: boolean
+  isVip?: boolean
+  /** A YouTube channel member. */
+  isMember?: boolean
+}
+
+export interface UserEntry { id: string; name: string; login?: string; color?: string }
+
+/** What a platform tells about one account. Undefined means unknown; null means "no". */
+export interface UserProfile {
+  avatar?: string
+  createdAt?: number
+  followedAt?: number | null
+  sub?: { tier?: string; months?: number; gift?: boolean } | null
+  member?: boolean
+  roles?: string[]
+  banned?: { until?: number } | null
+  url?: string
+  about?: string
+}
+
+/** Everything the user card shows: the profile plus their history in this channel. */
+export interface UserCard extends UserProfile {
+  platform: Platform
+  id: string
+  name: string
+  login?: string
+  color?: string
+  /** Their messages in this channel, newest first, from this stream and the saved streams. */
+  messages: ChatMessage[]
+  total: number
+  firstSeen?: number
+  /** In how many of the saved streams (plus this one) they chatted. */
+  streams: number
+  ofStreams: number
+  deleted: number
+  timeouts: number
+  bans: number
+}
+export interface UserGroups { broadcaster: UserEntry[]; moderators: UserEntry[]; vips: UserEntry[]; members: UserEntry[]; users: UserEntry[] }
+
+/** What a platform itself reports about who is watching. */
+export interface UsersInfo {
+  live: boolean
+  viewers?: number
+  /** The platform's own list of users in chat, where it has one (Twitch). */
+  groups?: UserGroups
+  /** The login is missing the permission needed for the full list. */
+  needsRelogin?: boolean
+}
+
+export interface PlatformUsers extends UsersInfo {
+  platform: Platform
+  /** 'chatters' is the platform's own list; 'chat' is everyone who chatted this stream. */
+  source: 'chatters' | 'chat'
+  groups: UserGroups
+  updatedAt: number
 }
 
 export interface ChatMessage {
@@ -216,6 +272,9 @@ export interface Settings {
   alertService: AlertSource | 'none'
   /** Saves chat from the last five streams on this PC. */
   keepChatHistory: boolean
+  /** Reads stream health from OBS's WebSocket server on this PC. */
+  obsEnabled: boolean
+  obsPort: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -239,11 +298,45 @@ export const DEFAULT_SETTINGS: Settings = {
   updatePrereleases: false,
   alertService: 'none',
   keepChatHistory: true,
+  obsEnabled: false,
+  obsPort: 4455,
   chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: false, paid: true, donations: true, hype: true }
 }
 
 /** Client secrets are write-only from the UI: it learns only whether one is stored. */
-export interface SecretState { youtubeSecret: boolean; kickSecret: boolean }
+export interface SecretState { youtubeSecret: boolean; kickSecret: boolean; obsPassword: boolean }
+
+/** Stream health read from OBS. Sizes in MB, durations in ms, bitrates in kb/s. */
+export interface ObsStats {
+  cpu: number
+  memoryMb: number
+  diskMb: number
+  fps: number
+  renderMs: number
+  /** The stream encoder in plain words, and the output video size and frame rate. */
+  encoder?: string
+  output?: {
+    width: number
+    height: number
+    fps: number
+    /** The canvas OBS draws on, before scaling. */
+    canvas?: { width: number; height: number }
+    /** Set when the stream encoder rescales again (Advanced output mode). */
+    stream?: { width: number; height: number }
+  }
+  renderMissed: number
+  renderTotal: number
+  encodeSkipped: number
+  encodeTotal: number
+  stream: { active: boolean; reconnecting: boolean; durationMs: number; dropped: number; total: number; bytes: number; kbps?: number }
+  record: { active: boolean; paused: boolean; durationMs: number; bytes: number; kbps?: number }
+}
+
+export interface ObsState {
+  status: 'off' | 'connecting' | 'connected' | 'error'
+  detail?: string
+  stats?: ObsStats
+}
 
 export interface Bootstrap {
   settings: Settings
@@ -256,6 +349,7 @@ export interface Bootstrap {
   integrations: IntegrationState[]
   update: UpdateState
   panelSignedIn: boolean | null
+  obs: ObsState
   demo: boolean
   builtInTwitchId: boolean
   builtInYoutube: boolean
@@ -289,6 +383,8 @@ export interface NnfApi {
   onSettings(cb: (settings: Settings) => void): () => void
   onUpdate(cb: (state: UpdateState) => void): () => void
   onPanelSignedIn(cb: (signedIn: boolean) => void): () => void
+  onObs(cb: (state: ObsState) => void): () => void
+  obs: { setPassword(password: string): Promise<SecretState>; reconnect(): Promise<void> }
   updates: { check(): Promise<UpdateState>; download(): Promise<void>; install(): Promise<void>; openPage(): Promise<void> }
   send(targets: Platform[], text: string, replyTo?: { platform: Platform; messageId: string }): Promise<SendResult[]>
   moderate(platform: Platform, req: ModerationRequest): Promise<ActionResult>
@@ -301,6 +397,8 @@ export interface NnfApi {
   saveSettings(patch: Partial<Settings>): Promise<Settings>
   saveSecret(key: 'youtubeSecret' | 'kickSecret', value: string): Promise<SecretState>
   removeEvents(ids: string[]): Promise<void>
+  users(platform: Platform): Promise<PlatformUsers>
+  userCard(platform: Platform, user: UserEntry): Promise<UserCard>
   history: {
     sessions(): Promise<HistorySession[]>
     load(id: string): Promise<ChatMessage[]>

@@ -1,5 +1,5 @@
 import type {
-  ActionDef, ActionResult, ChatMessage, ConnectionState, Emote, HypeTrain, ModerationRequest, Platform, StreamEvent
+  ActionDef, ActionResult, ChatMessage, ConnectionState, Emote, HypeTrain, ModerationRequest, Platform, StreamEvent, UserEntry, UserProfile, UsersInfo
 } from '../../shared/types'
 
 /** How a connector reports to the hub. */
@@ -30,4 +30,8 @@ export interface Connector {
   runAction(actionId: string, args: Record<string, string>): Promise<ActionResult>
   /** Reloads emotes after the provider settings change. */
   refreshEmotes(): Promise<void>
+  /** Live state, viewer count and, where the platform has one, its list of users in chat. */
+  users?(): Promise<UsersInfo>
+  /** Account details for the user card, as far as the platform shares them. */
+  profile?(user: UserEntry): Promise<UserProfile>
 }

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { HubBatch, NnfApi, Settings, UpdateState } from '../shared/types'
+import type { HubBatch, NnfApi, ObsState, Settings, UpdateState } from '../shared/types'
 
 const call = (ch: string) => (...args: unknown[]) => ipcRenderer.invoke(ch, ...args)
 
@@ -21,6 +21,8 @@ const api: NnfApi = {
   saveSettings: call('saveSettings') as NnfApi['saveSettings'],
   saveSecret: call('saveSecret') as NnfApi['saveSecret'],
   removeEvents: call('events:remove') as NnfApi['removeEvents'],
+  users: call('users:list') as NnfApi['users'],
+  userCard: call('users:card') as NnfApi['userCard'],
   history: {
     sessions: call('history:sessions') as NnfApi['history']['sessions'],
     load: call('history:load') as NnfApi['history']['load'],
@@ -34,6 +36,15 @@ const api: NnfApi = {
   openExternal: call('openExternal') as NnfApi['openExternal'],
   showPanel: call('showPanel') as NnfApi['showPanel'],
   hidePanel: call('hidePanel') as NnfApi['hidePanel'],
+  onObs(cb) {
+    const listener = (_e: unknown, s: ObsState): void => cb(s)
+    ipcRenderer.on('obs:state', listener)
+    return () => ipcRenderer.removeListener('obs:state', listener)
+  },
+  obs: {
+    setPassword: call('obs:password') as NnfApi['obs']['setPassword'],
+    reconnect: call('obs:reconnect') as NnfApi['obs']['reconnect']
+  },
   onPanelSignedIn(cb) {
     const listener = (_e: unknown, v: boolean): void => cb(v)
     ipcRenderer.on('panel:signedIn', listener)

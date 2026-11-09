@@ -1,5 +1,5 @@
 import { parseText } from '../shared/parts'
-import { PLATFORMS, type HistorySession } from '../shared/types'
+import { PLATFORMS, type HistorySession, type ObsState, type UserEntry, type UserProfile, type UsersInfo } from '../shared/types'
 import type {
   ActionDef, ActionResult, ChatMessage, Emote, EventType, HypeTrain, ModerationRequest, Platform, StreamEvent
 } from '../shared/types'
@@ -112,7 +112,7 @@ export class DemoConnector implements Connector {
       ts: Date.now(),
       kind: 'chat',
       parts: parseText(text, this.lookup),
-      author: { id: name, name, login, color: COLORS[Math.abs(i) % COLORS.length], badges: i === 0 ? [{ id: 'mod', title: 'Moderator' }] : [] },
+      author: { id: name, name, login, color: COLORS[Math.abs(i) % COLORS.length], badges: i === 0 ? [{ id: 'mod', title: 'Moderator' }] : [], isMod: i === 0, isMember: this.platform === 'youtube' && i === 1 },
       ...over
     }
   }
@@ -197,6 +197,39 @@ export class DemoConnector implements Connector {
     this.ctx.message(this.msg('DemoStreamer', text, { author: { id: 'me', name: 'DemoStreamer', color: '#ffb454', badges: [{ id: 'broadcaster', title: 'Broadcaster' }], isBroadcaster: true } }))
   }
 
+  /** Invented account details for the user card. */
+  async profile(user: UserEntry): Promise<UserProfile> {
+    const day = 86400000
+    const fresh = user.name === 'TurboTaco'
+    return {
+      createdAt: Date.now() - (fresh ? 2 : 900) * day,
+      followedAt: fresh ? null : Date.now() - 120 * day,
+      sub: this.platform === 'youtube' ? undefined : user.name === 'CosmicKiwi' ? { tier: 'Tier 1', months: 5 } : null,
+      member: this.platform === 'youtube' ? user.name === 'Marta G.' : undefined,
+      banned: null,
+      roles: CHATTERS[this.platform].indexOf(user.name) === 0 ? ['Moderator'] : [],
+      url: 'https://example.com/'
+    }
+  }
+
+  /** Invented viewers: Twitch gets a full list, as it would for real; the others report a count. */
+  async users(): Promise<UsersInfo> {
+    const viewers = { twitch: 142, youtube: 37, kick: 58 }[this.platform]
+    if (this.platform !== 'twitch') return { live: true, viewers }
+    const u = (name: string): UserEntry => ({ id: name, name, login: name.toLowerCase(), color: COLORS[Math.abs(CHATTERS.twitch.indexOf(name)) % COLORS.length] })
+    const lurkers = ['QuietMoth', 'PixelPanda', 'AstroLatte', 'NightOwl_92', 'SoftReset', 'Blinky', 'CozyGamer', 'LateNightLuna'].map((name) => ({ id: name, name, login: name.toLowerCase() }))
+    return {
+      live: true, viewers,
+      groups: {
+        broadcaster: [{ id: 'demo', name: 'DemoStreamer', login: 'demostreamer' }],
+        moderators: [u(CHATTERS.twitch[0]), { id: 'streamelements', name: 'StreamElements', login: 'streamelements' }],
+        vips: [u(CHATTERS.twitch[1])],
+        members: [],
+        users: [...CHATTERS.twitch.slice(2).map(u), ...lurkers]
+      }
+    }
+  }
+
   async moderate(req: ModerationRequest): Promise<ActionResult> {
     if (req.kind === 'delete') this.ctx.deleted(req.messageId)
     if (req.kind === 'timeout' || req.kind === 'ban') this.ctx.purged(req.userId)
@@ -251,3 +284,26 @@ export const demoHistory = (() => {
     clear: () => { cleared = true }
   }
 })()
+
+/** Invented OBS stats for demo mode: ready at first, then live a few seconds later. */
+export function startDemoObs(send: (s: ObsState) => void): void {
+  const started = Date.now()
+  let bytes = 0
+  setTimeout(() => send({ status: 'connecting' }), 300)
+  setInterval(() => {
+    const t = Date.now() - started
+    const live = t > 9000
+    const kbps = 5800 + Math.round(Math.random() * 400)
+    if (live) bytes += (kbps * 1000 / 8) * 2
+    send({
+      status: 'connected',
+      stats: {
+        cpu: 1 + Math.random() * 2, memoryMb: 2562.9, diskMb: 386.6 * 1024, fps: 60, renderMs: 1.2,
+        encoder: 'NVIDIA NVENC H.264', output: { width: 1920, height: 1080, fps: 60, canvas: { width: 2560, height: 1440 } },
+        renderMissed: 0, renderTotal: Math.round(t / 16.7), encodeSkipped: 0, encodeTotal: live ? Math.round((t - 9000) / 16.7) : 0,
+        stream: { active: live, reconnecting: false, durationMs: live ? t - 9000 + 6130000 : 0, dropped: live ? 3 : 0, total: live ? Math.round((t - 9000) / 16.7) + 368000 : 0, bytes, kbps: live ? kbps : undefined },
+        record: { active: false, paused: false, durationMs: 0, bytes: 0 }
+      }
+    })
+  }, 2000)
+}

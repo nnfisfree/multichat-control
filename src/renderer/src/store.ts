@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { chatEventGroup } from '../../shared/events'
-import type { AlertSource, HistorySession, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
+import { PLATFORMS } from '../../shared/types'
+import type { AlertSource, HistorySession, ObsState, PlatformUsers, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
 
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
@@ -27,9 +28,12 @@ export interface State {
   historySessions: HistorySession[]
   /** How many of the saved streams are shown, counted from the newest. */
   historyShown: number
+  /** Who is in chat on each platform, refreshed every minute and while the list is open. */
+  users: Partial<Record<Platform, PlatformUsers>>
+  obs: ObsState
 }
 
-let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0 }
+let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false, obsPassword: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0, users: {}, obs: { status: 'off' } }
 const listeners = new Set<() => void>()
 let eventsOpen = false
 /** While the user reads back through chat, old rows stay so their scroll position holds. */
@@ -73,18 +77,23 @@ async function init(): Promise<void> {
   window.nnf.onSettings((settings) => set({ settings }))
   window.nnf.onUpdate((update) => set({ update }))
   window.nnf.onPanelSignedIn((panelSignedIn) => set({ panelSignedIn }))
+  window.nnf.onObs((obs) => set({ obs }))
   const boot = await window.nnf.bootstrap()
   snapshotIds = new Set([...boot.messages, ...boot.events].map((x) => x.id))
   set({
     ready: true, boot, settings: boot.settings, secrets: boot.secrets, messages: boot.messages, events: boot.events, pronouns: boot.pronouns, hype: boot.hype, update: boot.update,
     statuses: Object.fromEntries(boot.statuses.map((s) => [s.platform, s])),
     integrations: Object.fromEntries(boot.integrations.map((i) => [i.source, i])),
-    panelSignedIn: boot.panelSignedIn
+    panelSignedIn: boot.panelSignedIn,
+    obs: boot.obs
   })
   // The latest past stream shows above this one; older ones load on request.
   const sessions = await window.nnf.history.sessions().catch((): HistorySession[] => [])
   set({ historySessions: sessions })
   if (sessions.length) await loadOlderHistory()
+  // The viewer count beside the users button stays fresh even while the list is closed.
+  setTimeout(() => void refreshUsers(), 8000)
+  setInterval(() => void refreshUsers(), 60000)
 }
 
 const when = (ts: number): string => new Date(ts).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -104,6 +113,22 @@ export async function loadOlderHistory(): Promise<void> {
   // The first stream shown also gets a line marking where this session starts.
   const now = state.historyShown === 0 ? [divider('now', Date.now(), 'This session')] : []
   set({ history: [...rows, ...state.history, ...now], historyShown: state.historyShown + 1 })
+}
+
+let usersBusy = false
+/** Reloads who is in chat on every connected platform. */
+export async function refreshUsers(): Promise<void> {
+  if (usersBusy) return
+  usersBusy = true
+  try {
+    const live = PLATFORMS.filter((p) => connected(state.statuses, p))
+    const results = await Promise.all(live.map((p) => window.nnf.users(p).catch(() => null)))
+    const users: State['users'] = {}
+    for (const r of results) if (r) users[r.platform] = r
+    set({ users })
+  } finally {
+    usersBusy = false
+  }
 }
 
 /** Clears chat here and deletes the saved history of past streams. Viewers' chat isn't touched. */

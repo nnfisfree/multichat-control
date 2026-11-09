@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { PLATFORMS, PLATFORM_LABEL, type ConnectionState, type Platform } from '../../../shared/types'
 import { Icon, PlatformIcon } from '../Icons'
-import { useStore } from '../store'
+import { connected, useStore } from '../store'
 import { ConnectBar, ConnectionsMenu } from './Connections'
 
 export type Tab = Platform | 'all'
@@ -24,13 +24,16 @@ function dotClass(s?: ConnectionState): string {
 interface Props {
   tab: Tab
   eventsOpen: boolean
+  usersOpen: boolean
+  onUsers(): void
   onTab(t: Tab): void
   onEvents(): void
   onSettings(): void
 }
 
-export function Tabs({ tab, eventsOpen, onTab, onEvents, onSettings }: Props): JSX.Element {
+export function Tabs({ tab, eventsOpen, usersOpen, onUsers, onTab, onEvents, onSettings }: Props): JSX.Element {
   const statuses = useStore((s) => s.statuses)
+  const watching = useStore((s) => PLATFORMS.reduce((n, p) => n + (connected(s.statuses, p) ? s.users[p]?.viewers ?? 0 : 0), 0))
   const unread = useStore((s) => s.unreadEvents)
   return (
     <nav className="tabs" role="tablist">
@@ -50,6 +53,11 @@ export function Tabs({ tab, eventsOpen, onTab, onEvents, onSettings }: Props): J
       </button>
       <div className="grow connect-slot"><ConnectBar /></div>
       <ConnectionsMenu />
+      <button className={usersOpen ? 'icon-btn users-btn on' : 'icon-btn users-btn'} aria-label="Users in chat" aria-expanded={usersOpen}
+        title={watching ? `Users in chat · ${watching.toLocaleString()} watching` : 'Users in chat'} onClick={onUsers}>
+        <Icon.users />
+        {watching > 0 && <span className="users-badge">{watching > 9999 ? `${Math.round(watching / 1000)}k` : watching.toLocaleString()}</span>}
+      </button>
       <button className="icon-btn" aria-label="Settings" title="Settings" onClick={onSettings}><Icon.gear /></button>
     </nav>
   )

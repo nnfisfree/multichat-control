@@ -1,7 +1,7 @@
 {
   "name": "multistream-control",
   "productName": "NoName's Multichat Control",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Standalone multi-platform stream chat for Twitch, YouTube and Kick.",
   "author": "NoName's Multichat Control contributors",
   "private": true,

@@ -1,6 +1,6 @@
 import { KICK_REDIRECT_PORT } from '../../../shared/app-config'
 import type { EmoteLookup } from '../../../shared/parts'
-import type { ActionDef, ActionResult, Emote, ModerationRequest } from '../../../shared/types'
+import type { ActionDef, ActionResult, Emote, ModerationRequest, UserEntry, UserProfile, UsersInfo } from '../../../shared/types'
 import { loopbackLogin } from '../../auth/loopback-pkce'
 import { credentials, type AppCredentials } from '../../credentials'
 import { load7tv, toLookup } from '../../emotes/third-party'
@@ -145,6 +145,39 @@ export class KickConnector implements Connector {
     if (r.deleted) this.ctx.deleted(r.deleted)
     if (r.purgedUser) this.ctx.purged(r.purgedUser)
     if (r.purgedAll) this.ctx.purged()
+  }
+
+  private viewerCache: { at: number; info: UsersInfo } | null = null
+
+  /**
+   * Picture from Kick's official API; follow and sub details from the data Kick's own website
+   * uses, when Kick lets it through. Either part can be missing.
+   */
+  async profile(user: UserEntry): Promise<UserProfile> {
+    const official = (await this.api('GET', `/users?id=${encodeURIComponent(user.id)}`).catch(() => null))?.data?.[0]
+    const slug = (user.login ?? user.name).toLowerCase()
+    const web = /^[a-z0-9_-]+$/i.test(slug) && this.slug
+      ? await fetchJson(`https://kick.com/api/v2/channels/${this.slug}/users/${slug}`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', Accept: 'application/json', Referer: 'https://kick.com/' } }).catch(() => null)
+      : null
+    const months = Number(web?.subscribed_for)
+    return {
+      avatar: official?.profile_picture || web?.profile_pic || undefined,
+      followedAt: web ? (web.following_since ? Date.parse(web.following_since) : null) : undefined,
+      sub: web ? (months > 0 ? { months } : null) : undefined,
+      roles: (web?.badges ?? []).map((b: any) => b.text ?? b.type).filter(Boolean),
+      url: `https://kick.com/${encodeURIComponent(slug)}`
+    }
+  }
+
+  /** Kick lists no viewers, only how many are watching. */
+  async users(): Promise<UsersInfo> {
+    if (!this.tokens) return { live: false }
+    if (this.viewerCache && Date.now() - this.viewerCache.at < 30000) return this.viewerCache.info
+    const ch = (await this.api('GET', '/channels').catch(() => null))?.data?.[0]
+    const n = Number(ch?.stream?.viewer_count)
+    const info: UsersInfo = { live: !!ch?.stream?.is_live, viewers: ch?.stream?.is_live && Number.isFinite(n) ? n : undefined }
+    this.viewerCache = { at: Date.now(), info }
+    return info
   }
 
   async stop(): Promise<void> {

@@ -58,7 +58,7 @@ class Store {
   }
 
   secretState(): SecretState {
-    return { youtubeSecret: !!this.getSecret('youtube.clientSecret'), kickSecret: !!this.getSecret('kick.clientSecret') }
+    return { youtubeSecret: !!this.getSecret('youtube.clientSecret'), kickSecret: !!this.getSecret('kick.clientSecret'), obsPassword: !!this.getSecret('obs.password') }
   }
 }
 

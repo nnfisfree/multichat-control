@@ -4,7 +4,7 @@
 
 <br />
 
-[![Download](https://img.shields.io/github/v/release/nnfisfree/multistream-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1800&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multistream-control/releases/latest)
+[![Download](https://img.shields.io/github/v/release/nnfisfree/multistream-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=3600&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multistream-control/releases/latest)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-5b35f0?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDQuNWw4LjUtMS4ydjguMkgyem05LjUwMC0xLjMwMEwyMiAxLjgwMHY5LjcwMEgxMS41MDB6TTIgMTIuNTAwaDguNTAwdjguMjAwTDIgMTkuNTAwem05LjUwMCAwSDIydjkuNzAwbC0xMC41MDAtMS40MDB6Ii8%2BPC9zdmc%2B)
 [![License](https://img.shields.io/badge/License-MIT-27a9e8?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik01IDJoMTNhMiAyIDAgMCAxIDIgMnYxNEg2LjVhMS41MDAgMS41MDAgMCAwIDAgMCAzSDIwdjFINi41MDBBMi41MDAgMi41MDAgMCAwIDEgNCAxOS41MDBWM2ExIDEgMCAwIDEgMS0xem0zIDR2Mmg4VjZIOHoiLz48L3N2Zz4%3D)](LICENSE)
 
@@ -14,7 +14,7 @@ A single portable app with nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: platforms connecting, merged live chat, the connections menu, recent events with a test redeem and the Clear menu, chat from a past stream, the Commands list and the emote picker" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: platforms connecting, OBS stats going live in the title bar, a user card, users in chat, recent events with a test redeem and the Clear menu, chat from a past stream and the Commands list" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -41,8 +41,9 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - **All, Twitch, YouTube and Kick** tabs
 - On All, choose exactly where a message goes
 - **Chat from your last 5 streams**, so you can read what you missed
-- Pauses when you scroll, with a new-message count
-- Reply, delete, time out, ban or shout out from any message
+- **Click any name for a user card**: account age, follow and sub, and everything they said in your channel
+- **Users in Chat** for every platform, grouped Broadcaster · Moderators · VIPs · Users, with live viewer counts
+- Reply, delete, time out (even for 1 second, to clear messages), ban or shout out
 
 </td>
 <td width="50%" valign="top">
@@ -91,11 +92,11 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 </td>
 <td valign="top">
 
-### 🔄 Always connected, always up to date
-- A progress bar while platforms connect, and a status menu for every connection
-- Reconnect or log in from that menu, without opening Settings
+### 📈 Stream health and updates
+- **OBS stats in the title bar**: live, uptime, bitrate, dropped frames, FPS and CPU
+- Click for everything: encoder, canvas and output resolution, render and encoding lag
+- A status menu for every connection, with reconnect and log in
 - Installs new versions in one click, checked against GitHub's checksum
-- Your settings and logins are never touched by an update
 
 </td>
 </tr>
@@ -105,16 +106,20 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
-<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards and a Hype Train banner" /><br /><b>Every chat in one place, with live events</b></td>
+<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, a Hype Train banner and OBS stats in the title bar" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
+<td align="center"><img src="docs/media/usercard.png" alt="User card with account age, follow and subscription, moderation buttons and the user's messages" /><br /><b>Know who you're talking to</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/media/users.png" alt="Users in Chat with Twitch, YouTube and Kick sections, viewer counts and role groups" /><br /><b>Who's in chat, on every platform</b></td>
+<td align="center"><img src="docs/media/obs.png" alt="OBS stats panel with encoder, canvas and output resolution, frames and the stream table" /><br /><b>OBS stats at a glance</b></td>
+</tr>
+<tr>
 <td align="center"><img src="docs/media/events.png" alt="Events drop-down with platform filters, type filter, sort and Clear buttons, and a redeem tagged TEST" /><br /><b>Recent events, filtered, sorted and tidy</b></td>
-</tr>
-<tr>
 <td align="center"><img src="docs/media/history.png" alt="Chat from a past stream under a divider, with a button to show the stream before and the Commands list open" /><br /><b>Read what you missed in your last streams</b></td>
-<td align="center"><img src="docs/media/connections.png" alt="Connections menu listing Twitch, YouTube and Kick with their state, Reconnect and Log out" /><br /><b>Every connection at a glance</b></td>
 </tr>
 <tr>
+<td align="center"><img src="docs/media/connections.png" alt="Connections menu listing Twitch, YouTube and Kick with their state, Reconnect and Log out" /><br /><b>Every connection at a glance</b></td>
 <td align="center"><img src="docs/media/emotes.png" alt="Emote picker grouped by provider, with search" /><br /><b>Emote picker for every provider</b></td>
-<td align="center"><img src="docs/media/actions.png" alt="Quick actions panel with the Twitch Rewards button and channel actions" /><br /><b>Quick actions and Twitch rewards</b></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/media/settings.png" alt="Settings with one-row logins for each platform and the Alerts and Donations picker" /><br /><b>One-click logins, one row per platform</b></td>
@@ -139,6 +144,8 @@ Open the gear icon and click **Log in** beside each platform you stream on. You 
 - **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in. Your custom Power-ups and points only show once you're signed in.
 - **Alerts & Donations:** pick the one service you use and click **Log in**.
 - **The status menu** next to the gear shows every connection. Click a row to reconnect or log in.
+- **Users in Chat:** the full Twitch list needs a newer Twitch login. If the app asks, click **Log in again** once.
+- **OBS stats (optional):** in OBS, open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info**. Then turn on **Settings → OBS Studio → Show OBS Stats** and paste it. The app only reads from OBS and never changes anything there.
 
 ### Commands
 
@@ -218,13 +225,17 @@ These limits come from the platforms.
 | **YouTube** | Chat exists only during a live broadcast. The app waits and connects by itself. |
 | **YouTube** | Each Google project gets 10,000 quota units a day, shared by everyone using that build. Each message sent costs 20. To avoid sharing, enter your own app in Settings. Messages are limited to 200 characters. |
 | **YouTube** | Custom member emoji have no documented API, so they show as text and aren't in the picker. |
+| **All** | Platforms only list viewers who are logged in. **Twitch** shares who is in chat; **YouTube** and **Kick** don't share who is watching, so their lists show who has chatted this stream, next to the viewer count. |
+| **All** | The user card's history covers your channel only: this stream plus the saved chat of your last 5 streams. No platform shares what someone said elsewhere. |
+| **Kick** | Kick only times people out in whole minutes, so **Timeout 1 second** deletes that user's recent messages instead. Follow and sub details on the user card come from Kick's website data and can be missing. |
 | **Kick** | Official events need a public web server, so **reading uses the same unofficial live connection as Kick's website**. Kick can change it without notice. Sending and moderation use the official API, and the app warns you if reading stops. |
 | **Streamlabs** | Keeps a history of donations only. Its other alerts arrive live. |
 
 ## Privacy and security
 
 - **Your data stays with you.** Settings, logins, saved events and chat history live in a `user-data` folder beside the exe, and the app has no server of its own. **Keep that folder private, because it holds your logins.**
-- **Logins are encrypted** for your Windows user, so moving to another PC means logging in again.
+- **Logins are encrypted** for your Windows user, so moving to another PC means logging in again. The OBS WebSocket password is stored the same way.
+- **OBS is read-only.** The app only reads stats from OBS on this PC; it never switches scenes or starts or stops anything.
 - **Chat history stays on your PC.** The last 5 streams are kept in `user-data`, with deleted messages saved only as deleted. Turn it off under Settings → Chat, or type `/clearhistory` to delete it.
 - **Coming from version 0.1.2 or earlier?** The data folder used to be called `nnf-data`. The app renames it to `user-data` on first start, so your logins and settings carry over.
 - **Updates are verified.** The app only installs a download that matches GitHub's checksum, and never touches `user-data`.
@@ -259,7 +270,7 @@ Donations are optional, and everyone gets the same features. Sharing the app, re
 
 ```text
 src/
-  main/          App process: logins, connectors, hub, updater
+  main/          App process: logins, connectors, hub, OBS, updater
     platforms/   One folder per platform behind a shared interface
     integrations/ Streamlabs and StreamElements
   preload/       The narrow bridge between the app and the UI
