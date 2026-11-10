@@ -1,11 +1,13 @@
 import type { JSX } from 'react'
 import { eventBadge } from '../../shared/events'
 import { ALERT_SOURCE_LABEL, type StreamEvent } from '../../shared/types'
-import { PlatformIcon } from './Icons'
+import { DollarIcon, PlatformIcon } from './Icons'
 
 /** Short label marking an event's type. Channel points use a round coin. */
 export function EventBadge({ e }: { e: Pick<StreamEvent, 'type' | 'text'> }): JSX.Element {
   const label = eventBadge(e)
+  // Donations (Streamlabs, StreamElements) get a gold coin with a dollar sign.
+  if (e.type === 'donation') return <span className="ev-badge badge-donation" title="Donation" aria-label="Donation"><DollarIcon /></span>
   return <span className={`ev-badge badge-${e.type}${label === 'OFF' ? ' badge-off' : ''}`}>{label}</span>
 }
 

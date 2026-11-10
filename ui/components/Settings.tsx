@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
 import { KICK_REDIRECT_URI } from '../../shared/app-config'
 import { ALERT_SOURCE_LABEL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform } from '../../shared/types'
-import { Icon, PlatformIcon } from './Icons'
+import { Icon, ObsLogo, PlatformIcon } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
 import { About } from './About'
 import { statusText } from './Tabs'
@@ -186,7 +186,7 @@ function ObsSettings(): JSX.Element {
       {s.obsEnabled && (
         <article className="account obs-setup">
           <header>
-            <span className="src-tag obs">OBS</span>
+            <ObsLogo size={20} />
             <h3>OBS Studio</h3>
             <span className="state">{state}</span>
             {obs.status !== 'off' && <div className="row-btns"><button className="btn ghost sm" onClick={() => { setResult(null); setChecking(Date.now()); void window.nnf.obs.reconnect() }}>Test connection</button></div>}

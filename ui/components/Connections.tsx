@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react'
 import { ALERT_SOURCE_LABEL, PLATFORMS, PLATFORM_LABEL, type ConnectionState, type IntegrationState } from '../../shared/types'
-import { Icon, PlatformIcon } from './Icons'
+import { Icon, ObsLogo, PlatformIcon } from './Icons'
 import { useStore } from '../lib/store'
 
 type Tone = 'good' | 'wait' | 'warn' | 'bad' | 'off'
@@ -88,7 +88,7 @@ function useServices(): Service[] {
     const tone: Tone = obs.status === 'connected' ? 'good' : obs.status === 'error' ? 'bad' : 'warn'
     const text = obs.status === 'connected' ? (obs.stats?.stream.active ? 'Connected · live' : 'Connected') : obs.status === 'error' ? (obs.detail ?? 'Error') : 'Waiting for OBS…'
     list.push({
-      key: 'obs', label: 'OBS Studio', icon: <span className="src-tag obs">OBS</span>, tone, text, tracked: true, pending: false,
+      key: 'obs', label: 'OBS Studio', icon: <ObsLogo />, tone, text, tracked: true, pending: false,
       hint: obs.status === 'connected' ? undefined : obs.detail,
       actions: [{ label: 'Reconnect', run: () => window.nnf.obs.reconnect() }]
     })

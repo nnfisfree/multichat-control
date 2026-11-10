@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from 'react'
 import type { Platform } from '../../shared/types'
+import obsLogo from '../../assets/obs.webp'
 
 function Svg({ children, size = 18 }: { children: ReactNode; size?: number }): JSX.Element {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{children}</svg>
@@ -10,6 +11,16 @@ export const PlatformIcon = ({ platform, size }: { platform: Platform; size?: nu
   if (platform === 'youtube') return <Svg size={size}><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12c0 1.6.2 3.3.5 4.8a3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1c.3-1.5.5-3.2.5-4.8s-.2-3.3-.5-4.8zM9.8 15.3V8.7l5.7 3.3-5.7 3.3z" /></Svg>
   return <Svg size={size}><path d="M3 3h7v5h2V6h2V3h7v7h-3v2h-2v0h2v2h3v7h-7v-3h-2v-2h-2v5H3V3z" /></Svg>
 }
+
+/** OBS Studio's logo. */
+export const ObsLogo = ({ size = 18 }: { size?: number }): JSX.Element => (
+  <img className="obs-logo" src={obsLogo} width={size} height={size} alt="" draggable={false} />
+)
+
+/** A dollar sign, for donations. */
+export const DollarIcon = ({ size = 14 }: { size?: number }): JSX.Element => (
+  <Svg size={size}><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" /></Svg>
+)
 
 const path = (d: string) => (): JSX.Element => <Svg><path d={d} /></Svg>
 

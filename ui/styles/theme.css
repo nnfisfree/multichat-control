@@ -61,12 +61,13 @@ h2, h3 { margin: 0; }
 }
 
 /* Title bar */
-.titlebar { height: 38px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 10px; -webkit-app-region: drag; }
-.titlebar button { -webkit-app-region: no-drag; }
+/* Dragging comes from data-tauri-drag-region only. No CSS app-region: WebView2 updates those
+   areas late, and a stale one swallowed clicks on the window buttons. */
+.titlebar { height: 38px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 10px; }
 .brand-icon { width: 20px; height: 20px; flex: none; }
 .brand { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .demo-tag { font-size: 11px; font-weight: 700; color: #151040; background: var(--orange); padding: 0 8px; border-radius: 8px; }
-.win-btn { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; line-height: 1; color: var(--win-glyph); background: var(--win-min); transition: filter 0.15s, box-shadow 0.15s; }
+.win-btn { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; line-height: 1; color: var(--win-glyph); background: var(--win-min); transition: filter 0.15s, box-shadow 0.15s; }
 .win-btn:hover { filter: brightness(1.15); box-shadow: 0 0 8px color-mix(in srgb, var(--win-min) 70%, transparent); }
 .win-btn.max { background: var(--win-max); }
 .win-btn.max:hover { box-shadow: 0 0 8px color-mix(in srgb, var(--win-max) 70%, transparent); }
@@ -220,7 +221,9 @@ select option { background: var(--solid); }
 .src-tag { flex: none; font: 700 10px/1 'Segoe UI', sans-serif; letter-spacing: 0.04em; padding: 3px 5px; border-radius: 4px; color: #fff; }
 .src-tag.streamelements { background: #2b6cff; }
 .src-tag.streamlabs { background: #31c3a2; color: #062a22; }
-.badge-donation { --c: 250, 190, 40; }
+/* Donations are a gold coin with a dollar sign. */
+.badge-donation { --c: 250, 190, 40; width: 24px; min-width: 24px; height: 24px; padding: 0; border-radius: 50%; color: #5a3a00; background: radial-gradient(circle at 35% 30%, #fff1a8, #f5c542 45%, #c98a0b 100%); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7), inset 0 -2px 3px rgba(120, 70, 0, 0.35), 0 0 9px rgba(250, 190, 40, 0.6); text-shadow: none; }
+.badge-donation svg { width: 15px; height: 15px; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.55)); }
 /* Compact account rows: one line each, details only when needed. */
 .modal .account { padding: 6px 10px; gap: 4px; margin-bottom: 6px; }
 .modal .account header { gap: 6px; min-height: 30px; }
@@ -490,6 +493,7 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .conn-head:disabled { cursor: default; opacity: 1; }
 .conn-icon { flex: none; display: grid; place-items: center; width: 22px; }
 .conn-icon svg { width: 16px; height: 16px; }
+.obs-logo { flex: none; display: block; object-fit: contain; }
 .conn-name { flex: none; font-weight: 600; }
 .conn-state { flex: 1; min-width: 0; text-align: right; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conn-body { padding: 4px 8px 8px 39px; }
@@ -582,7 +586,6 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 /* When space is short, the least important numbers go first: CPU, FPS, dropped frames, bitrate. */
 /* The status capsule in the title bar: centred, with room on both sides. */
 .title-status { flex: 1; min-width: 0; display: flex; justify-content: center; align-items: center; margin: 0 56px; container-type: inline-size; }
-.title-status .obs, .title-status button { -webkit-app-region: no-drag; }
 .title-status .obs-strip { height: 26px; padding: 0 16px; gap: 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.045);
   border: 1px solid transparent; background-clip: padding-box; box-shadow: 0 0 0 1px rgba(var(--purple-rgb), 0.35), 0 0 14px rgba(var(--blue-rgb), 0.12); }
 .title-status button.obs-strip:hover, .title-status button.obs-strip[aria-expanded="true"] { background: rgba(255, 255, 255, 0.09); box-shadow: 0 0 0 1px rgba(var(--blue-rgb), 0.6), 0 0 16px rgba(var(--purple-rgb), 0.3); }
