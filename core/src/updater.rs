@@ -188,7 +188,7 @@ pub async fn update_download(app: AppHandle) -> Result<(), String> {
         while let Some(chunk) = res.chunk().await.map_err(|e| e.to_string())? {
             hash.update(&chunk);
             bytes.extend_from_slice(&chunk);
-            let pct = if total > 0 { bytes.len() as u64 * 100 / total } else { 0 };
+            let pct = (bytes.len() as u64 * 100).checked_div(total).unwrap_or(0);
             if pct != shown { shown = pct; set(&app, json!({ "progress": pct })); }
         }
         let got: String = hash.finalize().iter().map(|b| format!("{b:02x}")).collect();

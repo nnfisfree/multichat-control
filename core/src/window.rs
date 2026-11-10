@@ -4,6 +4,7 @@
 //! the question in the app's own style). The core only reports the request and carries it out.
 
 use crate::storage::log;
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow, WindowEvent};
@@ -21,38 +22,66 @@ pub fn show(app: &AppHandle) {
         let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
+        apply_opacity(&w);
     }
 }
 
 /// Sends close requests (X button, Alt+F4, the taskbar) to the engine instead of closing.
 pub fn watch_close(window: &WebviewWindow) {
     let app = window.app_handle().clone();
-    window.on_window_event(move |e| {
-        if let WindowEvent::CloseRequested { api, .. } = e {
+    let win = window.clone();
+    window.on_window_event(move |e| match e {
+        WindowEvent::CloseRequested { api, .. } => {
             api.prevent_close();
             let _ = app.emit("app:close-requested", ());
         }
+        // Maximizing, restoring and similar changes rewrite the window's style and drop
+        // see-through, so it is put back after each of them.
+        WindowEvent::Resized(_) | WindowEvent::Focused(_) | WindowEvent::ScaleFactorChanged { .. } => apply_opacity(&win),
+        _ => {}
     });
 }
+
+/// The chosen opacity, 0 to 255. Kept here so it can be put back whenever Windows loses it.
+static ALPHA: AtomicU8 = AtomicU8::new(255);
 
 /// See-through window, from 5% (never fully invisible) to 100%.
 #[tauri::command]
 pub fn window_opacity(app: AppHandle, value: f64) {
     let alpha = (value.clamp(MIN_OPACITY, 1.0) * 255.0).round() as u8;
+    ALPHA.store(alpha, Ordering::Relaxed);
+    if let Some(w) = main_window(&app) {
+        apply_opacity(&w);
+    }
+}
+
+/// Sets the window's see-through level, adding the layered style if Windows dropped it.
+fn apply_opacity(w: &WebviewWindow) {
+    let alpha = ALPHA.load(Ordering::Relaxed);
     #[cfg(windows)]
-    if let Some(Ok(hwnd)) = main_window(&app).map(|w| w.hwnd()) {
-        use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowLongPtrW, SetLayeredWindowAttributes, SetWindowLongPtrW, GWL_EXSTYLE, LWA_ALPHA, WS_EX_LAYERED};
+    if let Ok(hwnd) = w.hwnd() {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetLayeredWindowAttributes, GetWindowLongPtrW, SetLayeredWindowAttributes, SetWindowLongPtrW, GWL_EXSTYLE, LWA_ALPHA, WS_EX_LAYERED};
         let h = hwnd.0 as windows_sys::Win32::Foundation::HWND;
         unsafe {
             let style = GetWindowLongPtrW(h, GWL_EXSTYLE);
-            if style & WS_EX_LAYERED as isize == 0 {
+            let layered = style & WS_EX_LAYERED as isize != 0;
+            // Fully opaque and never made see-through: nothing to do.
+            if alpha == 255 && !layered {
+                return;
+            }
+            if !layered {
                 SetWindowLongPtrW(h, GWL_EXSTYLE, style | WS_EX_LAYERED as isize);
+            } else {
+                let (mut key, mut current, mut flags) = (0u32, 0u8, 0u32);
+                if GetLayeredWindowAttributes(h, &mut key, &mut current, &mut flags) != 0 && flags & LWA_ALPHA != 0 && current == alpha {
+                    return;
+                }
             }
             SetLayeredWindowAttributes(h, 0, alpha, LWA_ALPHA);
         }
     }
     #[cfg(not(windows))]
-    let _ = (app, alpha);
+    let _ = (w, alpha);
 }
 
 fn ensure_tray(app: &AppHandle) -> tauri::Result<()> {
@@ -95,17 +124,45 @@ pub fn window_to_tray(app: AppHandle) -> Result<(), String> {
 
 /// Asks the engine to save what's waiting and exit. If it can't answer, the app exits anyway.
 pub fn request_quit(app: &AppHandle) {
+    guard_quit(app);
     let _ = app.emit("app:quit", ());
+}
+
+/// However closing was started, the app is gone within a few seconds: if saving hangs or the
+/// engine never answers, the process ends here.
+fn guard_quit(app: &AppHandle) {
+    static STARTED: AtomicBool = AtomicBool::new(false);
+    if STARTED.swap(true, Ordering::SeqCst) {
+        return;
+    }
     let app = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(4));
+        log("app", "exit (forced: shutting down took too long)");
         app.exit(0);
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        std::process::exit(0);
     });
 }
 
-/// Called by the engine once everything is saved.
+/// The engine is about to save and exit: from here the app always closes.
+#[tauri::command]
+pub fn app_quitting(app: AppHandle) {
+    guard_quit(&app);
+}
+
+/// The title bar's X, sent the same way as Alt+F4 so both always behave the same.
+#[tauri::command]
+pub fn window_close(app: AppHandle) {
+    log("app", "close button");
+    let _ = app.emit("app:close-requested", ());
+}
+
+/// Called by the engine once everything is saved. Exiting happens off the page's call, so the
+/// page answering can never hold it up.
 #[tauri::command]
 pub fn app_exit(app: AppHandle) {
     log("app", "exit");
-    app.exit(0);
+    guard_quit(&app);
+    std::thread::spawn(move || app.exit(0));
 }

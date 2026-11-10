@@ -213,7 +213,7 @@ async fn refresh(app: &AppHandle, s: Service, stale: Option<&str>) -> Result<Tok
     let _guard = REFRESHING.lock().await;
     let current = load_tokens(s).ok_or_else(|| format!("Not logged in to {}.", s.label()))?;
     let fresh_enough = current.expires_at - 60_000.0 > now_ms();
-    if fresh_enough && stale.map_or(true, |old| old != current.access) {
+    if fresh_enough && stale.is_none_or(|old| old != current.access) {
         return Ok(current);
     }
     let refresh_token = current.refresh.clone().ok_or_else(|| format!("Your {} login expired. Please log in again.", s.label()))?;

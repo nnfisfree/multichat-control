@@ -327,7 +327,7 @@ const CATEGORIES: { id: Category; label: string; desc: string; icon: () => JSX.E
   { id: 'connections', label: 'Connections', desc: 'Your platforms, alerts and OBS', icon: Icon.plug },
   { id: 'appearance', label: 'Appearance', desc: 'Skins, fonts and how the window looks', icon: Icon.palette },
   { id: 'chat', label: 'Chat', desc: 'What chat shows: details, events and emotes', icon: Icon.all },
-  { id: 'app', label: 'App', desc: 'Closing, safety and updates', icon: Icon.gear },
+  { id: 'app', label: 'App', desc: 'Closing, safety, clock and updates', icon: Icon.gear },
   { id: 'about', label: 'About', desc: 'The story behind the app', icon: Icon.info }
 ]
 
@@ -473,6 +473,11 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: 'obs' })
                 <Section title="Safety" desc="Protect against accidental clicks">
                   <Row title="Confirm Big Actions" desc="Ask before running an ad, raid or chat clear">
                     <Toggle label="Confirm big actions" on={s.confirmActions} onChange={(v) => void updateSettings({ confirmActions: v })} />
+                  </Row>
+                </Section>
+                <Section title="Clock" desc="Your PC's time under the message box">
+                  <Row title="Show the Clock" desc="hh:mm:ss AM/PM, in the skin's colours. Point at it to see the date.">
+                    <Toggle label="Show the clock" on={s.showClock} onChange={(v) => void updateSettings({ showClock: v })} />
                   </Row>
                 </Section>
                 <Section title="Updates" desc="New versions come from the project's GitHub page">

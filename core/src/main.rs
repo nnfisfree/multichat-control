@@ -72,6 +72,11 @@ fn main() {
                 .min_inner_size(420.0, 420.0)
                 .decorations(false)
                 .data_directory(paths::webview_dir())
+                // The font list in Settings reads the installed fonts without asking each time.
+                .on_permission_request(|_, kind| match kind {
+                    tauri::webview::PermissionKind::LocalFonts => tauri::webview::PermissionResponse::Allow,
+                    _ => tauri::webview::PermissionResponse::Default,
+                })
                 .additional_browser_args(&browser_args())
                 .build()?;
             window::watch_close(&main);
@@ -108,6 +113,8 @@ fn main() {
             panel::panel_hide,
             panel::panel_signed_in,
             window::window_to_tray,
+            window::window_close,
+            window::app_quitting,
             window::app_exit,
             updater::update_state,
             updater::update_check,

@@ -260,6 +260,8 @@ export interface Settings {
   kickClientId: string
   sendTargets: Record<Platform, boolean>
   confirmActions: boolean
+  /** The PC clock under the message box. */
+  showClock: boolean
   fontScale: number
   showTimestamps: boolean
   setupDismissed: boolean
@@ -291,6 +293,7 @@ export const DEFAULT_SETTINGS: Settings = {
   kickClientId: '',
   sendTargets: { twitch: true, youtube: true, kick: true },
   confirmActions: true,
+  showClock: true,
   fontScale: 1,
   showTimestamps: false,
   setupDismissed: false,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type JSX, type KeyboardEvent } from 'react
 import { PLATFORMS, PLATFORM_LABEL, type ChatMessage, type Platform, type SendResult, type UserEntry } from '../../shared/types'
 import { composerPlaceholder, plainText } from '../../shared/parts'
 import { ALL_COMMANDS, findCommand, isTwitchCommand, matchCommands } from '../lib/commands'
+import { Clock } from './Clock'
 import { Icon, PlatformIcon } from './Icons'
 import { connected, updateSettings, useStore } from '../lib/store'
 import type { Tab } from './Tabs'
@@ -29,6 +30,9 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
   const statuses = useStore((s) => s.statuses)
   const targets = useStore((s) => s.settings!.sendTargets)
+  const showClock = useStore((s) => s.settings!.showClock)
+  // Popovers above the message box move down when the clock row is hidden.
+  useEffect(() => { document.documentElement.dataset.clock = showClock ? 'on' : 'off' }, [showClock])
 
   const destinations: Platform[] = replyTo ? [replyTo.platform]
     : tab === 'all' ? PLATFORMS.filter((p) => targets[p] && connected(statuses, p))
@@ -124,7 +128,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     : composerPlaceholder(tab, destinations, PLATFORMS.some((p) => connected(statuses, p)))
 
   return (
-    <footer className="composer-wrap">
+    <footer className={showClock ? 'composer-wrap' : 'composer-wrap no-clock'}>
       {replyTo && (
         <div className="replying">
           <Icon.reply /> Replying to <b>{replyTo.author.name}</b>: <span>{plainText(replyTo.parts)}</span>
@@ -159,6 +163,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
         <button className={pop === 'actions' ? 'icon-btn on' : 'icon-btn'} aria-label="Actions" title="Quick actions" onClick={() => setPop(pop === 'actions' ? null : 'actions')}><Icon.bolt /></button>
         <button className="send" aria-label="Send" disabled={!text.trim() || (!findCommand(text) && (busy || !destinations.length))} onClick={() => void send()}><Icon.send /></button>
       </div>
+      {showClock && <Clock />}
       {commandList.length > 0 && (
         <div className="popover commands" role="menu" aria-label="Commands">
           <h3>Commands</h3>

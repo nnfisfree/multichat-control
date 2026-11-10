@@ -269,12 +269,27 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .linkish { color: var(--blue-2); text-decoration: underline; font-size: 13px; white-space: nowrap; }
 
 /* Composer */
-.composer-wrap { position: relative; flex: none; padding: 6px 12px 12px; border-top: 1px solid var(--line); }
+.composer-wrap { position: relative; flex: none; padding: 6px 12px 6px; border-top: 1px solid var(--line); }
 .composer { display: flex; align-items: flex-end; gap: 2px; background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 4px; }
 .composer:focus-within { border-color: var(--blue); }
 .composer textarea { flex: 1; resize: none; border: 0; outline: 0; background: none; padding: 5px 6px; font-size: 16px; max-height: 90px; min-width: 60px; field-sizing: content; }
 .composer textarea:placeholder-shown { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .targets { display: flex; gap: 2px; padding: 3px 2px; }
+/* The PC clock under the chat box's right-hand icons. Hovering shows the date. Every colour
+   comes from the skin, so it changes with it. --clock-room is the height it adds below the box. */
+:root { --clock-room: 16px; }
+:root[data-clock="off"] { --clock-room: 0px; }
+.composer-wrap.no-clock { padding-bottom: 12px; }
+.clock-row { display: flex; justify-content: flex-end; height: 18px; margin-top: 4px; padding-right: 2px; }
+.clock { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 18px; padding: 0 9px; border-radius: 999px; font: 600 12px/1 var(--ui-font), 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--text); background: rgba(var(--purple-rgb), 0.12); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.35); cursor: default; outline: none; transition: background 0.2s, box-shadow 0.2s; }
+.clock:hover, .clock:focus-visible { background: rgba(var(--purple-rgb), 0.22); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.7), 0 0 12px rgba(var(--purple-rgb), 0.35); }
+.clock-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: linear-gradient(135deg, var(--purple), var(--blue)); box-shadow: 0 0 6px rgba(var(--blue-rgb), 0.8); animation: clock-pulse 2s ease-in-out infinite; }
+.clock-time { font-weight: 700; color: var(--blue-2); background: linear-gradient(90deg, var(--purple-2), var(--blue-2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.clock-half { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+.clock-date { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 31; white-space: nowrap; padding: 6px 10px; font-size: 12.5px; font-weight: 600; letter-spacing: 0; color: var(--text); background: var(--solid); border: 1px solid var(--purple); border-radius: 8px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5), 0 0 12px rgba(var(--purple-rgb), 0.25); opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity 0.15s ease-out, transform 0.15s ease-out; }
+.clock:hover .clock-date, .clock:focus-visible .clock-date { opacity: 1; transform: none; }
+@keyframes clock-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .clock-dot { animation: none; } }
 .send { width: 40px; height: 32px; display: grid; place-items: center; color: var(--on-accent); background: var(--blue); border-radius: 9px; flex: none; }
 .send:hover:not(:disabled) { background: var(--blue-2); }
 .replying { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); padding-bottom: 4px; }
@@ -286,7 +301,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
 
 /* Popovers */
 .popover { background: var(--solid); border: 1px solid var(--purple); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55); z-index: 30; }
-.picker, .deck, .rewards { position: absolute; bottom: 66px; display: flex; flex-direction: column; overflow: hidden; max-width: calc(100% - 24px); max-height: calc(100% - 74px); }
+.picker, .deck, .rewards { position: absolute; bottom: calc(66px + var(--clock-room)); display: flex; flex-direction: column; overflow: hidden; max-width: calc(100% - 24px); max-height: calc(100% - 74px - var(--clock-room)); }
 .picker { right: 12px; width: 420px; height: 480px; }
 .deck { right: 12px; width: 440px; height: 520px; }
 .rewards { left: 12px; width: 380px; height: 600px; }
@@ -317,7 +332,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .notice.bad { background: rgba(255, 107, 129, 0.14); color: var(--bad); }
 .rewards-host { flex: 1; min-height: 0; background: var(--window); }
 .rewards-host.hidden { display: none; }
-.menu { position: absolute; left: 12px; bottom: 62px; min-width: 240px; padding: 4px; }
+.menu { position: absolute; left: 12px; bottom: calc(62px + var(--clock-room)); min-width: 240px; padding: 4px; }
 .menu button, .ctx button { display: block; width: 100%; text-align: left; padding: 6px 10px; border-radius: 7px; }
 .menu button:hover, .ctx button:hover:not(:disabled) { background: var(--surface-2); }
 .ctx { position: fixed; width: 200px; padding: 4px; z-index: 60; }
@@ -428,7 +443,8 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
   .tab { padding: 7px 7px 8px; }
   .tab-label { display: none; }
   .row { font-size: calc(16px * var(--chat-scale)); padding: 4px 10px; }
-  .composer-wrap { padding: 5px 8px 8px; }
+  .composer-wrap { padding: 5px 8px 4px; }
+  .composer-wrap.no-clock { padding-bottom: 8px; }
   .picker, .deck, .rewards { left: 8px; right: 8px; width: auto; max-width: none; }
   .modal-scroll { padding: 4px 14px 14px; }
   .set-row { flex-direction: column; align-items: stretch; gap: 6px; }
@@ -580,7 +596,6 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .obs-details table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .obs-details th { text-align: left; font-weight: 700; color: var(--blue-2); padding: 4px 6px 4px 0; border-bottom: 1px solid var(--line); }
 .obs-details td { padding: 4px 6px 4px 0; color: var(--text); }
-.src-tag.obs { background: #302e31; color: var(--text); }
 .obs-fields { display: grid; gap: 8px; margin-top: 6px; }
 .obs-fields input[type="number"] { width: 110px; }
 /* When space is short, the least important numbers go first: CPU, FPS, dropped frames, bitrate. */

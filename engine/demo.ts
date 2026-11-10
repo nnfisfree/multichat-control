@@ -48,7 +48,7 @@ const LINES = [
 ]
 const COLORS = ['#4fd1ff', '#ff7ad9', '#7dff9b', '#ffb454', '#b794ff', '#ff6b6b']
 
-const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean }[]> = {
+const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean; source?: StreamEvent['source'] }[]> = {
   twitch: [
     { type: 'follow', text: 'followed' },
     { type: 'redemption', text: 'redeemed', subject: 'Daily Check-in', amount: '1', details: { Reward: 'KEKW! [MP3]', Status: 'Unfulfilled' } },
@@ -58,7 +58,9 @@ const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string
     { type: 'gift', text: 'gifted 50 subs to the community', amount: 'Tier 1 x50', big: true },
     { type: 'powerup', text: 'used', subject: 'On-Screen Celebration', amount: '40 bits' },
     { type: 'raid', text: 'raided with 42 viewers', amount: '42', big: true },
-    { type: 'moderation', text: 'timed out TurboTaco', amount: '1m' }
+    { type: 'moderation', text: 'timed out TurboTaco', amount: '1m' },
+    { type: 'donation', text: 'donated', amount: '$10.00', message: 'For the snacks!', source: 'streamlabs' },
+    { type: 'donation', text: 'donated', amount: '€25.00', message: 'Great stream today', source: 'streamelements', big: true }
   ],
   youtube: [
     { type: 'paid', text: 'sent a Super Chat', amount: '€5.00', message: 'Keep it up!' },

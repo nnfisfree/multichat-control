@@ -4,7 +4,7 @@
 
 <br />
 
-[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1800&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
+[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1801&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-5b35f0?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDQuNWw4LjUtMS4ydjguMkgyem05LjUwMC0xLjMwMEwyMiAxLjgwMHY5LjcwMEgxMS41MDB6TTIgMTIuNTAwaDguNTAwdjguMjAwTDIgMTkuNTAwem05LjUwMCAwSDIydjkuNzAwbC0xMC41MDAtMS40MDB6Ii8%2BPC9zdmc%2B)
 ![Size](https://img.shields.io/badge/Size-8%20MB-a838e0?style=for-the-badge)
 [![License](https://img.shields.io/badge/License-MIT-27a9e8?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik01IDJoMTNhMiAyIDAgMCAxIDIgMnYxNEg2LjVhMS41MDAgMS41MDAgMCAwIDAgMCAzSDIwdjFINi41MDBBMi41MDAgMi41MDAgMCAwIDEgNCAxOS41MDBWM2ExIDEgMCAwIDEgMS0xem0zIDR2Mmg4VjZIOHoiLz48L3N2Zz4%3D)](LICENSE)
@@ -15,7 +15,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: merged chat, OBS stats, a user card, users in chat, recent events, the commands list narrowing as you type, and the skins changing the whole app's colours" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: merged chat, OBS stats, a user card, users in chat, recent events, the commands list narrowing as you type, the clock showing the date, and the skins changing the whole app's colours" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -105,6 +105,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - **OBS stats in the title bar**: live, uptime, bitrate, dropped frames, FPS and CPU
 - Click for everything: encoder, canvas and output resolution, render and encoding lag
 - A status menu for every connection, with reconnect and log in
+- **A clock** under the message box: point at it for the date. It follows the skin and can be hidden.
 - Installs new versions in one click, checked against GitHub's checksum
 
 </td>
@@ -115,7 +116,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
-<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, a Hype Train banner and OBS stats in the title bar" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
+<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, a donation, OBS stats in the title bar and the clock under the message box" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
 <td align="center"><img src="docs/media/usercard.png" alt="User card with account age, follow and subscription, moderation buttons and the user's messages" /><br /><b>Know who you're talking to</b></td>
 </tr>
 <tr>
@@ -135,7 +136,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td align="center"><img src="docs/media/emotes.png" alt="Emote picker grouped by provider, with search" /><br /><b>Emote picker for every provider</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/settings.png" alt="Settings with categories on the left and one-row logins for each platform" /><br /><b>Clear settings, one-click logins</b></td>
+<td align="center"><img src="docs/media/settings.png" alt="Settings with categories on the left, one-row logins for each platform and the OBS Studio card" /><br /><b>Clear settings, one-click logins</b></td>
 <td align="center"><img src="docs/media/support.png" alt="About page with the Support chapter and Donate, Subscribe and Gadgets Store buttons" /><br /><b>The story behind it, inside the app</b></td>
 </tr>
 </table>

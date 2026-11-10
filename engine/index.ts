@@ -111,19 +111,32 @@ export async function startEngine(): Promise<void> {
     return next
   }
 
-  // Shutting down: everything that's waiting is written first.
-  const quit = async (): Promise<void> => {
-    chatLog.flush()
-    for (const s of ALERT_SOURCES) alerts[s].stop()
-    obs.stop()
-    await Promise.race([hub.stopAll(), new Promise((r) => setTimeout(r, 1500))])
+  // Shutting down: everything that's waiting is written first. A step that fails is skipped,
+  // and the core closes the app within a few seconds whatever happens here.
+  let quitting: Promise<void> | null = null
+  const quit = (): Promise<void> => (quitting ??= (async () => {
+    log('app', 'closing')
+    await invoke('app_quitting').catch(() => {})
+    const step = (name: string, run: () => void): void => {
+      try { run() } catch (err) { log('app', `closing: ${name} failed: ${String(err)}`) }
+    }
+    step('chat history', () => chatLog.flush())
+    for (const s of ALERT_SOURCES) step(s, () => alerts[s].stop())
+    step('obs', () => obs.stop())
+    await Promise.race([hub.stopAll().catch(() => {}), new Promise((r) => setTimeout(r, 1500))])
     await invoke('app_exit')
-  }
+  })())
   const closeAsked = async (): Promise<void> => {
     const action = store.settings.closeAction
-    if (action === 'exit') return quit()
-    if (action === 'tray') return invoke('window_to_tray')
-    window.dispatchEvent(new CustomEvent(CLOSE_ASK_EVENT))
+    log('app', `close requested (${action})`)
+    try {
+      if (action === 'exit') return await quit()
+      if (action === 'tray') return await invoke('window_to_tray')
+      window.dispatchEvent(new CustomEvent(CLOSE_ASK_EVENT))
+    } catch (err) {
+      log('app', `closing failed: ${String(err)}`)
+      if (action !== 'tray') void quit()
+    }
   }
   await listen('app:close-requested', () => void closeAsked())
   await listen('app:quit', () => void quit())
@@ -224,7 +237,8 @@ export async function startEngine(): Promise<void> {
     window: (action) => {
       if (action === 'minimize') void win.minimize()
       else if (action === 'maximize') void win.toggleMaximize()
-      else void closeAsked()
+      // Sent through the core, the same way as Alt+F4.
+      else void invoke('window_close').catch(() => closeAsked())
     }
   }
   // The close question's answers, used by the interface.

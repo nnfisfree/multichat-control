@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1
+
+**New**
+
+- **A clock** under the message box, on the right: your PC's time as hh:mm:ss AM/PM. Point at it to see the date. Its colours follow the skin. Turn it off in Settings → App → Clock.
+- **OBS Studio's logo** in Connections and Settings
+- **Donations** from Streamlabs and StreamElements show a gold coin with a dollar sign
+
+**Fixed**
+
+- The window's X button could stop responding after changing the skin or resizing. Closing now always finishes, and the app closes on its own within a few seconds if something holds it up.
+- Opening Appearance no longer asks for permission to use the fonts on your computer
+- Window opacity works again: since 0.2.0 the window turned solid as soon as it was maximized, restored or resized
+
 ## 0.2.0
 
 **Rebuilt to be light.** The app moved from Electron to Tauri 2: it uses Microsoft Edge WebView2, which is part of Windows 10 and 11, instead of shipping its own Chromium.
