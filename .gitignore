@@ -1,18 +1,22 @@
+# Dependencies and build output
 node_modules/
-out/
-release/
+dist/
+core/target/
+core/gen/
 
 # Local app data holds logins and browser sessions. Never commit it.
-.user-data/
 user-data/
-# The folder's name up to version 0.1.2.
-.nnf-data/
-nnf-data/
+.user-data/
 
-# Private reference images taken from real streams.
-screenshots/
-
+# Private keys and local settings
 .env*
 !.env.example
-.claude/
 *.log
+
+# Editor and tool folders
+.vscode/
+.idea/
+.claude/
+
+# Release builds made by scripts/release.mjs
+release/
