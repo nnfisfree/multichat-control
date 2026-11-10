@@ -13,6 +13,7 @@ import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir, userInfo } from 'node:os'
 import { join, relative, resolve } from 'node:path'
+import { placeholderAsar } from './placeholder-asar.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const args = process.argv.slice(2)
@@ -87,7 +88,7 @@ const stage = mkdtempSync(join(tmpdir(), 'release-zip-'))
 try {
   copyFileSync(built, join(stage, EXE))
   mkdirSync(join(stage, 'resources'))
-  writeFileSync(join(stage, 'resources', 'app.asar'), 'Placeholder that lets version 0.1.x update itself. The app deletes it when it starts.\n')
+  writeFileSync(join(stage, 'resources', 'app.asar'), placeholderAsar())
   const zip = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', `Compress-Archive -Path '${stage}\\*' -DestinationPath '${join(out, files.zip)}' -Force`], { stdio: 'inherit' })
   if (zip.status !== 0 || !existsSync(join(out, files.zip))) stop('Could not create the zip.')
 } finally {
