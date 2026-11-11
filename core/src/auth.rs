@@ -435,7 +435,16 @@ async fn loopback_login(app: &AppHandle, s: Service) -> Result<Tokens, String> {
         }
         if let Some(why) = q.get("error_description").or_else(|| q.get("error")) {
             // StreamElements only says error=true when the user declines.
-            return Err(if why == "true" || why == "access_denied" { "Login was declined in the browser.".into() } else { why.clone() });
+            let declined = why == "true" || why == "access_denied";
+            // Until Google verifies the app, its login page shows an "unverified app" warning, and
+            // "Back to safety" there also comes back as a decline.
+            return Err(if declined && s == Service::Youtube {
+                "Login was declined in the browser. If Google said the app isn't verified, log in again and choose Advanced, then Go to MultichatControl.".into()
+            } else if declined {
+                "Login was declined in the browser.".into()
+            } else {
+                why.clone()
+            });
         }
     };
     drop(listener);

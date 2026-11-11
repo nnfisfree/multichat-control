@@ -44,7 +44,7 @@ const LINES = [
   'dude haha', 'that was insane', 'nnfHype nnfHype nnfHype', 'gg', 'KEKW', 'catJAM catJAM', 'what game is next?',
   'first time here, love the stream', 'https://example.com/clip check this out', 'PogChamp that play', 'lol', 'KICKHYPE lets go',
   'how long have you been streaming today? this run has been really fun to watch and I hope you keep going for a while',
-  '🔥🔥🔥', 'monkaS', 'hello from the demo!'
+  '🔥🔥🔥', 'monkaS', 'hello from the demo!', '@DemoStreamer can you read this? 👀', '@demostreamer what are your settings?'
 ]
 const COLORS = ['#4fd1ff', '#ff7ad9', '#7dff9b', '#ffb454', '#b794ff', '#ff6b6b']
 
@@ -153,7 +153,7 @@ export class DemoConnector implements Connector {
     // Platforms connect one after another, as they do for real, so the progress bar shows.
     this.ctx.status({ status: 'connecting' })
     const order = ['twitch', 'youtube', 'kick'].indexOf(this.platform)
-    this.timers.push(setTimeout(() => this.ctx.status({ status: 'connected', account: 'DemoStreamer' }), 2500 + order * 1800))
+    this.timers.push(setTimeout(() => this.ctx.status({ status: 'connected', account: 'DemoStreamer', mentions: ['DemoStreamer'] }), 2500 + order * 1800))
     // The streamer testing their own reward, so the TEST tag and Clear menu have something to show.
     if (this.platform === 'twitch') {
       this.timers.push(setTimeout(() => this.ctx.event({

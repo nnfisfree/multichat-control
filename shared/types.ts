@@ -177,6 +177,8 @@ export interface ConnectionState {
   platform: Platform
   status: ConnectionStatus
   account?: string
+  /** The names viewers tag the streamer with (without @), so those messages can be highlighted. */
+  mentions?: string[]
   detail?: string
   /** Shown while Twitch device login waits for the user. */
   device?: { code: string; url: string }

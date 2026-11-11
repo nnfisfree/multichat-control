@@ -32,6 +32,7 @@ export class TwitchConnector implements Connector {
   private userId = ''
   private login_ = ''
   private displayName = ''
+  private mentions: string[] = []
   private sub: EventSub | null = null
   private badges = new Map<string, Badge>()
   private third: EmoteLookup = new Map()
@@ -90,13 +91,14 @@ export class TwitchConnector implements Connector {
     this.login_ = who.login
     const users = await this.helix('GET', '/users', { id: who.user_id })
     this.displayName = users.data?.[0]?.display_name ?? who.login
+    this.mentions = [who.login, this.displayName]
     this.avatar = smallAvatar(users.data?.[0]?.profile_image_url)
     this.emoteCache = await loadEmoteCache(`twitch-${who.user_id}`)
     await Promise.all([this.loadBadges(), this.loadThirdParty(), this.loadManageable(), this.loadCheers()])
     this.sub = new EventSub({
       onSession: (id) => this.subscribeAll(id),
       onNotification: (type, id, e) => this.onEvent(type, id, e),
-      onState: (s, detail) => this.ctx.status({ status: s, account: this.displayName, detail })
+      onState: (s, detail) => this.ctx.status({ status: s, account: this.displayName, mentions: this.mentions, detail })
     })
     this.sub.start()
     if (this.checkTimer) clearInterval(this.checkTimer)

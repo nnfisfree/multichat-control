@@ -17,6 +17,7 @@ export class KickConnector implements Connector {
   private userId = 0
   private slug = ''
   private name = ''
+  private mentions: string[] = []
   private socket: KickSocket | null = null
   private found: KickChannel | null = null
   private third: EmoteLookup = new Map()
@@ -50,12 +51,13 @@ export class KickConnector implements Connector {
     this.userId = user?.user_id ?? channel?.broadcaster_user_id
     this.slug = channel?.slug ?? user?.name
     this.name = user?.name ?? this.slug
+    this.mentions = [this.slug, this.name].filter(Boolean)
     await this.connectSocket(++this.run)
   }
 
   private async connectSocket(run: number): Promise<void> {
     try {
-      this.ctx.status({ status: 'connecting', account: this.name, detail: 'Reading Kick channel' })
+      this.ctx.status({ status: 'connecting', account: this.name, mentions: this.mentions, detail: 'Reading Kick channel' })
       const d = await fetchChannel(this.slug)
       if (run !== this.run) return
       this.found = d
@@ -65,13 +67,13 @@ export class KickConnector implements Connector {
       const channels = [`chatrooms.${d.chatroomId}.v2`, `chatrooms.${d.chatroomId}`, `chatroom_${d.chatroomId}`, `channel.${d.channelId}`, `channel_${d.channelId}`]
       this.socket = new KickSocket(fetchRealtime, channels, {
         onEvent: (name, data) => this.onEvent(name, data),
-        onState: (s, detail) => this.ctx.status({ status: s, account: this.name, detail })
+        onState: (s, detail) => this.ctx.status({ status: s, account: this.name, mentions: this.mentions, detail })
       })
       this.socket.start()
       void this.emotes()
     } catch (err) {
       if (run !== this.run) return
-      this.ctx.status({ status: 'reconnecting', account: this.name, detail: `Kick read failed: ${message(err)} Sending still works.` })
+      this.ctx.status({ status: 'reconnecting', account: this.name, mentions: this.mentions, detail: `Kick read failed: ${message(err)} Sending still works.` })
       await sleep(30000)
       if (run === this.run) await this.connectSocket(run)
     }

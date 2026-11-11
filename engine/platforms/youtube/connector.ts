@@ -16,6 +16,7 @@ export class YouTubeConnector implements Connector {
   readonly platform = 'youtube' as const
   private loggedIn = false
   private channelName = ''
+  private mentions: string[] = []
   private liveChatId = ''
   private run = 0
   private cancelStream: (() => void) | null = null
@@ -43,7 +44,10 @@ export class YouTubeConnector implements Connector {
     this.loggedIn = true
     this.ctx.status({ status: 'connecting' })
     const me = await this.api('GET', '/channels', { part: 'snippet', mine: 'true' })
-    this.channelName = me.items?.[0]?.snippet?.title ?? 'YouTube'
+    const mine = me.items?.[0]?.snippet
+    this.channelName = mine?.title ?? 'YouTube'
+    // Viewers tag a channel by its @handle (customUrl), or sometimes by its name.
+    this.mentions = [String(mine?.customUrl ?? '').replace(/^@/, ''), mine?.title ?? ''].filter(Boolean)
     void this.loop(++this.run)
     void this.loadPastBroadcasts()
   }
@@ -102,17 +106,17 @@ export class YouTubeConnector implements Connector {
         this.broadcastId = r.items?.[0]?.id ?? ''
         if (!id) {
           this.liveChatId = ''
-          this.ctx.status({ status: 'waiting', account: this.channelName, detail: 'Waiting for a live broadcast' })
+          this.ctx.status({ status: 'waiting', account: this.channelName, mentions: this.mentions, detail: 'Waiting for a live broadcast' })
           await sleep(OFFLINE_CHECK_MS)
           continue
         }
         this.liveChatId = id
-        this.ctx.status({ status: 'connected', account: this.channelName })
+        this.ctx.status({ status: 'connected', account: this.channelName, mentions: this.mentions })
         await this.follow(id, run)
       } catch (err) {
         if (run !== this.run) return
         const quota = err instanceof HttpError && /quota/i.test(err.message)
-        this.ctx.status({ status: 'reconnecting', account: this.channelName, detail: quota ? 'YouTube daily quota used up. It resets at midnight Pacific Time.' : message(err) })
+        this.ctx.status({ status: 'reconnecting', account: this.channelName, mentions: this.mentions, detail: quota ? 'YouTube daily quota used up. It resets at midnight Pacific Time.' : message(err) })
         await sleep(quota ? 600000 : 30000)
       }
     }

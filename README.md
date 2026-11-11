@@ -4,7 +4,7 @@
 
 <br />
 
-[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1801&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
+[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1802&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-5b35f0?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDQuNWw4LjUtMS4ydjguMkgyem05LjUwMC0xLjMwMEwyMiAxLjgwMHY5LjcwMEgxMS41MDB6TTIgMTIuNTAwaDguNTAwdjguMjAwTDIgMTkuNTAwem05LjUwMCAwSDIydjkuNzAwbC0xMC41MDAtMS40MDB6Ii8%2BPC9zdmc%2B)
 ![Size](https://img.shields.io/badge/Size-8%20MB-a838e0?style=for-the-badge)
 [![License](https://img.shields.io/badge/License-MIT-27a9e8?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik01IDJoMTNhMiAyIDAgMCAxIDIgMnYxNEg2LjVhMS41MDAgMS41MDAgMCAwIDAgMCAzSDIwdjFINi41MDBBMi41MDAgMi41MDAgMCAwIDEgNCAxOS41MDBWM2ExIDEgMCAwIDEgMS0xem0zIDR2Mmg4VjZIOHoiLz48L3N2Zz4%3D)](LICENSE)
@@ -15,7 +15,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: merged chat, OBS stats, a user card, users in chat, recent events, the commands list narrowing as you type, the clock showing the date, and the skins changing the whole app's colours" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: merged chat with messages that tag the streamer highlighted in their platform's colour, OBS stats, a user card, users in chat, recent events, the commands list narrowing as you type, the clock showing the date, and the skins changing the whole app's colours" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -50,6 +50,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - **All, Twitch, YouTube and Kick** tabs
 - On All, choose exactly where a message goes
 - **Chat from your last 5 streams**, so you can read what you missed
+- **Messages that tag you stand out**, in the colour of the platform they came from: purple for Twitch, red for YouTube, green for Kick
 - **Click any name for a user card**: account age, follow and sub, and everything they said in your channel
 - **Users in Chat** for every platform, grouped Broadcaster · Moderators · VIPs · Users, with live viewer counts
 - Reply, delete, time out (even for 1 second, to clear messages), ban or shout out
@@ -116,7 +117,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
-<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, a donation, OBS stats in the title bar and the clock under the message box" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
+<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, a donation, a YouTube message that tags the streamer highlighted in red, OBS stats in the title bar and the clock" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
 <td align="center"><img src="docs/media/usercard.png" alt="User card with account age, follow and subscription, moderation buttons and the user's messages" /><br /><b>Know who you're talking to</b></td>
 </tr>
 <tr>
@@ -158,6 +159,7 @@ That's it. Future versions arrive through the app's own update banner.
 
 Open the gear icon and click **Log in** beside each platform you stream on. You sign in on the platform's own page: Twitch, your Google account for YouTube, or your Kick account. There's nothing else to set up.
 
+- **YouTube:** Google will show *"Google hasn't verified this app"*. **That's expected and safe:** click **Advanced**, then **Go to MultichatControl (unsafe)**. [Why it says that](#about-the-youtube-login-warning).
 - **Twitch** expires its logins after about 30 days, so the app may ask you to log in again.
 - **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in. Your custom Power-ups and points only show once you're signed in.
 - **Alerts & Donations:** pick the one service you use and click **Log in**.
@@ -285,7 +287,6 @@ These limits come from the platforms.
 | **Twitch** | The rewards panel depends on Twitch's page layout, so a Twitch redesign can stop it opening until the app is updated. Rewards that need a typed chat message must be redeemed in Twitch's normal chat. |
 | **Twitch** | Twitch sends no notice when a message is pinned, so the pinned bar checks every 20 seconds. |
 | **Twitch** | Pronouns come from the community service [pronouns.alejo.io](https://pronouns.alejo.io), so they cover Twitch chatters who registered there. Turning them on sends chatter names to that service. |
-| **YouTube** | Until Google verifies this app, YouTube login on official builds only works for approved testers, and those logins expire every 7 days. |
 | **YouTube** | Chat exists only during a live broadcast. The app waits and connects by itself. |
 | **YouTube** | Each Google project gets 10,000 quota units a day, shared by everyone using that build. Each message sent costs 20. To avoid sharing, enter your own app in Settings. Messages are limited to 200 characters. |
 | **YouTube** | Custom member emoji have no documented API, so they show as text and aren't in the picker. |
@@ -295,8 +296,26 @@ These limits come from the platforms.
 | **Kick** | Official events need a public web server, so **reading uses the same unofficial live connection as Kick's website**. Kick can change it without notice. Sending and moderation use the official API, and the app warns you if reading stops. |
 | **Streamlabs** | Keeps a history of donations only. Its other alerts arrive live. |
 
+## About the YouTube login warning
+
+When you log in to YouTube, Google shows a page saying **"Google hasn't verified this app"**. You don't need to worry about it. Click **Advanced**, then **Go to MultichatControl (unsafe)**, and the login continues as normal.
+
+**Why it appears:** to read and send live chat and to moderate it, an app needs YouTube's `youtube.force-ssl` permission. Google treats that permission as sensitive, and shows this warning for every app using it until the app has been through Google's verification, which needs a recorded demo video and a review that can take weeks. That process is aimed at companies, and this is a free project made by one streamer, so it hasn't been done.
+
+**What the warning doesn't mean:** it isn't a sign that something is wrong with the app or that your account is at risk. The app:
+
+- only uses that permission to read your live chat, send the messages you write, and delete messages, time out or ban people when you choose to. It never touches your videos, comments or captions
+- keeps your login on your own PC, encrypted by Windows, and sends it only to Google
+- has no server of its own, so nothing reaches the developer
+- is open source, so anyone can check exactly what it does
+
+The [privacy policy](https://multichat.nonamefound.lol/privacy/) has every detail. You can remove the app's access at any time at [myaccount.google.com/permissions](https://myaccount.google.com/permissions), or with **Log out** in the app.
+
+**The 100-person limit:** until an app is verified, Google lets at most 100 different people use its built-in login. If Google ever says the app has reached its user limit, create your own free Google app and enter it in **Settings → Connections → YouTube**. The app shows the steps, and that also gives you your own daily YouTube quota.
+
 ## Privacy and security
 
+- **Privacy policy:** [multichat.nonamefound.lol/privacy](https://multichat.nonamefound.lol/privacy/), with exactly what the app does with your YouTube data.
 - **Your data stays with you.** Settings, logins, saved events and chat history live in a `user-data` folder beside the exe, and the app has no server of its own. **Keep that folder private, because it holds your logins.**
 - **Logins are encrypted** with Windows' own protection for your Windows user, so moving to another PC means logging in again. The OBS WebSocket password is stored the same way.
 - **Logins never reach the app's window.** The part of the app written in Rust keeps them, adds them to each request itself, and only ever sends each one to that service's own servers.

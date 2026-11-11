@@ -3,6 +3,7 @@ import { plainText } from '../../shared/parts'
 import type { ChatMessage, MessagePart } from '../../shared/types'
 import { Icon, PlatformIcon } from './Icons'
 import { useStore } from '../lib/store'
+import { mentionsStreamer } from '../lib/mentions'
 import { EventCard } from './EventCard'
 
 function Part({ p }: { p: MessagePart }): JSX.Element {
@@ -58,10 +59,12 @@ interface Props {
 /** Chat text is rendered only through React text nodes, so messages cannot inject markup. */
 export const ChatRow = memo(function ChatRow({ m, showPlatform, showTime, onMenu }: Props): JSX.Element {
   const pronoun = useStore((s) => (s.settings?.showPronouns && m.platform === 'twitch' && m.author.login ? s.pronouns[m.author.login] : undefined))
+  // Messages that tag the streamer stand out, in the colour of the platform they came from.
+  const tagged = useStore((s) => mentionsStreamer(m, s.statuses[m.platform]?.mentions))
   if (m.divider) return <div className="history-divider" role="separator"><span>{m.divider}</span></div>
   if (m.event) return <div className="row kind-event"><EventCard e={m.event} /></div>
   return (
-    <div className={`row kind-${m.kind}${m.firstTime ? ' first' : ''}${m.effect ? ` effect-${m.effect}` : ''}`} onContextMenu={(e) => onMenu(e, m)}>
+    <div className={`row kind-${m.kind}${m.firstTime ? ' first' : ''}${m.effect ? ` effect-${m.effect}` : ''}${tagged ? ` mention mention-${m.platform}` : ''}`} onContextMenu={(e) => onMenu(e, m)}>
       {m.reply && (
         <div className="reply"><Icon.reply /> Replying to <b>{m.reply.author}</b>: {m.reply.text}</div>
       )}

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.2
+
+**New**
+
+- **Messages that tag you are highlighted.** When a viewer writes `@yourname`, the message gets a band in the colour of its platform: purple for Twitch, red for YouTube, green for Kick. It uses the names of the accounts you're logged in with (Twitch login and display name, YouTube @handle and channel name, Kick username), ignores letter case, and never lights up for your own messages or for look-alikes like `@yourname_bot` or an email address.
+- **A homepage and privacy policy** at [multichat.nonamefound.lol](https://multichat.nonamefound.lol/), explaining exactly what the app does with your YouTube data.
+
+**Fixed**
+
+- **YouTube login works for everyone.** Google only let approved test accounts log in, and showed everyone else "Access blocked". The app's Google project is now public, so any account can log in; Google shows an "unverified app" notice first (click Advanced, then Go to MultichatControl). Logins also no longer expire every 7 days. Thanks to **Zayso** for reporting it.
+- **The X button works again when set to Minimize to tray.** After some window moves, such as resizing from the top edge, the window could stop hiding while every click on X still arrived. The app now checks that the window really hid (or showed), and corrects it when it didn't.
+- If you click "Back to safety" on Google's notice, the app now explains how to continue instead of only saying the login was declined.
+
 ## 0.2.1
 
 **New**

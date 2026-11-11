@@ -27,14 +27,15 @@
       <p class="lead">Read and write Twitch, YouTube and Kick chat together, see every event as it happens, and run channel actions in one click. A free, open-source Windows app for streamers who go live on several platforms at once.</p>
       <a class="btn" href="https://github.com/nnfisfree/multichat-control/releases/latest">Download for Windows</a>
       <a class="btn ghost" href="privacy/">Privacy Policy</a>
-      <img class="shot" src="media/chat.png" width="1000" height="760" alt="MultichatControl showing Twitch, YouTube and Kick chat merged in one window, with event cards and OBS stats" />
+      <p class="version">Latest version: <a id="version" href="https://github.com/nnfisfree/multichat-control/releases/latest">0.2.2</a></p>
+      <img class="shot" src="media/chat.png" width="1000" height="760" alt="MultichatControl showing Twitch, YouTube and Kick chat merged in one window, with event cards, a highlighted message that tags the streamer, and OBS stats" />
       <p class="muted">Shown in demo mode, with invented chatters.</p>
     </div>
 
     <section>
       <h2>What it does</h2>
       <div class="grid">
-        <div class="card"><h3>💬 One merged chat</h3>Twitch, YouTube and Kick together, with a tab for each. Reply, and choose exactly where each message goes.</div>
+        <div class="card"><h3>💬 One merged chat</h3>Twitch, YouTube and Kick together, with a tab for each. Messages that tag you are highlighted in their platform's colour. Reply, and choose exactly where each message goes.</div>
         <div class="card"><h3>⚡ Every event</h3>Subscriptions, memberships, Super Chats, gifts, raids, redemptions and donations in one list.</div>
         <div class="card"><h3>🛡️ Moderation</h3>Delete messages, time out or ban on every platform, in one click.</div>
         <div class="card"><h3>🎨 Made for live</h3>OBS stats in the title bar, eight colour skins, an emote picker and a clock.</div>
@@ -73,5 +74,17 @@
     <a href="https://nonamefound.lol">Store</a>
   </footer>
 </div>
+<script>
+  // Shows the newest release, so this page never needs editing after a release.
+  fetch('https://api.github.com/repos/nnfisfree/multichat-control/releases/latest')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((r) => {
+      if (!r || !r.tag_name) return
+      const el = document.getElementById('version')
+      el.textContent = r.tag_name.replace(/^v/, '')
+      el.href = r.html_url
+    })
+    .catch(() => {})
+</script>
 </body>
 </html>

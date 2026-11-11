@@ -18,11 +18,29 @@ fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
 
 /// Brings the window back from the tray or the taskbar.
 pub fn show(app: &AppHandle) {
-    if let Some(w) = main_window(app) {
-        let _ = w.unminimize();
-        let _ = w.show();
-        let _ = w.set_focus();
-        apply_opacity(&w);
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if let Some(w) = main_window(&handle) {
+            let _ = w.unminimize();
+            set_shown(&w, true);
+            let _ = w.set_focus();
+            apply_opacity(&w);
+        }
+    });
+}
+
+/// Shows or hides the window, and checks Windows really did it. Tauri only acts when its own
+/// record of the window changes, and that record can drift from what is on screen (a hidden
+/// window shown by Windows itself, for one): then hide() or show() silently does nothing, which
+/// left the X button dead when it was set to the tray. Flipping the record and back makes Tauri
+/// act again. Must run on the main thread, where hide() and show() take effect at once.
+fn set_shown(w: &WebviewWindow, visible: bool) {
+    let flip = |v: bool| if v { w.show() } else { w.hide() };
+    let _ = flip(visible);
+    if w.is_visible().unwrap_or(visible) != visible {
+        log("window", &format!("{} did nothing, so the window state was resynced", if visible { "show" } else { "hide" }));
+        let _ = flip(!visible);
+        let _ = flip(visible);
     }
 }
 
@@ -116,10 +134,13 @@ fn ensure_tray(app: &AppHandle) -> tauri::Result<()> {
 #[tauri::command]
 pub fn window_to_tray(app: AppHandle) -> Result<(), String> {
     ensure_tray(&app).map_err(|e| e.to_string())?;
-    if let Some(w) = main_window(&app) {
-        let _ = w.hide();
-    }
-    Ok(())
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        if let Some(w) = main_window(&handle) {
+            set_shown(&w, false);
+        }
+    })
+    .map_err(|e| e.to_string())
 }
 
 /// Asks the engine to save what's waiting and exit. If it can't answer, the app exits anyway.
