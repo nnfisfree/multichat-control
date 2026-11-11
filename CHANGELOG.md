@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3
+
+**New**
+
+- **Raid bar.** Start a raid with `/raid channel` or the Start raid action and a bar appears at the top of chat, like the one in OBS's Twitch chat: the channel's profile picture with a LIVE tag, the game they're playing, their viewers and stream title, and Twitch's 90-second countdown with a progress bar. It sits above the pinned message, which stays visible under it, and takes its colours from your skin.
+- **Raid Now.** Send the raid without waiting for the countdown. It unlocks 10 seconds in, exactly like on Twitch. Twitch's API can't do this, so the app presses Twitch's own button on your chat page, kept open out of sight while the raid counts down. It needs the Twitch sign-in from Rewards & Power-ups. Also as `/raidnow`.
+- **Cancel** is red in every skin, and the bar goes away by itself once Twitch sends the raid.
+
 ## 0.2.2
 
 **New**

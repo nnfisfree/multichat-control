@@ -4,10 +4,14 @@
 
 <br />
 
-[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1802&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
+[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1803&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-5b35f0?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDQuNWw4LjUtMS4ydjguMkgyem05LjUwMC0xLjMwMEwyMiAxLjgwMHY5LjcwMEgxMS41MDB6TTIgMTIuNTAwaDguNTAwdjguMjAwTDIgMTkuNTAwem05LjUwMCAwSDIydjkuNzAwbC0xMC41MDAtMS40MDB6Ii8%2BPC9zdmc%2B)
 ![Size](https://img.shields.io/badge/Size-8%20MB-a838e0?style=for-the-badge)
 [![License](https://img.shields.io/badge/License-MIT-27a9e8?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik01IDJoMTNhMiAyIDAgMCAxIDIgMnYxNEg2LjVhMS41MDAgMS41MDAgMCAwIDAgMCAzSDIwdjFINi41MDBBMi41MDAgMi41MDAgMCAwIDEgNCAxOS41MDBWM2ExIDEgMCAwIDEgMS0xem0zIDR2Mmg4VjZIOHoiLz48L3N2Zz4%3D)](LICENSE)
+
+<br />
+
+💪 **Inspired by [Streamer.bot](https://streamer.bot)'s [chat](https://docs.streamer.bot/guide/extra-features/chat), but on steroids.**
 
 **Read and write Twitch, YouTube and Kick chat together, see every event as it happens, and run channel actions in one click.**
 <br />
@@ -15,7 +19,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: merged chat with messages that tag the streamer highlighted in their platform's colour, OBS stats, a user card, users in chat, recent events, the commands list narrowing as you type, the clock showing the date, and the skins changing the whole app's colours" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: the commands list narrowing to /raid and /raidnow, a raid starting with its raid bar and countdown, a user card, users in chat, OBS stats, recent events, the clock showing the date, and the skins changing the whole app's colours" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -83,6 +87,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 ### 🎛️ One-click control
 - Twitch's real Rewards & Power-ups panel, custom Power-ups included
 - **Every Twitch chat command**, typed in the message box: raids, polls, predictions, modes, pins and more
+- **Raid bar** like OBS's Twitch chat: the raided channel's picture, game, viewers and title, Twitch's countdown, **Raid Now** and Cancel
 - **Pinned messages** at the top of chat, out of the way during a Hype Train
 - Announcements, shoutouts, raids, ads and clips in one click
 - Shield mode, stream title and category
@@ -117,28 +122,31 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
-<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, a donation, a YouTube message that tags the streamer highlighted in red, OBS stats in the title bar and the clock" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
+<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, a Super Chat, messages that tag the streamer highlighted in red for YouTube and green for Kick, OBS stats in the title bar and the clock" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
+<td align="center"><img src="docs/media/raid.png" alt="Raid bar above the pinned message: the raided channel's picture with a LIVE tag, its game and viewers, the stream title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view, and Raid Now when you're ready</b></td>
+</tr>
+<tr>
 <td align="center"><img src="docs/media/usercard.png" alt="User card with account age, follow and subscription, moderation buttons and the user's messages" /><br /><b>Know who you're talking to</b></td>
-</tr>
-<tr>
 <td align="center"><img src="docs/media/users.png" alt="Users in Chat with Twitch, YouTube and Kick sections, viewer counts and role groups" /><br /><b>Who's in chat, on every platform</b></td>
+</tr>
+<tr>
 <td align="center"><img src="docs/media/obs.png" alt="OBS stats panel with encoder, canvas and output resolution, frames and the stream table" /><br /><b>OBS stats at a glance</b></td>
-</tr>
-<tr>
 <td align="center"><img src="docs/media/events.png" alt="Events drop-down with platform filters, type filter, sort and Clear buttons, and a redeem tagged TEST" /><br /><b>Recent events, filtered, sorted and tidy</b></td>
+</tr>
+<tr>
 <td align="center"><img src="docs/media/commands.png" alt="The commands list narrowing to /pin, /poll and /prediction while typing /p in the message box" /><br /><b>Every Twitch command, suggested as you type</b></td>
-</tr>
-<tr>
 <td align="center"><img src="docs/media/skins.png" alt="Settings, Appearance: eight skin cards from POS Club to OLED Black" /><br /><b>Eight skins, one click each</b></td>
+</tr>
+<tr>
 <td align="center"><img src="docs/media/history.png" alt="Chat from a past stream under a divider showing its date and number of messages" /><br /><b>Read what you missed in your last streams</b></td>
-</tr>
-<tr>
 <td align="center"><img src="docs/media/connections.png" alt="Connections menu listing Twitch, YouTube and Kick with their state" /><br /><b>Every connection at a glance</b></td>
-<td align="center"><img src="docs/media/emotes.png" alt="Emote picker grouped by provider, with search" /><br /><b>Emote picker for every provider</b></td>
 </tr>
 <tr>
+<td align="center"><img src="docs/media/emotes.png" alt="Emote picker grouped by provider, with search" /><br /><b>Emote picker for every provider</b></td>
 <td align="center"><img src="docs/media/settings.png" alt="Settings with categories on the left, one-row logins for each platform and the OBS Studio card" /><br /><b>Clear settings, one-click logins</b></td>
-<td align="center"><img src="docs/media/support.png" alt="About page with the Support chapter and Donate, Subscribe and Gadgets Store buttons" /><br /><b>The story behind it, inside the app</b></td>
+</tr>
+<tr>
+<td align="center" colspan="2"><img src="docs/media/support.png" width="50%" alt="About page, Support tab, with Donate, Subscribe on Twitch and Gadgets Store buttons" /><br /><b>The story behind it, inside the app</b></td>
 </tr>
 </table>
 
@@ -180,7 +188,8 @@ Type these in the message box. The **/** button lists them, and the list narrows
 
 | Command | What it does |
 |---|---|
-| `/raid channel` | Raid another channel (`/unraid` cancels) |
+| `/raid channel` | Raid another channel and show the raid bar (`/unraid` cancels) |
+| `/raidnow` | Send the raid without waiting for Twitch's 90-second countdown (from 10 seconds in) |
 | `/pin [5m] message` | Send and pin a message, until the stream ends or for 30 s to 30 min (`/unpin`) |
 | `/announce message` | Send an announcement (also `/announceblue`, `green`, `orange`, `purple`) |
 | `/shoutout channel` | Give a shoutout (also `/so`) |
@@ -286,6 +295,7 @@ These limits come from the platforms.
 | **Twitch** | The API keeps dated history only for follows, past streams, polls, predictions and the Hype Train record. Subs, gifts, Bits and raids from before the app started come from Streamlabs or StreamElements, or build up as the app sees them. |
 | **Twitch** | The rewards panel depends on Twitch's page layout, so a Twitch redesign can stop it opening until the app is updated. Rewards that need a typed chat message must be redeemed in Twitch's normal chat. |
 | **Twitch** | Twitch sends no notice when a message is pinned, so the pinned bar checks every 20 seconds. |
+| **Twitch** | Twitch's API can start and cancel a raid but not send it early, so **Raid Now presses Twitch's own button** on your chat page, kept open out of sight during the countdown. It needs the rewards panel's Twitch sign-in and unlocks 10 seconds in, like on Twitch. A Twitch redesign can stop it until the app is updated; the raid still goes when the countdown ends. |
 | **Twitch** | Pronouns come from the community service [pronouns.alejo.io](https://pronouns.alejo.io), so they cover Twitch chatters who registered there. Turning them on sends chatter names to that service. |
 | **YouTube** | Chat exists only during a live broadcast. The app waits and connects by itself. |
 | **YouTube** | Each Google project gets 10,000 quota units a day, shared by everyone using that build. Each message sent costs 20. To avoid sharing, enter your own app in Settings. Messages are limited to 200 characters. |
@@ -357,7 +367,7 @@ ui/            The interface (React): components, skins and styles
 engine/        The app's logic (TypeScript): the hub that merges chats, one connector per
   platforms/   platform behind a shared interface, alert services, OBS, demo mode
 core/          The Rust side (Tauri): window, logins and tokens, encrypted secrets, files,
-  src/         YouTube's live chat, Twitch's rewards panel, updater, tray
+  src/         YouTube's live chat, Twitch's rewards panel and Raid Now, updater, tray
 shared/        Types and message parsing used by the interface and the engine
 assets/        Icon and logos
 proto/         YouTube's live chat definition

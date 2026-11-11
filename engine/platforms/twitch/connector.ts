@@ -1,5 +1,5 @@
 import type { EmoteLookup } from '../../../shared/parts'
-import type { ActionDef, ActionResult, Badge, Emote, ModerationRequest, CommandOutcome, StreamEvent, UserEntry, UserGroups, UserProfile, UsersInfo } from '../../../shared/types'
+import type { ActionDef, ActionResult, Badge, RaidInfo, Emote, ModerationRequest, CommandOutcome, StreamEvent, UserEntry, UserGroups, UserProfile, UsersInfo } from '../../../shared/types'
 import { core, onDeviceCode } from '../../core'
 import { loadEmoteCache, saveEmoteCache } from '../../emotes/cache'
 import { loadTwitchExtras, toLookup } from '../../emotes/third-party'
@@ -230,9 +230,32 @@ export class TwitchConnector implements Connector {
     this.ctx.pinned?.(pinned)
   }
 
+  /** Whether our own raid is counting down. */
+  private raiding = false
+  private raidEnd: ReturnType<typeof setTimeout> | undefined
+
+  /**
+   * Shows or ends the raid bar. While a raid counts down, Twitch's own chat page stays open out of
+   * sight, so Raid Now can press Twitch's button there (Twitch's API can't send a raid early).
+   */
+  private setRaid(r: RaidInfo | null): void {
+    this.raiding = !!r
+    this.ctx.raid?.(r)
+    void core.raidPage(!!r, this.channelLogin()).catch(() => {})
+    // If Twitch's notice of the raid going out never arrives, it still ends after the countdown.
+    clearTimeout(this.raidEnd)
+    if (r) this.raidEnd = setTimeout(() => this.setRaid(null), Math.max(0, r.endsAt - Date.now()) + 30_000)
+  }
+
   /** Twitch's typed chat commands, run through the API. */
   async command(text: string): Promise<CommandOutcome | null> {
     if (!this.userId) return { ok: false, message: 'Log in to Twitch to use Twitch commands.' }
+    if (/^\/raidnow$/i.test(text.trim())) {
+      if (!this.raiding) return { ok: false, message: 'No raid is counting down. Start one with /raid channel.' }
+      const r = await core.raidNow(this.channelLogin())
+      // The bar stays until Twitch reports the raid, and goes then.
+      return { ok: r.ok, message: r.message }
+    }
     const send = async (message: string): Promise<string | undefined> => {
       const r = await this.helix('POST', '/chat/messages', undefined, { broadcaster_id: this.userId, sender_id: this.userId, message })
       const res = r?.data?.[0]
@@ -241,6 +264,7 @@ export class TwitchConnector implements Connector {
     }
     const result = await runTwitchCommand(this.helix, this.userId, text, send)
     if (result?.pinned) setTimeout(() => void this.refreshPin(), 800)
+    if (result && result.raid !== undefined) this.setRaid(result.raid)
     return result
   }
 
@@ -435,6 +459,10 @@ export class TwitchConnector implements Connector {
         this.hypeLevel = train.level
         return this.ctx.event({ id, platform: 'twitch', ts: Date.now(), type: 'hypetrain', big: true, text: `Hype Train reached level ${train.level}!`, amount: `Level ${train.level}`, details: {} })
       }
+      case 'channel.raid':
+        // Our own raid went out: the countdown bar is done.
+        if (e.from_broadcaster_user_id === this.userId) this.setRaid(null)
+        break
       case 'channel.hype_train.end':
         this.ctx.hype(null)
         this.hypeLevel = 0
@@ -523,6 +551,7 @@ export class TwitchConnector implements Connector {
 
   async runAction(actionId: string, args: Record<string, string>): Promise<ActionResult> {
     const r = await runTwitchAction(this.helix, this.userId, actionId, args)
+    if (r.raid !== undefined) this.setRaid(r.raid)
     if (actionId === 'reward.create') await this.loadManageable()
     return r
   }

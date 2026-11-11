@@ -3,7 +3,7 @@ import type { Connector, ConnectorContext } from './platforms/connector'
 import { eventToMessage } from '../shared/events'
 import { serializeFor } from '../shared/parts'
 import type {
-  ActionResult, AlertSource, ChatMessage, CommandOutcome, PinnedMessage, PlatformUsers, UserCard, UserEntry, UserGroups, UserProfile, UsersInfo, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
+  ActionResult, AlertSource, ChatMessage, CommandOutcome, PinnedMessage, PlatformUsers, RaidInfo, UserCard, UserEntry, UserGroups, UserProfile, UsersInfo, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
 } from '../shared/types'
 import { PLATFORMS } from '../shared/types'
 import { log } from './log'
@@ -36,6 +36,7 @@ export class Hub {
   private pronouns: Record<string, string> = {}
   private hype: HypeTrain | null = null
   private pinned: PinnedMessage | null = null
+  private raid: RaidInfo | null = null
   private pending: HubBatch = emptyBatch()
   private timer: ReturnType<typeof setTimeout> | null = null
   private sendBatch: ((batch: HubBatch) => void) | null = null
@@ -247,6 +248,11 @@ export class Hub {
         this.pending.pinned = p
         this.schedule()
       },
+      raid: (r) => {
+        this.raid = r
+        this.pending.raid = r
+        this.schedule()
+      },
       actionsChanged: () => {
         this.pending.actionsChanged = [...new Set([...(this.pending.actionsChanged ?? []), platform])]
         this.schedule()
@@ -284,7 +290,8 @@ export class Hub {
       pronouns: this.pronouns,
       hype: this.hype,
       integrations: [...this.integrations.values()],
-      pinned: this.pinned
+      pinned: this.pinned,
+      raid: this.raid
     }
   }
 

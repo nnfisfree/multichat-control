@@ -30,6 +30,12 @@ pub struct Bounds { x: f64, y: f64, width: f64, height: f64, colors: Option<Colo
 #[derive(Serialize)]
 pub struct ActionResult { ok: bool, #[serde(skip_serializing_if = "Option::is_none")] message: Option<String> }
 
+impl ActionResult {
+    pub(crate) fn new(ok: bool, message: Option<String>) -> Self {
+        Self { ok, message }
+    }
+}
+
 #[derive(Default)]
 struct Panel {
     channel: String,
@@ -46,14 +52,14 @@ fn panel() -> &'static Mutex<Panel> {
     P.get_or_init(|| Mutex::new(Panel::default()))
 }
 
-fn popout_url(channel: &str) -> Option<url::Url> {
+pub(crate) fn popout_url(channel: &str) -> Option<url::Url> {
     if channel.is_empty() || !channel.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return None;
     }
     url::Url::parse(&format!("https://www.twitch.tv/popout/{channel}/chat?darkpopout")).ok()
 }
 
-fn is_twitch(u: &url::Url) -> bool {
+pub(crate) fn is_twitch(u: &url::Url) -> bool {
     u.scheme() == "https" && u.host_str().is_some_and(|h| h == "twitch.tv" || h.ends_with(".twitch.tv"))
 }
 

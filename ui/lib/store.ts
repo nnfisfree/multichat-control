@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { chatEventGroup } from '../../shared/events'
 import { PLATFORMS } from '../../shared/types'
-import type { AlertSource, HistorySession, ObsState, PinnedMessage, PlatformUsers, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
+import type { AlertSource, HistorySession, ObsState, PinnedMessage, PlatformUsers, RaidInfo, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
 
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
@@ -32,9 +32,10 @@ export interface State {
   users: Partial<Record<Platform, PlatformUsers>>
   obs: ObsState
   pinned: PinnedMessage | null
+  raid: RaidInfo | null
 }
 
-let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false, obsPassword: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0, users: {}, obs: { status: 'off' }, pinned: null }
+let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false, obsPassword: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0, users: {}, obs: { status: 'off' }, pinned: null, raid: null }
 const listeners = new Set<() => void>()
 let eventsOpen = false
 /** While the user reads back through chat, old rows stay so their scroll position holds. */
@@ -70,8 +71,9 @@ function apply(b: HubBatch): void {
   let actionsVersion = state.actionsVersion
   for (const p of b.actionsChanged ?? []) actionsVersion = { ...actionsVersion, [p]: (actionsVersion[p] ?? 0) + 1 }
   const pinned = b.pinned === undefined ? state.pinned : b.pinned
+  const raid = b.raid === undefined ? state.raid : b.raid
   const integrations = b.integrations?.length ? { ...state.integrations, ...Object.fromEntries(b.integrations.map((i) => [i.source, i])) } : state.integrations
-  set({ messages, events, statuses, pronouns, hype, actionsVersion, integrations, pinned, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.filter((e) => !e.history).length })
+  set({ messages, events, statuses, pronouns, hype, actionsVersion, integrations, pinned, raid, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.filter((e) => !e.history).length })
 }
 
 async function init(): Promise<void> {
@@ -88,7 +90,8 @@ async function init(): Promise<void> {
     integrations: Object.fromEntries(boot.integrations.map((i) => [i.source, i])),
     panelSignedIn: boot.panelSignedIn,
     obs: boot.obs,
-    pinned: boot.pinned
+    pinned: boot.pinned,
+    raid: boot.raid
   })
   // The latest past stream shows above this one; older ones load on request.
   const sessions = await window.nnf.history.sessions().catch((): HistorySession[] => [])

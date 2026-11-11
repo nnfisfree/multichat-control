@@ -1,8 +1,9 @@
-import type { ActionResult, UserEntry } from '../../../shared/types'
+import type { ActionResult, RaidInfo, UserEntry } from '../../../shared/types'
 import type { Helix } from './connector'
+import { startRaid } from './raid'
 
 /** What a command returns: a message for the streamer, and sometimes something to open. */
-export type CommandResult = ActionResult & { openUser?: UserEntry; pinned?: boolean }
+export type CommandResult = ActionResult & { openUser?: UserEntry; pinned?: boolean; raid?: RaidInfo | null }
 
 const UNITS: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400, w: 604800, mo: 2592000 }
 
@@ -43,13 +44,12 @@ export async function runTwitchCommand(helix: Helix, me: string, input: string, 
 
   switch (name) {
     case 'raid': {
-      const u = await user(rest[0])
-      await helix('POST', '/raids', { from_broadcaster_id: me, to_broadcaster_id: u.id })
-      return ok(`Raid on ${u.name} is set up. It starts after Twitch's countdown, or press Raid Now on Twitch.`)
+      const raid = await startRaid(helix, me, rest[0] ?? '')
+      return { ok: true, raid, message: `Raiding ${raid.name} when Twitch's countdown ends.` }
     }
     case 'unraid':
       await helix('DELETE', '/raids', { broadcaster_id: me })
-      return ok('Raid canceled.')
+      return { ok: true, raid: null, message: 'Raid canceled.' }
     case 'ban': {
       const u = await user(rest[0])
       await helix('POST', '/moderation/bans', mod, { data: { user_id: u.id, ...(rest.length > 1 ? { reason: rest.slice(1).join(' ') } : {}) } })

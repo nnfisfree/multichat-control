@@ -1,6 +1,7 @@
 /** Twitch chat commands the app runs through Twitch's API, for the help list and suggestions. */
 export const TWITCH_COMMANDS: { name: string; usage: string; description: string }[] = [
   { name: '/raid', usage: '/raid channel', description: 'Raid another channel' },
+  { name: '/raidnow', usage: '/raidnow', description: 'Send the raid without waiting for the countdown' },
   { name: '/unraid', usage: '/unraid', description: 'Cancel the raid' },
   { name: '/pin', usage: '/pin [5m] message', description: 'Send and pin a message, until the stream ends or for 30 s to 30 min' },
   { name: '/unpin', usage: '/unpin', description: 'Remove the pinned message' },

@@ -35,6 +35,9 @@ export const core = {
   removeFile: (name: string) => invoke<void>('file_remove', { name }),
   listFolder: (folder: 'chat-history' | 'emote-cache') => invoke<string[]>('folder_list', { folder }),
   clearHistory: () => invoke<void>('history_clear'),
+  /** The hidden Twitch page that Raid Now presses Twitch's own button on: open while a raid counts down. */
+  raidPage: (open: boolean, channel?: string) => invoke<void>('raid_page', { openPage: open, channel: channel ?? null }),
+  raidNow: (channel?: string) => invoke<{ ok: boolean; message?: string }>('raid_now', { channel: channel ?? null }),
   openUrl: (url: string) => invoke<void>('plugin:opener|open_url', { url }),
   log: (scope: string, text: string) => invoke<void>('log_line', { scope, text }).catch(() => {})
 }

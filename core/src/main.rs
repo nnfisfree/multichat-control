@@ -6,6 +6,7 @@ mod kick;
 mod legacy;
 mod panel;
 mod paths;
+mod raid;
 mod secrets;
 mod sockets;
 mod storage;
@@ -112,6 +113,8 @@ fn main() {
             panel::panel_show,
             panel::panel_hide,
             panel::panel_signed_in,
+            raid::raid_page,
+            raid::raid_now,
             window::window_to_tray,
             window::window_close,
             window::app_quitting,

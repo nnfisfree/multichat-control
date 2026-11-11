@@ -85,7 +85,11 @@ const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)]
  * Simulated platform for UI work and automated tests. Runs through the same interface as the
  * real connectors, so `--demo` exercises everything except the network.
  */
+/** A made-up channel picture for the demo raid. */
+const DEMO_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a59"/><stop offset="1" stop-color="#9146ff"/></linearGradient></defs>' + '<rect width="64" height="64" fill="url(#g)"/><circle cx="32" cy="26" r="12" fill="#ffe3c7"/><path d="M10 64c2-14 12-20 22-20s20 6 22 20z" fill="#1b1440"/><path d="M19 24c0-10 6-15 13-15s13 5 13 15c-3-5-8-7-13-7s-10 2-13 7z" fill="#3a1f12"/></svg>')
+
 export class DemoConnector implements Connector {
+  private raidTimer: ReturnType<typeof setTimeout> | undefined
   private timers: ReturnType<typeof setTimeout>[] = []
   private seq = 0
   private toggles: Record<string, boolean> = { slow: false, subonly: false }
@@ -250,6 +254,20 @@ export class DemoConnector implements Connector {
       return { ok: true, message: minutes ? `Pinned for ${minutes[1]} minutes.` : 'Pinned until the stream ends.' }
     }
     if (name === '/unpin') { this.ctx.pinned?.(null); return { ok: true, message: 'Unpinned.' } }
+    if (name === '/raid') {
+      const who = (rest[0] ?? 'PixelPaladin').replace(/^@/, '')
+      const now = Date.now()
+      this.ctx.raid?.({ login: who.toLowerCase(), name: who, avatar: DEMO_AVATAR, game: 'Elden Ring', title: 'First blind run! Malenia attempts all night', viewers: 1284, live: true, startedAt: now, endsAt: now + 90_000 })
+      clearTimeout(this.raidTimer)
+      this.raidTimer = setTimeout(() => this.ctx.raid?.(null), 90_000)
+      return { ok: true, message: `Raiding ${who} when Twitch's countdown ends.` }
+    }
+    if (name === '/raidnow') {
+      clearTimeout(this.raidTimer)
+      this.raidTimer = setTimeout(() => this.ctx.raid?.(null), 1500)
+      return { ok: true, message: 'Raid sent.' }
+    }
+    if (name === '/unraid') { clearTimeout(this.raidTimer); this.ctx.raid?.(null); return { ok: true, message: 'Raid canceled.' } }
     if (name === '/user' && rest[0]) return { ok: true, openUser: { id: rest[0], name: rest[0], login: rest[0].toLowerCase() } }
     return { ok: true, message: `Demo: ${name} done.` }
   }

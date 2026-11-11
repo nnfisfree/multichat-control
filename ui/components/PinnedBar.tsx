@@ -9,11 +9,12 @@ const left = (ms: number): string => {
 
 /**
  * The message pinned in Twitch chat, at the top of chat. It steps aside while a Hype Train
- * banner shows, and comes back when the train ends.
+ * banner shows, and comes back when the train ends. During a raid it always shows, under the raid bar.
  */
 export function PinnedBar(): JSX.Element | null {
   const pinned = useStore((s) => s.pinned)
   const hype = useStore((s) => s.hype)
+  const raid = useStore((s) => s.raid)
   const [now, setNow] = useState(Date.now())
   const [busy, setBusy] = useState(false)
   useEffect(() => {
@@ -21,7 +22,7 @@ export function PinnedBar(): JSX.Element | null {
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
   }, [pinned?.endsAt])
-  if (!pinned || hype || (pinned.endsAt && pinned.endsAt <= now)) return null
+  if (!pinned || (hype && !raid) || (pinned.endsAt && pinned.endsAt <= now)) return null
   return (
     <div className="pinned-bar" role="status">
       <span className="pinned-icon" aria-hidden="true"><Icon.pin /></span>

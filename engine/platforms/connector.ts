@@ -1,5 +1,5 @@
 import type {
-  ActionDef, ActionResult, ChatMessage, ConnectionState, Emote, HypeTrain, CommandOutcome, ModerationRequest, PinnedMessage, Platform, StreamEvent, UserEntry, UserProfile, UsersInfo
+  ActionDef, ActionResult, ChatMessage, ConnectionState, Emote, HypeTrain, CommandOutcome, ModerationRequest, PinnedMessage, Platform, RaidInfo, StreamEvent, UserEntry, UserProfile, UsersInfo
 } from '../../shared/types'
 
 /** How a connector reports to the hub. */
@@ -14,6 +14,8 @@ export interface ConnectorContext {
   actionsChanged(): void
   /** The pinned chat message changed. */
   pinned?(p: PinnedMessage | null): void
+  /** An outgoing raid started, or went, or was cancelled. */
+  raid?(r: RaidInfo | null): void
   status(s: Omit<ConnectionState, 'platform'>): void
 }
 

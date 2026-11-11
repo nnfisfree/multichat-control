@@ -28,6 +28,21 @@ export interface UserEntry { id: string; name: string; login?: string; color?: s
 /** The message pinned in Twitch chat, if any. */
 export interface PinnedMessage { id: string; text: string; sender: string; endsAt?: number }
 
+/** An outgoing Twitch raid during Twitch's countdown: who is being raided and when it goes. */
+export interface RaidInfo {
+  login: string
+  name: string
+  avatar?: string
+  /** What they are streaming; absent when they are offline. */
+  game?: string
+  title?: string
+  viewers?: number
+  live: boolean
+  startedAt: number
+  /** When Twitch sends the raid on its own. */
+  endsAt: number
+}
+
 /** The result of a typed command. */
 export type CommandOutcome = ActionResult & { openUser?: UserEntry }
 
@@ -364,6 +379,7 @@ export interface Bootstrap {
   hype: HypeTrain | null
   integrations: IntegrationState[]
   pinned: PinnedMessage | null
+  raid: RaidInfo | null
   update: UpdateState
   panelSignedIn: boolean | null
   obs: ObsState
@@ -391,6 +407,8 @@ export interface HubBatch {
   integrations?: IntegrationState[]
   /** The pinned Twitch message; null when it is removed, undefined means no change. */
   pinned?: PinnedMessage | null
+  /** The outgoing raid; null when it goes or is cancelled, undefined means no change. */
+  raid?: RaidInfo | null
 }
 
 /** The skin's colours, so Twitch's rewards panel can match the app. */

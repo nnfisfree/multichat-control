@@ -1,5 +1,6 @@
-import type { ActionDef, ActionResult } from '../../../shared/types'
+import type { ActionDef, ActionResult, RaidInfo } from '../../../shared/types'
 import type { Helix } from './connector'
+import { startRaid } from './raid'
 
 const CHAT_MODES: { key: string; label: string; apply: (on: boolean) => Record<string, unknown> }[] = [
   { key: 'slow_mode', label: 'Slow mode', apply: (on) => ({ slow_mode: on, slow_mode_wait_time: on ? 30 : undefined }) },
@@ -86,7 +87,7 @@ async function userId(helix: Helix, login: string): Promise<string> {
   return id
 }
 
-export async function runTwitchAction(helix: Helix, id: string, action: string, a: Record<string, string>): Promise<ActionResult> {
+export async function runTwitchAction(helix: Helix, id: string, action: string, a: Record<string, string>): Promise<ActionResult & { raid?: RaidInfo | null }> {
   const mod = { broadcaster_id: id, moderator_id: id }
 
   if (action.startsWith('mode.')) {
@@ -127,12 +128,13 @@ export async function runTwitchAction(helix: Helix, id: string, action: string, 
     case 'ad':
       await helix('POST', '/channels/commercial', undefined, { broadcaster_id: id, length: Number(a.length || 60) })
       return { ok: true, message: 'Ad break started.' }
-    case 'raid':
-      await helix('POST', '/raids', { from_broadcaster_id: id, to_broadcaster_id: await userId(helix, a.login) })
-      return { ok: true, message: 'Raid started.' }
+    case 'raid': {
+      const raid = await startRaid(helix, id, a.login ?? '')
+      return { ok: true, raid, message: `Raiding ${raid.name} when Twitch's countdown ends.` }
+    }
     case 'raid.cancel':
       await helix('DELETE', '/raids', { broadcaster_id: id })
-      return { ok: true, message: 'Raid cancelled.' }
+      return { ok: true, raid: null, message: 'Raid cancelled.' }
     case 'title':
       await helix('PATCH', '/channels', { broadcaster_id: id }, { title: a.title })
       return { ok: true, message: 'Title updated.' }

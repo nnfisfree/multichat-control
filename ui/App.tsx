@@ -10,6 +10,7 @@ import { UsersDrawer } from './components/UsersDrawer'
 import { UserCardPanel } from './components/UserCard'
 import { ClosePrompt } from './components/ClosePrompt'
 import { PinnedBar } from './components/PinnedBar'
+import { RaidBar } from './components/RaidBar'
 import { HypeBanner } from './components/HypeBanner'
 import { RewardsPanel } from './components/RewardsPanel'
 import { Settings } from './components/Settings'
@@ -105,6 +106,7 @@ function Main(): JSX.Element {
       <div className="shell">
         <Tabs tab={tab} eventsOpen={events} usersOpen={users} onUsers={() => openUsers(!users)} onTab={(t) => { setTab(t); openEvents(false); openUsers(false) }} onEvents={() => openEvents(!events)} onSettings={() => setSettingsOpen(true)} />
         <main className="stage">
+          {(tab === 'all' || tab === 'twitch') && <RaidBar />}
           <HypeBanner tab={tab} />
           {(tab === 'all' || tab === 'twitch') && <PinnedBar />}
           <ChatList key={tab} messages={shown} showPlatform={tab === 'all'} showTime={settings.showTimestamps} onMenu={onMenu} />
