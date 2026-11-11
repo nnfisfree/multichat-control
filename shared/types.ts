@@ -239,6 +239,16 @@ export interface ActionDef {
 export interface SendResult { platform: Platform; ok: boolean; error?: string }
 export interface ActionResult { ok: boolean; message?: string }
 
+/** The channel's own audience counts, for the stats under the message box. Missing means unknown. */
+export interface ChannelStats {
+  followers?: number
+  subscribers?: number
+  /** Kick: how many of the subscribers were gifted. */
+  gifted?: number
+  /** YouTube rounds its subscriber count to three significant figures. */
+  rounded?: boolean
+}
+
 export type ModerationRequest =
   | { kind: 'delete'; messageId: string }
   | { kind: 'timeout'; userId: string; userName: string; seconds: number }
@@ -279,6 +289,10 @@ export interface Settings {
   confirmActions: boolean
   /** The PC clock under the message box. */
   showClock: boolean
+  /** Followers and subscribers of each connected platform, under the message box. */
+  showStats: boolean
+  /** The version whose "What's new" the user already acknowledged. Empty before the first one. */
+  seenVersion: string
   fontScale: number
   showTimestamps: boolean
   setupDismissed: boolean
@@ -300,6 +314,9 @@ export interface Settings {
   /** Reads stream health from OBS's WebSocket server on this PC. */
   obsEnabled: boolean
   obsPort: number
+  /** Lists and runs Streamer.bot actions through its WebSocket server on this PC. */
+  sbEnabled: boolean
+  sbPort: number
   /** The skin's id, from the renderer's skins list. */
   theme: string
 }
@@ -311,6 +328,8 @@ export const DEFAULT_SETTINGS: Settings = {
   sendTargets: { twitch: true, youtube: true, kick: true },
   confirmActions: true,
   showClock: true,
+  showStats: true,
+  seenVersion: '',
   fontScale: 1,
   showTimestamps: false,
   setupDismissed: false,
@@ -328,12 +347,14 @@ export const DEFAULT_SETTINGS: Settings = {
   keepChatHistory: true,
   obsEnabled: false,
   obsPort: 4455,
+  sbEnabled: false,
+  sbPort: 8080,
   theme: 'pos',
   chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: false, paid: true, donations: true, hype: true }
 }
 
 /** Client secrets are write-only from the UI: it learns only whether one is stored. */
-export interface SecretState { youtubeSecret: boolean; kickSecret: boolean; obsPassword: boolean }
+export interface SecretState { youtubeSecret: boolean; kickSecret: boolean; obsPassword: boolean; sbPassword: boolean }
 
 /** Stream health read from OBS. Sizes in MB, durations in ms, bitrates in kb/s. */
 export interface ObsStats {
@@ -369,6 +390,20 @@ export interface ObsState {
   stats?: ObsStats
 }
 
+/** A Streamer.bot action, as GetActions lists it. */
+export interface SbAction { id: string; name: string; group: string; enabled: boolean }
+/** A Streamer.bot chat command (such as !lurk). Streamer.bot runs it when it sees it in chat. */
+export interface SbCommand { id: string; name: string; group: string; enabled: boolean; commands: string[] }
+
+export interface StreamerbotState {
+  status: 'off' | 'connecting' | 'connected' | 'error'
+  detail?: string
+  /** Streamer.bot's version, once connected. */
+  version?: string
+  actions: SbAction[]
+  commands: SbCommand[]
+}
+
 export interface Bootstrap {
   settings: Settings
   secrets: SecretState
@@ -383,6 +418,7 @@ export interface Bootstrap {
   update: UpdateState
   panelSignedIn: boolean | null
   obs: ObsState
+  streamerbot: StreamerbotState
   demo: boolean
   builtInTwitchId: boolean
   builtInYoutube: boolean
@@ -424,6 +460,13 @@ export interface NnfApi {
   onPanelSignedIn(cb: (signedIn: boolean) => void): () => void
   onObs(cb: (state: ObsState) => void): () => void
   obs: { setPassword(password: string): Promise<SecretState>; reconnect(): Promise<void> }
+  onStreamerbot(cb: (state: StreamerbotState) => void): () => void
+  streamerbot: {
+    setPassword(password: string): Promise<SecretState>
+    reconnect(): Promise<void>
+    /** Runs an action by its id. `input` reaches the action as rawInput, input0, input1… */
+    run(actionId: string, input?: string): Promise<ActionResult>
+  }
   updates: { check(): Promise<UpdateState>; download(): Promise<void>; install(): Promise<void>; openPage(): Promise<void> }
   send(targets: Platform[], text: string, replyTo?: { platform: Platform; messageId: string }): Promise<SendResult[]>
   moderate(platform: Platform, req: ModerationRequest): Promise<ActionResult>
@@ -437,6 +480,8 @@ export interface NnfApi {
   saveSecret(key: 'youtubeSecret' | 'kickSecret', value: string): Promise<SecretState>
   removeEvents(ids: string[]): Promise<void>
   users(platform: Platform): Promise<PlatformUsers>
+  /** Followers and subscribers, as far as the platform shares them; null when not connected. */
+  stats(platform: Platform): Promise<ChannelStats | null>
   userCard(platform: Platform, user: UserEntry): Promise<UserCard>
   /** Runs a Twitch chat command such as /raid or /pin. */
   twitchCommand(text: string): Promise<CommandOutcome>

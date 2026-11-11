@@ -1,11 +1,17 @@
 import type { EmoteLookup } from '../../../shared/parts'
-import type { ActionDef, ActionResult, Emote, ModerationRequest, UserEntry, UserProfile, UsersInfo } from '../../../shared/types'
+import type { ActionDef, ActionResult, ChannelStats, Emote, ModerationRequest, UserEntry, UserProfile, UsersInfo } from '../../../shared/types'
 import { core } from '../../core'
 import { load7tv, toLookup } from '../../emotes/third-party'
 import { api, fetchJson, message, sleep } from '../../net'
 import { store } from '../../store'
 import type { Connector, ConnectorContext } from '../connector'
-import { fetchChannel, fetchRealtime, type KickChannel } from './discovery'
+import { fetchChannel, fetchFollowers, fetchRealtime, type KickChannel } from './discovery'
+
+/** A non-negative whole number from Kick's API, or undefined. */
+const count = (v: unknown): number | undefined => {
+  const n = typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : v
+  return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : undefined
+}
 import { normalize } from './normalize'
 import { KickSocket } from './socket'
 
@@ -61,6 +67,7 @@ export class KickConnector implements Connector {
       const d = await fetchChannel(this.slug)
       if (run !== this.run) return
       this.found = d
+      if (d.followers !== undefined) this.followers = { at: Date.now(), n: d.followers }
       this.loadPast(d)
       await this.loadSeven()
       if (run !== this.run) return
@@ -129,6 +136,33 @@ export class KickConnector implements Connector {
   }
 
   /** Kick lists no viewers, only how many are watching. */
+  /** Followers last read from Kick's channel page, which changes slowly and is read sparingly. */
+  private followers: { at: number; n?: number } = { at: 0 }
+
+  /**
+   * Subscribers come from Kick's API. Kick's API has no follower count, so that comes from the same
+   * public channel page the chat connection reads.
+   */
+  async stats(): Promise<ChannelStats> {
+    if (!this.loggedIn) return {}
+    const [ch, followers] = await Promise.all([
+      this.api('GET', '/channels').then((r) => r?.data?.[0], () => null),
+      this.followerCount()
+    ])
+    const paid = count(ch?.active_subscribers_count)
+    const gifted = count(ch?.active_gifted_subscribers_count)
+    return { followers, subscribers: paid === undefined && gifted === undefined ? undefined : (paid ?? 0) + (gifted ?? 0), gifted }
+  }
+
+  private async followerCount(): Promise<number | undefined> {
+    if (this.slug && Date.now() - this.followers.at > 5 * 60000) {
+      this.followers.at = Date.now()
+      const n = await fetchFollowers(this.slug)
+      if (n !== undefined) this.followers.n = n
+    }
+    return this.followers.n
+  }
+
   async users(): Promise<UsersInfo> {
     if (!this.loggedIn) return { live: false }
     if (this.viewerCache && Date.now() - this.viewerCache.at < 30000) return this.viewerCache.info

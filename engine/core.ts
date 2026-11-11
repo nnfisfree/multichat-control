@@ -25,9 +25,10 @@ export const core = {
   builtInLogins: () => invoke<{ youtube: boolean; kick: boolean }>('built_in_logins'),
   socketToken: (service: Service) => invoke<string>('socket_token', { service }),
   obsAuth: (salt: string, challenge: string) => invoke<string>('obs_auth', { salt, challenge }),
+  sbAuth: (salt: string, challenge: string) => invoke<string>('sb_auth', { salt, challenge }),
 
   secretState: () => invoke<SecretState>('secret_state'),
-  saveSecret: (key: 'youtubeSecret' | 'kickSecret' | 'obsPassword', value: string | null) => invoke<SecretState>('secret_save', { key, value }),
+  saveSecret: (key: 'youtubeSecret' | 'kickSecret' | 'obsPassword' | 'sbPassword', value: string | null) => invoke<SecretState>('secret_save', { key, value }),
 
   readFile: (name: string) => invoke<string | null>('file_read', { name }),
   writeFile: (name: string, text: string) => invoke<void>('file_write', { name, text }),

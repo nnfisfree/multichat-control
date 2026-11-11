@@ -68,7 +68,7 @@ fn main() {
             secrets::migrate_electron();
             updater::remove_old_exe();
             let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                .title("NoName's Multichat Control")
+                .title("Multichat Control")
                 .inner_size(1000.0, 780.0)
                 .min_inner_size(420.0, 420.0)
                 .decorations(false)
@@ -103,6 +103,7 @@ fn main() {
             auth::built_in_logins,
             auth::socket_token,
             auth::obs_auth,
+            auth::sb_auth,
             kick::kick_via_page,
             youtube::youtube_stream_start,
             youtube::youtube_stream_stop,

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react'
 import { ALERT_SOURCE_LABEL, PLATFORMS, PLATFORM_LABEL, type ConnectionState, type IntegrationState } from '../../shared/types'
-import { Icon, ObsLogo, PlatformIcon } from './Icons'
+import { Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
 import { useStore } from '../lib/store'
+import { ALERTS_READY } from '../../shared/app-config'
 
 type Tone = 'good' | 'wait' | 'warn' | 'bad' | 'off'
 
@@ -71,6 +72,8 @@ function useServices(): Service[] {
   const demo = useStore((s) => !!s.boot?.demo)
   const obs = useStore((s) => s.obs)
   const obsEnabled = useStore((s) => s.settings?.obsEnabled ?? false)
+  const sb = useStore((s) => s.streamerbot)
+  const sbEnabled = useStore((s) => s.settings?.sbEnabled ?? false)
   const list = PLATFORMS.map((p) => platformService(p, statuses[p]))
   // The rewards panel only matters once Twitch itself is logged in. Not everyone uses it, so
   // it only counts toward the total once it's signed in.
@@ -82,7 +85,7 @@ function useServices(): Service[] {
         : { tone: 'off' as const, text: 'Not signed in', tracked: false, hint: 'Open the gem panel and click Sign in to Twitch.' })
     })
   }
-  if (choice !== 'none') list.push(alertService(choice, integrations[choice]))
+  if (ALERTS_READY && choice !== 'none') list.push(alertService(choice, integrations[choice]))
   // OBS only appears once the streamer turned it on in Settings.
   if (obsEnabled && !demo) {
     const tone: Tone = obs.status === 'connected' ? 'good' : obs.status === 'error' ? 'bad' : 'warn'
@@ -91,6 +94,17 @@ function useServices(): Service[] {
       key: 'obs', label: 'OBS Studio', icon: <ObsLogo />, tone, text, tracked: true, pending: false,
       hint: obs.status === 'connected' ? undefined : obs.detail,
       actions: [{ label: 'Reconnect', run: () => window.nnf.obs.reconnect() }]
+    })
+  }
+  // Streamer.bot, once turned on in Settings.
+  if (sbEnabled) {
+    const count = sb.actions.filter((a) => a.enabled).length
+    const tone: Tone = sb.status === 'connected' ? 'good' : sb.status === 'error' ? 'bad' : 'warn'
+    const text = sb.status === 'connected' ? `Connected · ${count} action${count === 1 ? '' : 's'}` : sb.status === 'error' ? 'Needs attention' : 'Waiting…'
+    list.push({
+      key: 'streamerbot', label: 'Streamer.bot', icon: <StreamerbotLogo />, tone, text, tracked: true, pending: false,
+      hint: sb.status === 'connected' ? (sb.version ? `Streamer.bot ${sb.version}. Its actions are in the / commands list.` : 'Its actions are in the / commands list.') : sb.detail,
+      actions: [{ label: 'Reconnect', run: () => window.nnf.streamerbot.reconnect() }]
     })
   }
   return list

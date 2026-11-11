@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { chatEventGroup } from '../../shared/events'
 import { PLATFORMS } from '../../shared/types'
-import type { AlertSource, HistorySession, ObsState, PinnedMessage, PlatformUsers, RaidInfo, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
+import type { AlertSource, HistorySession, ObsState, StreamerbotState, PinnedMessage, PlatformUsers, RaidInfo, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
 
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
@@ -31,11 +31,12 @@ export interface State {
   /** Who is in chat on each platform, refreshed every minute and while the list is open. */
   users: Partial<Record<Platform, PlatformUsers>>
   obs: ObsState
+  streamerbot: StreamerbotState
   pinned: PinnedMessage | null
   raid: RaidInfo | null
 }
 
-let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false, obsPassword: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0, users: {}, obs: { status: 'off' }, pinned: null, raid: null }
+let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false, obsPassword: false, sbPassword: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0, users: {}, obs: { status: 'off' }, streamerbot: { status: 'off', actions: [], commands: [] }, pinned: null, raid: null }
 const listeners = new Set<() => void>()
 let eventsOpen = false
 /** While the user reads back through chat, old rows stay so their scroll position holds. */
@@ -82,6 +83,7 @@ async function init(): Promise<void> {
   window.nnf.onUpdate((update) => set({ update }))
   window.nnf.onPanelSignedIn((panelSignedIn) => set({ panelSignedIn }))
   window.nnf.onObs((obs) => set({ obs }))
+  window.nnf.onStreamerbot((streamerbot) => set({ streamerbot }))
   const boot = await window.nnf.bootstrap()
   snapshotIds = new Set([...boot.messages, ...boot.events].map((x) => x.id))
   set({
@@ -90,6 +92,7 @@ async function init(): Promise<void> {
     integrations: Object.fromEntries(boot.integrations.map((i) => [i.source, i])),
     panelSignedIn: boot.panelSignedIn,
     obs: boot.obs,
+    streamerbot: boot.streamerbot,
     pinned: boot.pinned,
     raid: boot.raid
   })

@@ -32,7 +32,7 @@ fn open(app: &AppHandle, channel: &str) -> Result<Webview, String> {
         .additional_browser_args(&crate::browser_args())
         .initialization_script(RAID_JS)
         // It stays on Twitch and opens nothing.
-        .on_navigation(|u| is_twitch(u))
+        .on_navigation(is_twitch)
         .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
     // Outside the window's area: present (so Twitch's page keeps running normally) but never seen.
     main.add_child(builder, LogicalPosition::new(-5000.0, -5000.0), LogicalSize::new(420.0, 700.0))

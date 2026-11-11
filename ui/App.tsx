@@ -9,11 +9,12 @@ import { EventsDrawer } from './components/EventsDrawer'
 import { UsersDrawer } from './components/UsersDrawer'
 import { UserCardPanel } from './components/UserCard'
 import { ClosePrompt } from './components/ClosePrompt'
+import { WhatsNew } from './components/WhatsNew'
 import { PinnedBar } from './components/PinnedBar'
 import { RaidBar } from './components/RaidBar'
 import { HypeBanner } from './components/HypeBanner'
 import { RewardsPanel } from './components/RewardsPanel'
-import { Settings } from './components/Settings'
+import { Settings, type SettingsFocus } from './components/Settings'
 import { Tabs, type Tab } from './components/Tabs'
 import { TitleBar } from './components/TitleBar'
 import { UpdateBanner } from './components/UpdateBanner'
@@ -36,7 +37,7 @@ function Main(): JSX.Element {
   const [users, setUsers] = useState(false)
   const [card, setCard] = useState<{ platform: Platform; user: UserEntry; x: number; y: number } | null>(null)
   const [pop, setPop] = useState<Pop>(null)
-  const [settingsOpen, setSettingsOpen] = useState<boolean | 'obs'>(!settings.setupDismissed && !boot.demo)
+  const [settingsOpen, setSettingsOpen] = useState<boolean | SettingsFocus>(!settings.setupDismissed && !boot.demo)
   const [menu, setMenu] = useState<{ x: number; y: number; m: ChatMessage; userOnly?: boolean } | null>(null)
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
   const [insert, setInsert] = useState<{ text: string; n: number } | null>(null)
@@ -78,6 +79,20 @@ function Main(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [events, users, menu, card, pop, openEvents, openUsers])
 
+  // A click outside the open popup or user card closes it. Clicks inside any popup, and on the
+  // button that opens one (which toggles it itself), don't count.
+  useEffect(() => {
+    if (!pop && !card) return
+    const outside = (e: globalThis.MouseEvent): void => {
+      const t = e.target
+      if (t instanceof Element && t.closest('.popover, [data-pop-toggle]')) return
+      setPop(null)
+      setCard(null)
+    }
+    window.addEventListener('mousedown', outside)
+    return () => window.removeEventListener('mousedown', outside)
+  }, [pop, card])
+
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), toast.ok ? 2500 : 7000)
@@ -101,7 +116,7 @@ function Main(): JSX.Element {
 
   return (
     <div className="app" style={{ '--chat-scale': settings.fontScale, '--ui-font': `"${settings.uiFont}"`, '--chat-font': `"${settings.chatFont}"` } as React.CSSProperties}>
-      <TitleBar demo={boot.demo} onObsSettings={() => setSettingsOpen('obs')} />
+      <TitleBar demo={boot.demo} onObsSettings={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} />
       <UpdateBanner />
       <div className="shell">
         <Tabs tab={tab} eventsOpen={events} usersOpen={users} onUsers={() => openUsers(!users)} onTab={(t) => { setTab(t); openEvents(false); openUsers(false) }} onEvents={() => openEvents(!events)} onSettings={() => setSettingsOpen(true)} />
@@ -121,7 +136,8 @@ function Main(): JSX.Element {
       </div>
       {menu && <ContextMenu {...menu} onClose={closeMenu} onReply={setReplyTo} onResult={setToast} onCard={menu.m.author.id ? (m) => openCard(m, menu.x, menu.y) : undefined} />}
       {card && <UserCardPanel platform={card.platform} user={card.user} x={card.x} y={card.y} onClose={() => setCard(null)} onReply={setReplyTo} onResult={setToast} />}
-      {settingsOpen && <Settings focus={settingsOpen === 'obs' ? 'obs' : undefined} onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <Settings focus={typeof settingsOpen === 'object' ? settingsOpen : undefined} onClose={() => setSettingsOpen(false)} />}
+      {!settingsOpen && !boot.demo && <WhatsNew onSettings={(f) => setSettingsOpen(f)} onCommands={() => setPop('commands')} />}
       <ClosePrompt />
     </div>
   )

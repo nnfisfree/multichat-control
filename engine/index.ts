@@ -2,12 +2,12 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import {
-  ALERT_SOURCES, PLATFORMS, type AlertSource, type Bootstrap, type HubBatch, type NnfApi, type ObsState,
+  ALERT_SOURCES, PLATFORMS, type AlertSource, type Bootstrap, type HubBatch, type NnfApi, type ObsState, type StreamerbotState,
   type PanelBounds, type Platform, type Settings, type UpdateState
 } from '../shared/types'
 import { ChatLog } from './chat-log'
 import { core, onAuthChanged } from './core'
-import { DemoConnector, demoHistory, startDemoObs } from './demo'
+import { DEMO_STREAMERBOT, DemoConnector, demoHistory, startDemoObs } from './demo'
 import { loadEvents, loadRemoved, saveEvents, saveRemoved } from './event-log'
 import { Hub } from './hub'
 import { StreamElements } from './integrations/streamelements'
@@ -18,7 +18,9 @@ import type { Connector } from './platforms/connector'
 import { KickConnector } from './platforms/kick/connector'
 import { TwitchConnector } from './platforms/twitch/connector'
 import { YouTubeConnector } from './platforms/youtube/connector'
+import { ALERTS_READY } from '../shared/app-config'
 import { loadStore, store } from './store'
+import { StreamerbotLink } from './streamerbot'
 
 /** What the Rust core tells the engine at start. */
 interface AppInfo { demo: boolean; version: string; dataDir: string }
@@ -39,6 +41,7 @@ export async function startEngine(): Promise<void> {
   const batchListeners = new Set<(b: HubBatch) => void>()
   const settingsListeners = new Set<(s: Settings) => void>()
   const obsListeners = new Set<(s: ObsState) => void>()
+  const sbListeners = new Set<(s: StreamerbotState) => void>()
   const updateListeners = new Set<(s: UpdateState) => void>()
   const panelListeners = new Set<(v: boolean) => void>()
   const on = <T>(set: Set<(v: T) => void>) => (cb: (v: T) => void) => { set.add(cb); return () => { set.delete(cb) } }
@@ -75,7 +78,7 @@ export async function startEngine(): Promise<void> {
   }
   const startAlerts = async (): Promise<void> => {
     for (const s of ALERT_SOURCES) {
-      if (s === store.settings.alertService && !demo) await alerts[s].start().catch(() => {})
+      if (ALERTS_READY && s === store.settings.alertService && !demo) await alerts[s].start().catch(() => {})
       else {
         alerts[s].stop()
         hub.alertContext(s).status({ status: 'off' })
@@ -95,6 +98,15 @@ export async function startEngine(): Promise<void> {
   let obsState: ObsState = { status: 'off' } as ObsState
   const sendObs = (s: ObsState): void => { obsState = s; tell(obsListeners, s) }
   const obs = new ObsLink(sendObs)
+
+  // Streamer.bot: its actions and commands, kept in step with what's set up there.
+  let sbState: StreamerbotState = { status: 'off', actions: [], commands: [] }
+  const sendSb = (s: StreamerbotState): void => { sbState = s; tell(sbListeners, s) }
+  const sb = new StreamerbotLink(sendSb)
+  const startSb = (): void => {
+    if (!demo) return sb.start()
+    sendSb(store.settings.sbEnabled ? DEMO_STREAMERBOT : { status: 'off', actions: [], commands: [] })
+  }
 
   // The rest lives in the core: the updater, the Twitch panel's sign-in, the window.
   let update: UpdateState = await invoke<UpdateState>('update_state').catch(() => ({ status: 'idle' } as UpdateState))
@@ -123,6 +135,7 @@ export async function startEngine(): Promise<void> {
     step('chat history', () => chatLog.flush())
     for (const s of ALERT_SOURCES) step(s, () => alerts[s].stop())
     step('obs', () => obs.stop())
+    step('streamerbot', () => sb.stop())
     await Promise.race([hub.stopAll().catch(() => {}), new Promise((r) => setTimeout(r, 1500))])
     await invoke('app_exit')
   })())
@@ -162,11 +175,13 @@ export async function startEngine(): Promise<void> {
       version: info.version,
       update,
       obs: obsState,
+      streamerbot: sbState,
       panelSignedIn
     }),
     onBatch: on(batchListeners),
     onSettings: on(settingsListeners),
     onObs: on(obsListeners),
+    onStreamerbot: on(sbListeners),
     onUpdate: on(updateListeners),
     onPanelSignedIn: on(panelListeners),
     send: (targets, text, replyTo) => hub.send(targets, text, replyTo),
@@ -185,6 +200,7 @@ export async function startEngine(): Promise<void> {
       // Turning history off also deletes what was saved.
       if (patch.keepChatHistory === false && !demo) chatLog.clear()
       if (!demo && (before.obsEnabled !== next.obsEnabled || before.obsPort !== next.obsPort)) obs.start()
+      if (before.sbEnabled !== next.sbEnabled || before.sbPort !== next.sbPort) startSb()
       if (!demo && before.twitchClientId !== next.twitchClientId) await restart('twitch')
       if (!demo && before.youtubeClientId !== next.youtubeClientId) await restart('youtube')
       if (!demo && before.kickClientId !== next.kickClientId) await restart('kick')
@@ -198,6 +214,7 @@ export async function startEngine(): Promise<void> {
     },
     removeEvents: async (ids) => hub.removeEvents(Array.isArray(ids) ? ids : []),
     users: (p) => hub.users(p),
+    stats: (p) => hub.stats(p),
     userCard: (p, u) => hub.userCard(p, { id: String(u?.id ?? ''), name: String(u?.name ?? ''), login: u?.login, color: u?.color }),
     twitchCommand: (text) => hub.twitchCommand(String(text ?? '')),
     history: {
@@ -211,7 +228,7 @@ export async function startEngine(): Promise<void> {
     },
     alerts: {
       login: async (source) => {
-        if (!ALERT_SOURCES.includes(source) || demo) throw new Error('Not available here.')
+        if (!ALERT_SOURCES.includes(source) || demo || !ALERTS_READY) throw new Error('Not available yet.')
         await alerts[source].login()
       },
       logout: async (source) => { if (ALERT_SOURCES.includes(source)) alerts[source].logout() },
@@ -227,6 +244,19 @@ export async function startEngine(): Promise<void> {
         return state
       },
       reconnect: async () => { if (!demo) obs.start() }
+    },
+    streamerbot: {
+      setPassword: async (password) => {
+        const state = await core.saveSecret('sbPassword', typeof password === 'string' && password ? password : null)
+        startSb()
+        return state
+      },
+      reconnect: async () => startSb(),
+      run: async (id, input) => {
+        if (!demo) return sb.runAction(String(id ?? ''), typeof input === 'string' ? input : undefined)
+        const action = DEMO_STREAMERBOT.actions.find((a) => a.id === id)
+        return action ? { ok: true, message: `Ran "${action.name}" in Streamer.bot.` } : { ok: false, message: 'That action is no longer in Streamer.bot.' }
+      }
     },
     updates: {
       check: () => invoke<UpdateState>('update_check', { manual: true }),
@@ -251,6 +281,7 @@ export async function startEngine(): Promise<void> {
   await applyOpacity().catch(() => {})
   if (demo) startDemoObs(sendObs)
   else obs.start()
+  startSb()
   // Demo copies are for trying the app, so they never update themselves.
   if (!demo) void invoke('update_start').catch(() => {})
   log('app', `started ${info.version}${demo ? ' in demo mode' : ''}`)

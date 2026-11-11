@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
-import { KICK_REDIRECT_URI } from '../../shared/app-config'
+import { ALERTS_READY, KICK_REDIRECT_URI } from '../../shared/app-config'
 import { ALERT_SOURCE_LABEL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform } from '../../shared/types'
-import { Icon, ObsLogo, PlatformIcon } from './Icons'
+import { Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
 import { About } from './About'
 import { statusText } from './Tabs'
@@ -105,7 +105,8 @@ const ALERT_STATUS: Record<IntegrationState['status'], string> = {
 
 /** Streamers use one alert service, so they pick it and log in. That's all. */
 function AlertsPicker(): JSX.Element {
-  const choice = useStore((s) => s.settings!.alertService)
+  // Until both services approve the app, both are shown as coming soon and nothing is picked.
+  const choice = useStore((s) => (ALERTS_READY ? s.settings!.alertService : 'none'))
   const st = useStore((s) => (choice === 'none' ? undefined : s.integrations[choice]))
   const [err, setErr] = useState('')
   const act = (fn: () => Promise<unknown>) => () => {
@@ -121,9 +122,13 @@ function AlertsPicker(): JSX.Element {
       <header>
         <div className="seg" role="radiogroup" aria-label="Alert service">
           {(['none', 'streamelements', 'streamlabs'] as const).map((v) => (
-            <button key={v} role="radio" aria-checked={choice === v} className={choice === v ? 'on' : ''} onClick={() => { setErr(''); void updateSettings({ alertService: v }) }}>
-              {v === 'none' ? 'None' : ALERT_SOURCE_LABEL[v]}
-            </button>
+            v !== 'none' && !ALERTS_READY
+              ? <button key={v} role="radio" aria-checked={false} disabled className="soon" title={`${ALERT_SOURCE_LABEL[v]} is coming soon: waiting for ${ALERT_SOURCE_LABEL[v]} to approve the app`}>
+                  {ALERT_SOURCE_LABEL[v]} <small>Soon..</small>
+                </button>
+              : <button key={v} role="radio" aria-checked={choice === v} className={choice === v ? 'on' : ''} onClick={() => { setErr(''); void updateSettings({ alertService: v }) }}>
+                  {v === 'none' ? 'None' : ALERT_SOURCE_LABEL[v]}
+                </button>
           ))}
         </div>
         {choice !== 'none' && (
@@ -215,6 +220,88 @@ function ObsSettings(): JSX.Element {
                   <button className="btn ghost sm" type="button" aria-pressed={show} title={show ? 'Hide password' : 'Show password'} onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
                   <button className="btn" disabled={!password.trim()} onClick={() => void save(password.trim())}>Save</button>
                   {saved && <button className="btn ghost" title="For OBS without a password" onClick={() => void save('')}>Remove</button>}
+                </div>
+              </label>
+            </div>
+          </details>
+        </article>
+      )}
+    </div>
+  )
+}
+
+/** Connects to Streamer.bot's WebSocket server to list and run its actions. */
+function StreamerbotSettings(): JSX.Element {
+  const s = useStore((x) => x.settings!)
+  const saved = useStore((x) => x.secrets.sbPassword)
+  const sb = useStore((x) => x.streamerbot)
+  const [password, setPassword] = useState('')
+  const [show, setShow] = useState(false)
+  /** Set right after a change, so the result of that attempt shows under the field. */
+  const [checking, setChecking] = useState<number | null>(null)
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
+  const count = sb.actions.filter((a) => a.enabled).length
+
+  useEffect(() => {
+    if (checking === null) return
+    if (sb.status === 'connected') { setResult({ ok: true, text: `Connected to Streamer.bot. ${count} action${count === 1 ? '' : 's'} in the / commands list.` }); setChecking(null) }
+    else if (sb.status === 'error') { setResult({ ok: false, text: sb.detail ?? 'Streamer.bot refused the connection.' }); setChecking(null) }
+  }, [sb.status, sb.detail, checking, count])
+  // Streamer.bot that never answers is most often closed, or its WebSocket server is stopped.
+  useEffect(() => {
+    if (checking === null) return
+    const t = setTimeout(() => {
+      setResult({ ok: false, text: `Streamer.bot didn't answer on port ${s.sbPort}. Is it open, with its WebSocket Server started?` })
+      setChecking(null)
+    }, 8000)
+    return () => clearTimeout(t)
+  }, [checking, s.sbPort])
+
+  const save = async (value: string): Promise<void> => {
+    setResult(null)
+    setSecrets(await window.nnf.streamerbot.setPassword(value))
+    setPassword('')
+    setShow(false)
+    setChecking(Date.now())
+  }
+  const state = !s.sbEnabled ? 'Off' : sb.status === 'connected' ? `Connected · ${count} action${count === 1 ? '' : 's'}` : sb.status === 'error' ? 'Needs attention' : 'Waiting for Streamer.bot…'
+  return (
+    <div id="streamerbot-settings">
+      <Row title="Use Streamer.bot" desc="Run your Streamer.bot actions from the / commands list, or by typing /sb and the action's name. The list follows what you set up in Streamer.bot.">
+        <Toggle label="Use Streamer.bot" on={s.sbEnabled} onChange={(v) => { void updateSettings({ sbEnabled: v }); if (v) setChecking(Date.now()) }} />
+      </Row>
+      {s.sbEnabled && (
+        <article className="account obs-setup">
+          <header>
+            <StreamerbotLogo size={20} />
+            <h3>Streamer.bot</h3>
+            <span className="state">{state}</span>
+            {sb.status !== 'off' && <div className="row-btns"><button className="btn ghost sm" onClick={() => { setResult(null); setChecking(Date.now()); void window.nnf.streamerbot.reconnect() }}>Test connection</button></div>}
+          </header>
+          {result
+            ? <div className={result.ok ? 'notice good' : 'notice bad'} role="status">{result.ok ? '✓ ' : '✗ '}{result.text}</div>
+            : checking !== null
+              ? <div className="notice" role="status">Connecting to Streamer.bot…</div>
+              : sb.detail && sb.status !== 'connected' && <div className={sb.status === 'error' ? 'notice bad' : 'notice'}>{sb.detail}</div>}
+          <details className="advanced" open={sb.status !== 'connected'}>
+            <summary>How to connect</summary>
+            <ol>
+              <li>In Streamer.bot, open <b>Servers/Clients → WebSocket Server</b>.</li>
+              <li>Tick <b>Auto Start</b> and click <b>Start Server</b>. Leave the address at 127.0.0.1, the port at 8080 and the endpoint at <b>/</b> unless you changed them.</li>
+              <li>If <b>Authentication</b> is turned on there, copy its password and paste it below. If it isn't, no password is needed.</li>
+            </ol>
+            <div className="obs-fields">
+              <label>Port
+                <input type="number" min={1} max={65535} defaultValue={s.sbPort} onBlur={(e) => { const v = Number(e.target.value); if (v && v !== s.sbPort) { void updateSettings({ sbPort: v }); setResult(null); setChecking(Date.now()) } }} />
+              </label>
+              <label>Password {saved ? <em>(saved, encrypted on this PC)</em> : <em>(none saved)</em>}
+                <div className="row-btns">
+                  <input type={show ? 'text' : 'password'} autoComplete="off" spellCheck={false} value={password} onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && password.trim()) void save(password.trim()) }}
+                    placeholder={saved ? 'Paste a new one to replace it' : 'Only if Authentication is on in Streamer.bot'} />
+                  <button className="btn ghost sm" type="button" aria-pressed={show} title={show ? 'Hide password' : 'Show password'} onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
+                  <button className="btn" disabled={!password.trim()} onClick={() => void save(password.trim())}>Save</button>
+                  {saved && <button className="btn ghost" title="For Streamer.bot without a password" onClick={() => void save('')}>Remove</button>}
                 </div>
               </label>
             </div>
@@ -322,16 +409,18 @@ function SkinPicker(): JSX.Element {
   )
 }
 
-type Category = 'connections' | 'appearance' | 'chat' | 'app' | 'about'
+export type Category = 'connections' | 'appearance' | 'chat' | 'app' | 'about'
+/** Where Settings opens: a page, and optionally the id of a section to scroll to. */
+export interface SettingsFocus { cat: Category; target?: string }
 const CATEGORIES: { id: Category; label: string; desc: string; icon: () => JSX.Element }[] = [
-  { id: 'connections', label: 'Connections', desc: 'Your platforms, alerts and OBS', icon: Icon.plug },
+  { id: 'connections', label: 'Connections', desc: 'Your platforms, alerts, OBS and Streamer.bot', icon: Icon.plug },
   { id: 'appearance', label: 'Appearance', desc: 'Skins, fonts and how the window looks', icon: Icon.palette },
   { id: 'chat', label: 'Chat', desc: 'What chat shows: details, events and emotes', icon: Icon.all },
   { id: 'app', label: 'App', desc: 'Closing, safety, clock and updates', icon: Icon.gear },
   { id: 'about', label: 'About', desc: 'The story behind the app', icon: Icon.info }
 ]
 
-export function Settings({ onClose, focus }: { onClose(): void; focus?: 'obs' }): JSX.Element {
+export function Settings({ onClose, focus }: { onClose(): void; focus?: SettingsFocus }): JSX.Element {
   const boot = useStore((s) => s.boot!)
   const s = useStore((x) => x.settings!)
   const fonts = useFonts()
@@ -347,12 +436,12 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: 'obs' })
     box.style.setProperty('--light-x', `${e.clientX - r.left}px`)
     box.style.setProperty('--light-y', `${e.clientY - r.top}px`)
   }
-  // Opened from the OBS capsule: go straight to the OBS section.
+  // Opened for one thing (the OBS capsule, "What's new"): go straight to its page and section.
   useEffect(() => {
-    if (focus !== 'obs') return
-    setCat('connections')
-    requestAnimationFrame(() => document.getElementById('obs-settings')?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
-  }, [focus])
+    if (!focus) return
+    setCat(focus.cat)
+    if (focus.target) requestAnimationFrame(() => document.getElementById(focus.target!)?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+  }, [focus?.cat, focus?.target])
   const pick = (c: Category): void => {
     setCat(c)
     scroll.current?.scrollTo({ top: 0 })
@@ -394,10 +483,13 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: 'obs' })
                 <Section title="OBS Studio" desc="See your stream's health at a glance, like OBS's Stats dock">
                   <ObsSettings />
                 </Section>
+                <Section title="Streamer.bot" desc="Run your Streamer.bot actions from the message box">
+                  <StreamerbotSettings />
+                </Section>
               </>}
 
               {cat === 'appearance' && <>
-                <Section title="Skins" desc="Change the colours of the whole app. The glowing window edge stays the same in every skin.">
+                <Section id="skins-settings" title="Skins" desc="Change the colours of the whole app. The glowing window edge stays the same in every skin.">
                   <SkinPicker />
                 </Section>
                 <Section title="Window" desc="How the window looks on your screen">
@@ -475,9 +567,12 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: 'obs' })
                     <Toggle label="Confirm big actions" on={s.confirmActions} onChange={(v) => void updateSettings({ confirmActions: v })} />
                   </Row>
                 </Section>
-                <Section title="Clock" desc="Your PC's time under the message box">
+                <Section id="stats-settings" title="Clock & Stats" desc="The row under the message box">
                   <Row title="Show the Clock" desc="hh:mm:ss AM/PM, in the skin's colours. Point at it to see the date.">
                     <Toggle label="Show the clock" on={s.showClock} onChange={(v) => void updateSettings({ showClock: v })} />
+                  </Row>
+                  <Row title="Show Channel Stats" desc="Followers and subscribers of each connected platform, in the middle. On YouTube, its subscribers; YouTube doesn't share member counts.">
+                    <Toggle label="Show channel stats" on={s.showStats ?? true} onChange={(v) => void updateSettings({ showStats: v })} />
                   </Row>
                 </Section>
                 <Section title="Updates" desc="New versions come from the project's GitHub page">

@@ -1,7 +1,7 @@
 import { parseText } from '../shared/parts'
-import { PLATFORMS, type HistorySession, type ObsState, type UserEntry, type UserProfile, type UsersInfo } from '../shared/types'
+import { PLATFORMS, type HistorySession, type ObsState, type StreamerbotState, type UserEntry, type UserProfile, type UsersInfo } from '../shared/types'
 import type {
-  ActionDef, ActionResult, ChatMessage, CommandOutcome, Emote, EventType, HypeTrain, ModerationRequest, Platform, StreamEvent
+  ActionDef, ActionResult, ChannelStats, ChatMessage, CommandOutcome, Emote, EventType, HypeTrain, ModerationRequest, Platform, StreamEvent
 } from '../shared/types'
 import type { Connector, ConnectorContext } from './platforms/connector'
 import { store } from './store'
@@ -224,6 +224,11 @@ export class DemoConnector implements Connector {
     }
   }
 
+  /** Invented audience counts. */
+  async stats(): Promise<ChannelStats> {
+    return { twitch: { followers: 4343, subscribers: 261 }, youtube: { subscribers: 12300, rounded: true }, kick: { followers: 1874, subscribers: 57, gifted: 12 } }[this.platform]
+  }
+
   /** Invented viewers: Twitch gets a full list, as it would for real; the others report a count. */
   async users(): Promise<UsersInfo> {
     const viewers = { twitch: 142, youtube: 37, kick: 58 }[this.platform]
@@ -348,4 +353,22 @@ export function startDemoObs(send: (s: ObsState) => void): void {
       }
     })
   }, 2000)
+}
+
+/** Invented Streamer.bot actions and commands for demo mode. */
+export const DEMO_STREAMERBOT: StreamerbotState = {
+  status: 'connected',
+  version: '1.0.7',
+  actions: [
+    { id: 'demo-1', name: 'Hydrate Reminder', group: 'Alerts', enabled: true },
+    { id: 'demo-2', name: 'Scene: Be Right Back', group: 'Scenes', enabled: true },
+    { id: 'demo-3', name: 'Scene: Just Chatting', group: 'Scenes', enabled: true },
+    { id: 'demo-4', name: 'Shoutout Last Raider', group: 'Shoutouts', enabled: true },
+    { id: 'demo-5', name: 'Sound: Airhorn', group: 'Sounds', enabled: true }
+  ],
+  commands: [
+    { id: 'demo-c1', name: 'Discord', group: '', enabled: true, commands: ['!discord'] },
+    { id: 'demo-c2', name: 'Lurk', group: '', enabled: true, commands: ['!lurk'] },
+    { id: 'demo-c3', name: 'Socials', group: '', enabled: true, commands: ['!socials', '!twitter'] }
+  ]
 }

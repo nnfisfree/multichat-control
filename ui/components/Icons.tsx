@@ -1,6 +1,8 @@
 import type { JSX, ReactNode } from 'react'
 import type { Platform } from '../../shared/types'
 import obsLogo from '../../assets/obs.webp'
+import sbLogo from '../../assets/streamerbot.webp'
+import appLogo from '../../assets/icon.png'
 
 function Svg({ children, size = 18 }: { children: ReactNode; size?: number }): JSX.Element {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{children}</svg>
@@ -14,7 +16,17 @@ export const PlatformIcon = ({ platform, size }: { platform: Platform; size?: nu
 
 /** OBS Studio's logo. */
 export const ObsLogo = ({ size = 18 }: { size?: number }): JSX.Element => (
-  <img className="obs-logo" src={obsLogo} width={size} height={size} alt="" draggable={false} />
+  <img className="logo-img" src={obsLogo} width={size} height={size} alt="" draggable={false} />
+)
+
+/** Streamer.bot's logo. */
+export const StreamerbotLogo = ({ size = 18 }: { size?: number }): JSX.Element => (
+  <img className="logo-img" src={sbLogo} width={size} height={size} alt="" draggable={false} />
+)
+
+/** This app's own icon. */
+export const AppLogo = ({ size = 18 }: { size?: number }): JSX.Element => (
+  <img className="logo-img" src={appLogo} width={size} height={size} alt="" draggable={false} />
 )
 
 /** A dollar sign, for donations. */

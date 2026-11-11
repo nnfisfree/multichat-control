@@ -1,5 +1,5 @@
 import type { EmoteLookup } from '../../../shared/parts'
-import type { ActionDef, ActionResult, Badge, RaidInfo, Emote, ModerationRequest, CommandOutcome, StreamEvent, UserEntry, UserGroups, UserProfile, UsersInfo } from '../../../shared/types'
+import type { ActionDef, ActionResult, Badge, ChannelStats, RaidInfo, Emote, ModerationRequest, CommandOutcome, StreamEvent, UserEntry, UserGroups, UserProfile, UsersInfo } from '../../../shared/types'
 import { core, onDeviceCode } from '../../core'
 import { loadEmoteCache, saveEmoteCache } from '../../emotes/cache'
 import { loadTwitchExtras, toLookup } from '../../emotes/third-party'
@@ -284,6 +284,18 @@ export class TwitchConnector implements Connector {
    * Twitch's own list of who is in chat (signed-in users only), grouped by role. Without the
    * newer permissions, it reports that a new login is needed instead of failing.
    */
+  /** Followers and subscribers. Channels that can't have subs (not Affiliate) just have no sub count. */
+  async stats(): Promise<ChannelStats> {
+    const b = this.userId
+    if (!b) return {}
+    const total = (r: any): number | undefined => (typeof r?.total === 'number' ? r.total : undefined)
+    const [follows, subs] = await Promise.all([
+      this.helix('GET', '/channels/followers', { broadcaster_id: b, first: '1' }).catch(() => null),
+      this.helix('GET', '/subscriptions', { broadcaster_id: b, first: '1' }).catch(() => null)
+    ])
+    return { followers: total(follows), subscribers: total(subs) }
+  }
+
   async users(): Promise<UsersInfo> {
     if (!this.userId) return { live: false }
     if (this.usersCache && Date.now() - this.usersCache.at < 30000) return this.usersCache.info

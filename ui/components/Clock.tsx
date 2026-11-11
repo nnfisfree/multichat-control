@@ -30,13 +30,11 @@ function useNow(): Date {
 export function Clock(): JSX.Element {
   const now = useNow()
   return (
-    <div className="clock-row">
-      <div className="clock" tabIndex={0} aria-label={`${time(now)} ${half(now)}, ${date(now)}`}>
-        <span className="clock-dot" aria-hidden="true" />
-        <span className="clock-time">{time(now)}</span>
-        <span className="clock-half">{half(now)}</span>
-        <span className="clock-date" role="tooltip">{date(now)}</span>
-      </div>
+    <div className="clock" tabIndex={0} aria-label={`${time(now)} ${half(now)}, ${date(now)}`}>
+      <span className="clock-dot" aria-hidden="true" />
+      <span className="clock-time">{time(now)}</span>
+      <span className="clock-half">{half(now)}</span>
+      <span className="clock-date" role="tooltip">{date(now)}</span>
     </div>
   )
 }

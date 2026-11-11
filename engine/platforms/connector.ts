@@ -1,5 +1,5 @@
 import type {
-  ActionDef, ActionResult, ChatMessage, ConnectionState, Emote, HypeTrain, CommandOutcome, ModerationRequest, PinnedMessage, Platform, RaidInfo, StreamEvent, UserEntry, UserProfile, UsersInfo
+  ActionDef, ActionResult, ChannelStats, ChatMessage, ConnectionState, Emote, HypeTrain, CommandOutcome, ModerationRequest, PinnedMessage, Platform, RaidInfo, StreamEvent, UserEntry, UserProfile, UsersInfo
 } from '../../shared/types'
 
 /** How a connector reports to the hub. */
@@ -36,6 +36,8 @@ export interface Connector {
   refreshEmotes(): Promise<void>
   /** Live state, viewer count and, where the platform has one, its list of users in chat. */
   users?(): Promise<UsersInfo>
+  /** The channel's followers and subscribers, as far as the platform shares them. */
+  stats?(): Promise<ChannelStats>
   /** Account details for the user card, as far as the platform shares them. */
   profile?(user: UserEntry): Promise<UserProfile>
   /** Runs a typed chat command; null when the command is not one this platform knows. */

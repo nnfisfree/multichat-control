@@ -1,11 +1,18 @@
-import { useEffect, useRef, useState, type JSX, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type JSX, type KeyboardEvent, type ReactNode } from 'react'
 import { PLATFORMS, PLATFORM_LABEL, type ChatMessage, type Platform, type SendResult, type UserEntry } from '../../shared/types'
 import { composerPlaceholder, plainText } from '../../shared/parts'
-import { ALL_COMMANDS, findCommand, isTwitchCommand, matchCommands } from '../lib/commands'
+import { allCommands, COMMAND_GROUPS, findCommand, findSbAction, isSbCommand, isTwitchCommand, matchCommands, SB_PREFIX, type CommandGroup, type CommandInfo } from '../lib/commands'
+import { ChannelStatsBar } from './ChannelStats'
 import { Clock } from './Clock'
-import { Icon, PlatformIcon } from './Icons'
+import { AppLogo, Icon, PlatformIcon, StreamerbotLogo } from './Icons'
 import { connected, updateSettings, useStore } from '../lib/store'
 import type { Tab } from './Tabs'
+
+const GROUP_HEAD: Record<CommandGroup, { label: string; icon: ReactNode }> = {
+  twitch: { label: 'Twitch', icon: <PlatformIcon platform="twitch" size={16} /> },
+  app: { label: 'Multichat Control', icon: <AppLogo size={16} /> },
+  streamerbot: { label: 'Streamer.bot', icon: <StreamerbotLogo size={16} /> }
+}
 
 export type Pop = 'emotes' | 'actions' | 'rewards' | 'menu' | 'commands' | null
 
@@ -24,15 +31,22 @@ interface Props {
 
 export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSettings, onOpenUser }: Props): JSX.Element {
   const input = useRef<HTMLTextAreaElement>(null)
+  const search = useRef<HTMLInputElement>(null)
+  const [query, setQuery] = useState('')
   const [text, setText] = useState('')
   const [results, setResults] = useState<SendResult[]>([])
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
   const statuses = useStore((s) => s.statuses)
   const targets = useStore((s) => s.settings!.sendTargets)
+  const sb = useStore((s) => s.streamerbot)
+  const sbEnabled = useStore((s) => s.settings!.sbEnabled)
   const showClock = useStore((s) => s.settings!.showClock)
-  // Popovers above the message box move down when the clock row is hidden.
-  useEffect(() => { document.documentElement.dataset.clock = showClock ? 'on' : 'off' }, [showClock])
+  const showStats = useStore((s) => s.settings!.showStats ?? true)
+  // The row under the message box holds the stats (middle) and the clock (right).
+  const footRow = showClock || showStats
+  // Popovers above the message box move down when that row is hidden.
+  useEffect(() => { document.documentElement.dataset.clock = footRow ? 'on' : 'off' }, [footRow])
 
   const destinations: Platform[] = replyTo ? [replyTo.platform]
     : tab === 'all' ? PLATFORMS.filter((p) => targets[p] && connected(statuses, p))
@@ -57,6 +71,13 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     if (replyTo) input.current?.focus()
   }, [replyTo])
 
+  // Opening the commands list starts a fresh search, ready to type into.
+  useEffect(() => {
+    if (pop !== 'commands') return
+    setQuery('')
+    requestAnimationFrame(() => search.current?.focus())
+  }, [pop])
+
   useEffect(() => {
     if (!note) return
     const t = setTimeout(() => setNote(null), 5000)
@@ -77,6 +98,23 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
       setText('')
       setPop(null)
       setNote(await command.run().then((t) => ({ ok: true, text: t }), (e) => ({ ok: false, text: String(e?.message ?? e) })))
+      input.current?.focus()
+      return
+    }
+    // Streamer.bot actions run in Streamer.bot, whatever tab is open.
+    if (isSbCommand(body)) {
+      const found = findSbAction(body, sb.actions)
+      if (!found) {
+        const name = body.slice(SB_PREFIX.length).trim()
+        setNote({ ok: false, text: sb.status !== 'connected' ? 'Streamer.bot is not connected. Turn it on in Settings → Connections.' : name ? `No Streamer.bot action called "${name}".` : 'Type the name of a Streamer.bot action after /sb.' })
+        return
+      }
+      setBusy(true)
+      const r = await window.nnf.streamerbot.run(found.action.id, found.input).catch((e) => ({ ok: false, message: String(e?.message ?? e) }))
+      setBusy(false)
+      setPop(null)
+      setNote({ ok: r.ok, text: r.message ?? (r.ok ? 'Done.' : 'Failed.') })
+      if (r.ok) setText('')
       input.current?.focus()
       return
     }
@@ -116,19 +154,43 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     } else if (e.key === 'Escape' && replyTo) clearReply()
   }
 
-  const pick = (name: string): void => {
-    setText(`${name} `)
+  const pick = (c: CommandInfo): void => {
+    setText(`${c.insert ?? c.name} `)
     setPop(null)
     requestAnimationFrame(() => input.current?.focus())
   }
-  const suggestions = matchCommands(text)
-  const commandList = pop === 'commands' ? ALL_COMMANDS : suggestions
+  const full = pop === 'commands'
+  // Every word typed in the search has to appear in the command, its usage or its description.
+  const words = full ? query.toLowerCase().split(/\s+/).filter(Boolean) : []
+  const commandList = full
+    ? allCommands(sb).filter((c) => { const hay = `${c.usage} ${c.description}`.toLowerCase(); return words.every((w) => hay.includes(w)) })
+    : matchCommands(text, sb)
+  // In the full list, the Streamer.bot group shows even when empty, to say why.
+  const sbNote = !full || words.length || commandList.some((c) => c.group === 'streamerbot') ? null
+    : !sbEnabled ? 'Connect Streamer.bot in Settings → Connections to run its actions from here.'
+    : sb.status === 'connected' ? 'No actions or chat commands are turned on in Streamer.bot yet.'
+    : sb.status === 'error' ? (sb.detail ?? 'Streamer.bot needs attention. See Settings → Connections.')
+    : 'Waiting for Streamer.bot…'
+  const groups = COMMAND_GROUPS.map((g) => ({ g, items: commandList.filter((c) => c.group === g) }))
+    .filter(({ g, items }) => items.length > 0 || (g === 'streamerbot' && sbNote))
+  const onSearchKey = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      if (query) return setQuery('')
+      setPop(null)
+      input.current?.focus()
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const first = groups.find((g) => g.items.length)?.items[0]
+      if (first) pick(first)
+    }
+  }
 
   const placeholder = replyTo ? `Reply to ${replyTo.author.name}…`
     : composerPlaceholder(tab, destinations, PLATFORMS.some((p) => connected(statuses, p)))
 
   return (
-    <footer className={showClock ? 'composer-wrap' : 'composer-wrap no-clock'}>
+    <footer className={footRow ? 'composer-wrap' : 'composer-wrap no-clock'}>
       {replyTo && (
         <div className="replying">
           <Icon.reply /> Replying to <b>{replyTo.author.name}</b>: <span>{plainText(replyTo.parts)}</span>
@@ -146,8 +208,9 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
         </div>
       )}
       <div className="composer">
-        <button className={pop === 'menu' ? 'icon-btn on' : 'icon-btn'} aria-label="Menu" onClick={() => setPop(pop === 'menu' ? null : 'menu')}><Icon.menu /></button>
-        <button className={pop === 'rewards' ? 'icon-btn on' : 'icon-btn'} aria-label="Twitch rewards and Power-ups" title="Twitch Rewards & Power-ups" onClick={() => setPop(pop === 'rewards' ? null : 'rewards')}><Icon.gem /></button>
+        <button className={pop === 'menu' ? 'icon-btn on' : 'icon-btn'} aria-label="Menu" data-pop-toggle onClick={() => setPop(pop === 'menu' ? null : 'menu')}><Icon.menu /></button>
+        <button className={pop === 'commands' ? 'icon-btn on' : 'icon-btn'} aria-label="Commands" title="Commands" data-pop-toggle onClick={() => setPop(pop === 'commands' ? null : 'commands')}><Icon.slash /></button>
+        <button className={pop === 'rewards' ? 'icon-btn on' : 'icon-btn'} aria-label="Twitch rewards and Power-ups" title="Twitch Rewards & Power-ups" data-pop-toggle onClick={() => setPop(pop === 'rewards' ? null : 'rewards')}><Icon.gem /></button>
         <textarea ref={input} rows={1} aria-label="Message" placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} />
         {tab === 'all' && !replyTo && (
           <div className="targets">
@@ -158,24 +221,41 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
             ))}
           </div>
         )}
-        <button className={pop === 'emotes' ? 'icon-btn on' : 'icon-btn'} aria-label="Emotes" title="Emotes" onClick={() => setPop(pop === 'emotes' ? null : 'emotes')}><Icon.smile /></button>
-        <button className={pop === 'commands' ? 'icon-btn on' : 'icon-btn'} aria-label="Commands" title="Commands" onClick={() => setPop(pop === 'commands' ? null : 'commands')}><Icon.slash /></button>
-        <button className={pop === 'actions' ? 'icon-btn on' : 'icon-btn'} aria-label="Actions" title="Quick actions" onClick={() => setPop(pop === 'actions' ? null : 'actions')}><Icon.bolt /></button>
-        <button className="send" aria-label="Send" disabled={!text.trim() || (!findCommand(text) && (busy || !destinations.length))} onClick={() => void send()}><Icon.send /></button>
+        <button className={pop === 'emotes' ? 'icon-btn on' : 'icon-btn'} aria-label="Emotes" title="Emotes" data-pop-toggle onClick={() => setPop(pop === 'emotes' ? null : 'emotes')}><Icon.smile /></button>
+        <button className={pop === 'actions' ? 'icon-btn on' : 'icon-btn'} aria-label="Actions" title="Quick actions" data-pop-toggle onClick={() => setPop(pop === 'actions' ? null : 'actions')}><Icon.bolt /></button>
+        <button className="send" aria-label="Send" disabled={!text.trim() || (!findCommand(text) && (busy || (!isSbCommand(text) && !destinations.length)))} onClick={() => void send()}><Icon.send /></button>
       </div>
-      {showClock && <Clock />}
-      {commandList.length > 0 && (
+      {footRow && (
+        <div className="clock-row">
+          <span className="stats-cell">{showStats && <ChannelStatsBar />}</span>
+          <span className="clock-cell">{showClock && <Clock />}</span>
+        </div>
+      )}
+      {(full || groups.length > 0) && (
         <div className="popover commands" role="menu" aria-label="Commands">
           <h3>Commands</h3>
-          <p className="commands-hint">Type them in the message box. They run in this app: Twitch commands go straight to Twitch, and none are posted as chat text.</p>
+          {full && <p className="commands-hint">Type them in the message box, or click one. Twitch and app commands are never posted as chat text, /sb runs a Streamer.bot action, and ! commands are sent to chat for Streamer.bot to pick up.</p>}
+          {full && (
+            <label className="users-filter cmd-search">
+              <Icon.search />
+              <input ref={search} placeholder="Search commands" aria-label="Search commands" spellCheck={false} value={query}
+                onChange={(e) => setQuery(e.target.value)} onKeyDown={onSearchKey} />
+              {query && <button className="cmd-search-clear" aria-label="Clear search" title="Clear search" onClick={() => { setQuery(''); search.current?.focus() }}><Icon.close /></button>}
+            </label>
+          )}
           <div className="commands-list">
-            {commandList.map((c) => (
-              <button key={c.name} role="menuitem" onClick={() => pick(c.name)}>
-                <code>{c.usage}</code>
-                {c.twitch && <span className="cmd-tag">Twitch</span>}
-                {c.app && <span className="cmd-tag app" title="Runs in this app only">App</span>}
-                <small>{c.description}</small>
-              </button>
+            {full && groups.length === 0 && <p className="cmd-group-note">No commands match "{query.trim()}".</p>}
+            {groups.map(({ g, items }) => (
+              <section key={g} className="cmd-group" aria-label={GROUP_HEAD[g].label}>
+                <h4 className={`cmd-group-head cmd-group-${g}`}>{GROUP_HEAD[g].icon}<span>{GROUP_HEAD[g].label}</span></h4>
+                {items.map((c) => (
+                  <button key={`${g}:${c.usage}`} role="menuitem" onClick={() => pick(c)}>
+                    <code>{c.usage}</code>
+                    <small>{c.description}</small>
+                  </button>
+                ))}
+                {g === 'streamerbot' && sbNote && <p className="cmd-group-note">{sbNote}</p>}
+              </section>
             ))}
           </div>
         </div>

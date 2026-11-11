@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.5
+
+**New**
+
+- **Streamer.bot.** Run any Streamer.bot action from the message box with `/sb Action name`; text after the name reaches the action as `rawInput`, `input0`, `input1`… The list of actions and chat commands follows Streamer.bot live: adding, renaming, turning off or deleting one there updates it here. Works with or without Streamer.bot's WebSocket password, which is stored encrypted on the PC. Set it up in Settings → Connections → Streamer.bot.
+- **The / list** moved to the left of the message box, is split into Twitch, Multichat Control and Streamer.bot groups with their icons, and has a search box.
+- **Channel stats** under the message box: followers and subscribers for Twitch and Kick, subscribers for YouTube, styled like the clock. Settings → App → Clock & Stats.
+- **Myst Bourne**, a purple and white skin.
+- **Popups close when you click outside them.**
+- **What's new**: shown once after each update, with a Show me button for each feature.
+
+**Changed**
+
+- The app is now called just **Multichat Control** in its title bar, window and tray.
+- **Streamlabs and StreamElements are paused** (marked Soon.. in Settings) until both approve the app.
+
 ## 0.2.3
 
 **New**

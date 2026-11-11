@@ -50,7 +50,7 @@ mod win {
     }
 }
 
-const TITLE: &str = "NoName's Multichat Control";
+const TITLE: &str = "Multichat Control";
 
 /// True when WebView2 is installed. Development builds can pretend it isn't, to test the message.
 #[cfg(windows)]

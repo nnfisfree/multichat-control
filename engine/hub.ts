@@ -3,7 +3,7 @@ import type { Connector, ConnectorContext } from './platforms/connector'
 import { eventToMessage } from '../shared/events'
 import { serializeFor } from '../shared/parts'
 import type {
-  ActionResult, AlertSource, ChatMessage, CommandOutcome, PinnedMessage, PlatformUsers, RaidInfo, UserCard, UserEntry, UserGroups, UserProfile, UsersInfo, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
+  ActionResult, AlertSource, ChannelStats, ChatMessage, CommandOutcome, PinnedMessage, PlatformUsers, RaidInfo, UserCard, UserEntry, UserGroups, UserProfile, UsersInfo, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
 } from '../shared/types'
 import { PLATFORMS } from '../shared/types'
 import { log } from './log'
@@ -141,6 +141,12 @@ export class Hub {
       timeouts: mod.filter((e) => /timed out/i.test(e.text)).length,
       bans: mod.filter((e) => /\bbanned\b/i.test(e.text)).length
     }
+  }
+
+  /** The channel's followers and subscribers on one platform. */
+  async stats(platform: Platform): Promise<ChannelStats | null> {
+    const c = this.connectors.get(platform)
+    return c?.stats ? c.stats().catch(() => null) : null
   }
 
   /** Who is in chat on one platform: the platform's own list where it has one, else who chatted. */

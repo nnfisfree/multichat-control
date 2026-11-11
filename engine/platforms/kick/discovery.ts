@@ -10,6 +10,8 @@ export interface KickChannel {
   channelId: number
   userId?: number
   emotes: { id: string; name: string; group: string }[]
+  /** Followers, from the channel page. */
+  followers?: number
   /** Past streams, newest first, when Kick lists them. */
   past: { id: string; start: number; seconds: number; title: string }[]
 }
@@ -34,8 +36,20 @@ function parseChannel(channel: any, emotes: any, videos?: any): KickChannel {
     emotes: (Array.isArray(emotes) ? emotes : []).flatMap((set: any) => (set.emotes ?? []).map((e: any) => ({
       id: String(e.id), name: e.name, group: set.name === 'Global' || set.name === 'Emojis' ? `Kick ${set.name}` : 'Kick Channel'
     }))),
+    followers: followersOf(channel),
     past: parsePast(videos ?? channel.previous_livestreams)
   }
+}
+
+const followersOf = (channel: any): number | undefined => {
+  const n = Number(channel?.followers_count ?? channel?.followersCount)
+  return Number.isFinite(n) && n >= 0 ? n : undefined
+}
+
+/** The follower count from the public channel page; undefined when Kick refuses the request. */
+export async function fetchFollowers(slug: string): Promise<number | undefined> {
+  if (!/^[a-z0-9_-]+$/i.test(slug)) return undefined
+  return fetchJson(`https://kick.com/api/v2/channels/${slug}`, { headers: HEADERS }).then(followersOf, () => undefined)
 }
 
 /**

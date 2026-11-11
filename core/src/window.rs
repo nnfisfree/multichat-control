@@ -110,7 +110,7 @@ fn ensure_tray(app: &AppHandle) -> tauri::Result<()> {
     let exit = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &exit])?;
     let mut tray = TrayIconBuilder::with_id(TRAY_ID)
-        .tooltip("NoName's Multichat Control")
+        .tooltip("Multichat Control")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, e| match e.id.as_ref() {

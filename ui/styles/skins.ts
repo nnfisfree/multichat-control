@@ -65,6 +65,18 @@ export const SKINS: Skin[] = [
     })
   },
   {
+    id: 'myst-bourne', name: 'Myst Bourne', by: 'For Alex, my sis ❤️',
+    swatch: ['#1c0638', '#3b0f73', '#a855f7', '#f0e2ff'],
+    vars: make({
+      bg: '#1c0638', bgDeep: '#14042a', window: 'linear-gradient(135deg, #14042a, #2a0957 40%, #45108f 75%, #6a1fb8)',
+      solid: '#220748', solid2: '#2f0c61', accent: '#9d3ff0', accent2: '#b366ff', second: '#c06cf5', second2: '#d496ff',
+      text: '#ffffff', muted: '#dcc6fa', onAccent: '#ffffff', warn: '#ffc46b', good: '#5eebb0', bad: '#ff6b9a',
+      line: 'rgba(240, 226, 255, 0.2)',
+      hype: 'linear-gradient(90deg, rgba(157, 63, 240, 0.8), rgba(240, 226, 255, 0.28))',
+      win: ['#f0e2ff', '#d9b8ff', '#c06cf5', '#2a0957']
+    })
+  },
+  {
     id: 'dracula', name: 'Dracula', by: 'draculatheme.com',
     swatch: ['#282a36', '#44475a', '#bd93f9', '#ff79c6'],
     vars: make({

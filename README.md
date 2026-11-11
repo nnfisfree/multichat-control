@@ -4,7 +4,7 @@
 
 <br />
 
-[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1803&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
+[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1805&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-5b35f0?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDQuNWw4LjUtMS4ydjguMkgyem05LjUwMC0xLjMwMEwyMiAxLjgwMHY5LjcwMEgxMS41MDB6TTIgMTIuNTAwaDguNTAwdjguMjAwTDIgMTkuNTAwem05LjUwMCAwSDIydjkuNzAwbC0xMC41MDAtMS40MDB6Ii8%2BPC9zdmc%2B)
 ![Size](https://img.shields.io/badge/Size-8%20MB-a838e0?style=for-the-badge)
 [![License](https://img.shields.io/badge/License-MIT-27a9e8?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik01IDJoMTNhMiAyIDAgMCAxIDIgMnYxNEg2LjVhMS41MDAgMS41MDAgMCAwIDAgMCAzSDIwdjFINi41MDBBMi41MDAgMi41MDAgMCAwIDEgNCAxOS41MDBWM2ExIDEgMCAwIDEgMS0xem0zIDR2Mmg4VjZIOHoiLz48L3N2Zz4%3D)](LICENSE)
@@ -19,7 +19,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: the commands list narrowing to /raid and /raidnow, a raid starting with its raid bar and countdown, a user card, users in chat, OBS stats, recent events, the clock showing the date, and the skins changing the whole app's colours" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: the commands list searched for Streamer.bot actions and raids, a Streamer.bot action run with /sb, a raid starting with its raid bar and countdown, a user card, users in chat, OBS stats, the connections menu, and the nine skins changing the whole app's colours, with follower and subscriber counts under the message box" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -75,11 +75,15 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <tr>
 <td valign="top">
 
-### 💸 Alerts and donations
-- **One-click login with Streamlabs** (StreamElements coming soon)
-- Donations and tips arrive live, with past donations at start
-- Fills in the past subs, gifts and Bits that platforms don't share
-- The same event from two sources is shown only once
+### 🤖 Streamer.bot
+- **Run any Streamer.bot action** from the message box: `/sb Action name`, with text after the name passed to the action
+- The list **follows Streamer.bot live**: add, rename or turn off an action there and it updates here
+- Your Streamer.bot **chat commands** (like `!lurk`) are listed too, ready to send
+- Works with or without Streamer.bot's WebSocket password
+
+### 💸 Alerts and donations *(coming soon)*
+- One-click login with **Streamlabs** and **StreamElements**, once both approve the app
+- Donations and tips live, plus the past subs, gifts and Bits that platforms don't share
 
 </td>
 <td valign="top">
@@ -87,6 +91,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 ### 🎛️ One-click control
 - Twitch's real Rewards & Power-ups panel, custom Power-ups included
 - **Every Twitch chat command**, typed in the message box: raids, polls, predictions, modes, pins and more
+- **The / list**, split into Twitch, app and Streamer.bot commands, **with search**
 - **Raid bar** like OBS's Twitch chat: the raided channel's picture, game, viewers and title, Twitch's countdown, **Raid Now** and Cancel
 - **Pinned messages** at the top of chat, out of the way during a Hype Train
 - Announcements, shoutouts, raids, ads and clips in one click
@@ -98,7 +103,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td valign="top">
 
 ### 🎨 Skins and emotes
-- **8 skins**: POS Club, Dracula, Catppuccin Mocha, Tokyo Night, Nord, Gruvbox Dark, Rosé Pine and OLED Black, Twitch's panel included
+- **9 skins**: POS Club, Myst Bourne, Dracula, Catppuccin Mocha, Tokyo Night, Nord, Gruvbox Dark, Rosé Pine and OLED Black, Twitch's panel included
 - Picker that follows the active tab, with search
 - Twitch, BetterTTV, 7TV, FrankerFaceZ and Kick emotes
 - Overlay emotes, animated cheermotes and Twitch chat GIFs
@@ -111,8 +116,9 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - **OBS stats in the title bar**: live, uptime, bitrate, dropped frames, FPS and CPU
 - Click for everything: encoder, canvas and output resolution, render and encoding lag
 - A status menu for every connection, with reconnect and log in
-- **A clock** under the message box: point at it for the date. It follows the skin and can be hidden.
-- Installs new versions in one click, checked against GitHub's checksum
+- **Followers and subscribers** of every connected platform, under the message box
+- **A clock** beside them: point at it for the date. Both follow the skin and can be hidden.
+- Installs new versions in one click, checked against GitHub's checksum, and shows **what's new** after each update
 
 </td>
 </tr>
@@ -122,7 +128,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
-<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, a Super Chat, messages that tag the streamer highlighted in red for YouTube and green for Kick, OBS stats in the title bar and the clock" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
+<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, OBS stats in the title bar, and followers and subscribers for each platform beside the clock under the message box" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
 <td align="center"><img src="docs/media/raid.png" alt="Raid bar above the pinned message: the raided channel's picture with a LIVE tag, its game and viewers, the stream title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view, and Raid Now when you're ready</b></td>
 </tr>
 <tr>
@@ -134,19 +140,20 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td align="center"><img src="docs/media/events.png" alt="Events drop-down with platform filters, type filter, sort and Clear buttons, and a redeem tagged TEST" /><br /><b>Recent events, filtered, sorted and tidy</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/commands.png" alt="The commands list narrowing to /pin, /poll and /prediction while typing /p in the message box" /><br /><b>Every Twitch command, suggested as you type</b></td>
-<td align="center"><img src="docs/media/skins.png" alt="Settings, Appearance: eight skin cards from POS Club to OLED Black" /><br /><b>Eight skins, one click each</b></td>
+<td align="center"><img src="docs/media/commands.png" alt="The commands list with a search box, grouped into Multichat Control and Streamer.bot commands with their icons" /><br /><b>Every command, grouped and searchable</b></td>
+<td align="center"><img src="docs/media/streamerbot.png" alt="A Streamer.bot action just ran, and typing /sb S suggests the Streamer.bot actions that match" /><br /><b>Run Streamer.bot actions from the message box</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/media/skins.png" alt="Settings, Appearance: nine skin cards from POS Club and Myst Bourne to OLED Black" /><br /><b>Nine skins, one click each</b></td>
+<td align="center"><img src="docs/media/connections.png" alt="Connections menu listing Twitch, YouTube, Kick and Streamer.bot with their state" /><br /><b>Every connection at a glance</b></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/media/history.png" alt="Chat from a past stream under a divider showing its date and number of messages" /><br /><b>Read what you missed in your last streams</b></td>
-<td align="center"><img src="docs/media/connections.png" alt="Connections menu listing Twitch, YouTube and Kick with their state" /><br /><b>Every connection at a glance</b></td>
-</tr>
-<tr>
 <td align="center"><img src="docs/media/emotes.png" alt="Emote picker grouped by provider, with search" /><br /><b>Emote picker for every provider</b></td>
-<td align="center"><img src="docs/media/settings.png" alt="Settings with categories on the left, one-row logins for each platform and the OBS Studio card" /><br /><b>Clear settings, one-click logins</b></td>
 </tr>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/support.png" width="50%" alt="About page, Support tab, with Donate, Subscribe on Twitch and Gadgets Store buttons" /><br /><b>The story behind it, inside the app</b></td>
+<td align="center"><img src="docs/media/settings.png" alt="Settings with categories on the left, one-row logins for each platform, alert services marked Soon and the OBS Studio card" /><br /><b>Clear settings, one-click logins</b></td>
+<td align="center"><img src="docs/media/support.png" alt="About page, Support tab, with Donate, Subscribe on Twitch and Gadgets Store buttons" /><br /><b>The story behind it, inside the app</b></td>
 </tr>
 </table>
 
@@ -170,19 +177,21 @@ Open the gear icon and click **Log in** beside each platform you stream on. You 
 - **YouTube:** Google will show *"Google hasn't verified this app"*. **That's expected and safe:** click **Advanced**, then **Go to MultichatControl (unsafe)**. [Why it says that](#about-the-youtube-login-warning).
 - **Twitch** expires its logins after about 30 days, so the app may ask you to log in again.
 - **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in. Your custom Power-ups and points only show once you're signed in.
-- **Alerts & Donations:** pick the one service you use and click **Log in**.
+- **Alerts & Donations:** Streamlabs and StreamElements are marked **Soon..** until both services approve the app.
 - **The status menu** next to the gear shows every connection. Click a row to reconnect or log in.
 - **Users in Chat and some commands** need a newer Twitch login. If the app asks, click **Log in again** once.
 - **OBS stats (optional):** in OBS, open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info**. Then turn on **Settings → Connections → OBS Studio → Show OBS Stats** and paste it. The app only reads from OBS and never changes anything there.
+- **Streamer.bot (optional):** in Streamer.bot, open **Servers/Clients → WebSocket Server**, tick **Auto Start** and click **Start Server** (address `127.0.0.1`, port `8080`, endpoint `/`). Then turn on **Settings → Connections → Streamer.bot → Use Streamer.bot**. If Authentication is on in Streamer.bot, paste its password there too.
 - **Skins:** **Settings → Appearance**. The window edge keeps its glow in every skin.
 
 ### Commands
 
-Type these in the message box. The **/** button lists them, and the list narrows as you type. None are posted as chat text.
+Type these in the message box. The **/** button (left of the message box) lists them in three groups, Twitch, Multichat Control and Streamer.bot, with a search box on top. The list also narrows as you type. None are posted as chat text, except Streamer.bot's `!` chat commands, which are meant for chat.
 
 | Command | What it does |
 |---|---|
 | `/clearhistory` | Clears the chat in the app and deletes the saved chat of past streams. Your viewers' chat isn't affected. |
+| `/sb Action name [text]` | Runs that Streamer.bot action. Any text after the name reaches the action as `rawInput`, `input0`, `input1`… |
 
 **Twitch** commands go straight to Twitch, whichever tab is open:
 
@@ -304,7 +313,9 @@ These limits come from the platforms.
 | **All** | The user card's history covers your channel only: this stream plus the saved chat of your last 5 streams. No platform shares what someone said elsewhere. |
 | **Kick** | Kick only times people out in whole minutes, so **Timeout 1 second** deletes that user's recent messages instead. Follow and sub details on the user card come from Kick's website data and can be missing. |
 | **Kick** | Official events need a public web server, so **reading uses the same unofficial live connection as Kick's website**. Kick can change it without notice. Sending and moderation use the official API, and the app warns you if reading stops. |
-| **Streamlabs** | Keeps a history of donations only. Its other alerts arrive live. |
+| **Streamer.bot** | The app connects to Streamer.bot on the same PC. Its chat commands (like `!lurk`) run when Streamer.bot sees them in chat, so they're sent as normal messages. |
+| **YouTube** | The subscriber count is rounded by YouTube, and member counts aren't shared with apps. |
+| **Kick** | Kick's API has no follower count, so it's read from Kick's public channel page every few minutes. |
 
 ## About the YouTube login warning
 
@@ -327,9 +338,10 @@ The [privacy policy](https://multichat.nonamefound.lol/privacy/) has every detai
 
 - **Privacy policy:** [multichat.nonamefound.lol/privacy](https://multichat.nonamefound.lol/privacy/), with exactly what the app does with your YouTube data.
 - **Your data stays with you.** Settings, logins, saved events and chat history live in a `user-data` folder beside the exe, and the app has no server of its own. **Keep that folder private, because it holds your logins.**
-- **Logins are encrypted** with Windows' own protection for your Windows user, so moving to another PC means logging in again. The OBS WebSocket password is stored the same way.
+- **Logins are encrypted** with Windows' own protection for your Windows user, so moving to another PC means logging in again. The OBS and Streamer.bot WebSocket passwords are stored the same way.
 - **Logins never reach the app's window.** The part of the app written in Rust keeps them, adds them to each request itself, and only ever sends each one to that service's own servers.
 - **OBS is read-only.** The app only reads stats from OBS on this PC; it never switches scenes or starts or stops anything.
+- **Streamer.bot only runs what you ask.** The app reads its list of actions and commands, and runs an action only when you send `/sb`.
 - **Chat history stays on your PC.** The last 5 streams are kept in `user-data`, with deleted messages saved only as deleted. Turn it off under Settings → Chat, or type `/clearhistory` to delete it.
 - **Coming from version 0.1?** Everything carries over: the app reads 0.1's files and logins on first start. From 0.1.2 or earlier, the `nnf-data` folder is renamed to `user-data` too.
 - **Updates are verified.** The app only installs a download that matches GitHub's checksum, and never touches `user-data`.
@@ -365,7 +377,7 @@ Donations are optional, and everyone gets the same features. Sharing the app, re
 ```text
 ui/            The interface (React): components, skins and styles
 engine/        The app's logic (TypeScript): the hub that merges chats, one connector per
-  platforms/   platform behind a shared interface, alert services, OBS, demo mode
+  platforms/   platform behind a shared interface, alert services, OBS, Streamer.bot, demo mode
 core/          The Rust side (Tauri): window, logins and tokens, encrypted secrets, files,
   src/         YouTube's live chat, Twitch's rewards panel and Raid Now, updater, tray
 shared/        Types and message parsing used by the interface and the engine

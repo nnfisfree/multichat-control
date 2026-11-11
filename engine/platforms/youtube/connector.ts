@@ -1,4 +1,4 @@
-import type { ActionDef, ActionResult, Emote, ModerationRequest, UserEntry, UserProfile, UsersInfo } from '../../../shared/types'
+import type { ActionDef, ActionResult, ChannelStats, Emote, ModerationRequest, UserEntry, UserProfile, UsersInfo } from '../../../shared/types'
 import { core } from '../../core'
 import { emojiSet } from '../../emotes/emoji'
 import { api, HttpError, message, sleep } from '../../net'
@@ -80,6 +80,16 @@ export class YouTubeConnector implements Connector {
   private viewerCache: { at: number; info: UsersInfo } | null = null
 
   /** YouTube lists no viewers, only how many are watching. Checked at most once a minute (1 quota unit). */
+  /**
+   * Subscribers. YouTube rounds the count to three significant figures. Members can't be counted:
+   * Google only opens that list to creators it approves.
+   */
+  async stats(): Promise<ChannelStats> {
+    const s = (await this.api('GET', '/channels', { part: 'statistics', mine: 'true' })).items?.[0]?.statistics
+    const n = Number(s?.subscriberCount)
+    return Number.isFinite(n) && s?.subscriberCount !== undefined ? { subscribers: n, rounded: true } : {}
+  }
+
   async users(): Promise<UsersInfo> {
     if (!this.liveChatId || !this.broadcastId) return { live: false }
     if (this.viewerCache && Date.now() - this.viewerCache.at < 60000) return this.viewerCache.info

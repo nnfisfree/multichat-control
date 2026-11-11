@@ -379,7 +379,7 @@ fn loopback_of(s: Service) -> Loopback {
 
 fn page(ok: bool) -> String {
     let text = if ok { "Login complete. You can close this tab." } else { "Login failed. Please return to the app and try again." };
-    format!("<!doctype html><meta charset=\"utf-8\"><title>NoName's Multichat Control</title><body style=\"background:#150a3c;color:#fff;font:18px sans-serif;display:grid;place-items:center;height:90vh\"><div>{text}</div>")
+    format!("<!doctype html><meta charset=\"utf-8\"><title>Multichat Control</title><body style=\"background:#150a3c;color:#fff;font:18px sans-serif;display:grid;place-items:center;height:90vh\"><div>{text}</div>")
 }
 
 /// Opens the browser and waits for the login's redirect on a local port. PKCE and the state value
@@ -528,13 +528,25 @@ pub async fn socket_token(app: AppHandle, service: String) -> Result<String, Str
     Ok(fresh(&app, s).await?.access)
 }
 
-/// OBS's WebSocket login: the answer to OBS's challenge, computed here so the password stays here.
-#[tauri::command]
-pub fn obs_auth(salt: String, challenge: String) -> String {
-    let password = secrets::get("obs.password").unwrap_or_default();
+/// The answer to a WebSocket server's password challenge, computed here so the password stays
+/// here. OBS and Streamer.bot use the same scheme: base64(sha256(base64(sha256(password + salt)) + challenge)).
+fn challenge_answer(secret_name: &str, salt: &str, challenge: &str) -> String {
+    let password = secrets::get(secret_name).unwrap_or_default();
     let b64 = base64::engine::general_purpose::STANDARD;
     let secret = b64.encode(Sha256::digest(format!("{password}{salt}").as_bytes()));
     b64.encode(Sha256::digest(format!("{secret}{challenge}").as_bytes()))
+}
+
+/// OBS's WebSocket login.
+#[tauri::command]
+pub fn obs_auth(salt: String, challenge: String) -> String {
+    challenge_answer("obs.password", &salt, &challenge)
+}
+
+/// Streamer.bot's WebSocket login.
+#[tauri::command]
+pub fn sb_auth(salt: String, challenge: String) -> String {
+    challenge_answer("streamerbot.password", &salt, &challenge)
 }
 
 // ---- For other parts of the core (YouTube's chat stream) ----

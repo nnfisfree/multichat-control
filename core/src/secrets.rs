@@ -152,6 +152,7 @@ pub struct SecretState {
     youtube_secret: bool,
     kick_secret: bool,
     obs_password: bool,
+    sb_password: bool,
 }
 
 #[tauri::command]
@@ -161,16 +162,18 @@ pub fn secret_state() -> SecretState {
         youtube_secret: map.contains_key("youtube.clientSecret"),
         kick_secret: map.contains_key("kick.clientSecret"),
         obs_password: map.contains_key("obs.password"),
+        sb_password: map.contains_key("streamerbot.password"),
     }
 }
 
-/// Saves a secret the user typed in Settings. Only these three can be set from the page.
+/// Saves a secret the user typed in Settings. Only these can be set from the page.
 #[tauri::command]
 pub fn secret_save(key: String, value: Option<String>) -> Result<SecretState, String> {
     let name = match key.as_str() {
         "youtubeSecret" => "youtube.clientSecret",
         "kickSecret" => "kick.clientSecret",
         "obsPassword" => "obs.password",
+        "sbPassword" => "streamerbot.password",
         _ => return Err("Unknown secret.".into()),
     };
     set(name, value.as_deref().map(str::trim))?;

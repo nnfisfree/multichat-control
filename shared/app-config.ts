@@ -1,4 +1,11 @@
-export const APP_NAME = "NoName's Multichat Control"
+export const APP_NAME = 'Multichat Control'
+
+/**
+ * Streamlabs and StreamElements logins stay off until both services approve the app (Streamlabs
+ * allows only 10 test users before that; StreamElements hasn't issued its keys yet). Set to true
+ * once both have approved: the Settings choice, the Connections menu and the engine all follow it.
+ */
+export const ALERTS_READY = false
 
 /**
  * Kick needs an exact redirect match, so this port is fixed. Register this URL in the Kick app.
