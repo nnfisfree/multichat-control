@@ -1,6 +1,6 @@
 /**
  * Skins. Each one swaps the app's colour variables; the window edge gradient (--edge) is never
- * touched, so every skin keeps the same frame. Palettes come from popular open-source (MIT)
+ * touched, so every skin keeps the same frame. Palettes come from popular open-source
  * themes, credited in `by`.
  */
 export interface Skin {
@@ -110,25 +110,26 @@ export const SKINS: Skin[] = [
     })
   },
   {
-    id: 'nord', name: 'Nord', by: 'nordtheme.com',
-    swatch: ['#2e3440', '#3b4252', '#88c0d0', '#81a1c1'],
+    id: 'kanagawa', name: 'Kanagawa', by: 'Kanagawa by rebelot',
+    swatch: ['#1f1f28', '#2a2a37', '#957fb8', '#7e9cd8'],
     vars: make({
-      bg: '#2e3440', bgDeep: '#272c36', window: 'linear-gradient(135deg, #272c36, #2e3440 50%, #343b49)',
-      solid: '#2a303b', solid2: '#3b4252', accent: '#81a1c1', accent2: '#9cb5d0', second: '#88c0d0', second2: '#8fbcbb',
-      text: '#eceff4', muted: '#c0c8d6', onAccent: '#242933', warn: '#ebcb8b', good: '#a3be8c', bad: '#bf616a',
-      line: 'rgba(216, 222, 233, 0.16)',
-      win: ['#ebcb8b', '#a3be8c', '#bf616a', '#2e3440']
+      bg: '#1f1f28', bgDeep: '#16161d', window: 'linear-gradient(135deg, #16161d, #1f1f28 50%, #2a2a37)',
+      solid: '#1a1a22', solid2: '#2a2a37', accent: '#957fb8', accent2: '#b39ddb', second: '#7e9cd8', second2: '#7fb4ca',
+      text: '#dcd7ba', muted: '#b4b0a0', onAccent: '#16161d', warn: '#ffa066', good: '#98bb6c', bad: '#ff5d62',
+      line: 'rgba(220, 215, 186, 0.14)',
+      win: ['#e6c384', '#98bb6c', '#e46876', '#16161d']
     })
   },
   {
-    id: 'gruvbox', name: 'Gruvbox Dark', by: 'Gruvbox by morhetz',
-    swatch: ['#282828', '#3c3836', '#fe8019', '#fabd2f'],
+    id: 'sweet', name: 'Sweet', by: 'Sweet by EliverLara',
+    swatch: ['#161925', '#1f2233', '#c74ded', '#00c1e4'],
     vars: make({
-      bg: '#282828', bgDeep: '#1d2021', window: 'linear-gradient(135deg, #1d2021, #282828 55%, #32302f)',
-      solid: '#1d2021', solid2: '#32302f', accent: '#fe8019', accent2: '#ff9a45', second: '#fabd2f', second2: '#8ec07c',
-      text: '#ebdbb2', muted: '#bdae93', onAccent: '#1d2021', warn: '#fabd2f', good: '#b8bb26', bad: '#fb4934',
-      line: 'rgba(235, 219, 178, 0.15)',
-      win: ['#fabd2f', '#b8bb26', '#fb4934', '#1d2021']
+      bg: '#161925', bgDeep: '#10121b', window: 'linear-gradient(135deg, #10121b, #161925 45%, #221a3d 80%, #2c1640)',
+      solid: '#13151f', solid2: '#1f2233', accent: '#c74ded', accent2: '#dc7ef5', second: '#00c1e4', second2: '#5fe0f5',
+      text: '#ebedf5', muted: '#a9adc4', onAccent: '#10121b', warn: '#f9a03f', good: '#00e8c6', bad: '#ff3d71',
+      line: 'rgba(199, 77, 237, 0.2)',
+      hype: 'linear-gradient(90deg, rgba(199, 77, 237, 0.6), rgba(255, 61, 113, 0.4))',
+      win: ['#f9dc5c', '#00e8c6', '#ff3d71', '#10121b']
     })
   },
   {

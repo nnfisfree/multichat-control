@@ -6,6 +6,7 @@ mod kick;
 mod legacy;
 mod panel;
 mod paths;
+mod placement;
 mod raid;
 mod secrets;
 mod sockets;
@@ -13,6 +14,7 @@ mod storage;
 mod updater;
 mod webview2;
 mod window;
+mod wobble;
 mod youtube;
 
 use serde::Serialize;
@@ -72,6 +74,8 @@ fn main() {
                 .inner_size(1000.0, 780.0)
                 .min_inner_size(420.0, 420.0)
                 .decorations(false)
+                // Shown once it is back where it was last time, so it never jumps on screen.
+                .visible(false)
                 .data_directory(paths::webview_dir())
                 // The font list in Settings reads the installed fonts without asking each time.
                 .on_permission_request(|_, kind| match kind {
@@ -80,7 +84,11 @@ fn main() {
                 })
                 .additional_browser_args(&browser_args())
                 .build()?;
+            placement::restore(&main);
             window::watch_close(&main);
+            wobble::install(&main);
+            main.show()?;
+            placement::shown(&main);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -109,6 +117,7 @@ fn main() {
             youtube::youtube_stream_start,
             youtube::youtube_stream_stop,
             window::window_opacity,
+            wobble::window_wobble,
             sockets::ws_open,
             sockets::ws_send,
             sockets::ws_close,

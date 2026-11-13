@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type JSX, type KeyboardEvent, type ReactNo
 import { PLATFORMS, PLATFORM_LABEL, type ChatMessage, type Platform, type SendResult, type UserEntry } from '../../shared/types'
 import { composerPlaceholder, plainText } from '../../shared/parts'
 import { allCommands, COMMAND_GROUPS, findCommand, findSbAction, isSbCommand, isTwitchCommand, matchCommands, SB_PREFIX, type CommandGroup, type CommandInfo } from '../lib/commands'
-import { ChannelStatsBar } from './ChannelStats'
+import { ObsStrip } from './ObsStrip'
 import { Clock } from './Clock'
 import { AppLogo, Icon, PlatformIcon, StreamerbotLogo } from './Icons'
 import { connected, updateSettings, useStore } from '../lib/store'
@@ -25,11 +25,12 @@ interface Props {
   /** Set by the picker; consumed once. */
   insert: { text: string; n: number } | null
   onSettings(): void
+  onObsSettings(): void
   /** /user name opens their user card. */
   onOpenUser(user: UserEntry): void
 }
 
-export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSettings, onOpenUser }: Props): JSX.Element {
+export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSettings, onObsSettings, onOpenUser }: Props): JSX.Element {
   const input = useRef<HTMLTextAreaElement>(null)
   const search = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
@@ -42,9 +43,9 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
   const sb = useStore((s) => s.streamerbot)
   const sbEnabled = useStore((s) => s.settings!.sbEnabled)
   const showClock = useStore((s) => s.settings!.showClock)
-  const showStats = useStore((s) => s.settings!.showStats ?? true)
-  // The row under the message box holds the stats (middle) and the clock (right).
-  const footRow = showClock || showStats
+  const obsOn = useStore((s) => (s.settings!.obsEnabled || !!s.boot?.demo) && s.obs.status !== 'off')
+  // The row under the message box holds the OBS stats (middle) and the clock (right).
+  const footRow = showClock || obsOn
   // Popovers above the message box move down when that row is hidden.
   useEffect(() => { document.documentElement.dataset.clock = footRow ? 'on' : 'off' }, [footRow])
 
@@ -227,7 +228,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
       </div>
       {footRow && (
         <div className="clock-row">
-          <span className="stats-cell">{showStats && <ChannelStatsBar />}</span>
+          <span className="stats-cell">{obsOn && <ObsStrip onFix={onObsSettings} />}</span>
           <span className="clock-cell">{showClock && <Clock />}</span>
         </div>
       )}

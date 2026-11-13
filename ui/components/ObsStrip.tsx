@@ -26,6 +26,7 @@ const running = (durationMs: number, at: number, now: number): number => {
 }
 import type { ObsStats } from '../../shared/types'
 import { useStore } from '../lib/store'
+import { ObsLogo } from './Icons'
 
 const clock = (ms: number): string => {
   const s = Math.floor(ms / 1000)
@@ -116,7 +117,7 @@ export function ObsStrip({ onFix }: { onFix?(): void }): JSX.Element | null {
     // Not connected yet: one click opens the OBS settings to fix it.
     return (
       <button className={obs.status === 'error' ? 'obs-strip muted bad' : 'obs-strip muted'} title={`${obs.detail ?? 'Waiting for OBS'}. Click to open the OBS settings.`} onClick={onFix}>
-        <span className="obs-dot" /> {obs.status === 'error' ? 'OBS: check password' : 'Waiting for OBS…'}
+        <ObsLogo size={13} /><span className="obs-dot" /> {obs.status === 'error' ? 'OBS: check password' : 'Waiting for OBS…'}
       </button>
     )
   }
@@ -125,6 +126,7 @@ export function ObsStrip({ onFix }: { onFix?(): void }): JSX.Element | null {
   return (
     <div className="obs" ref={box}>
       <button className={`obs-strip ${live ? 'live' : ''}`} aria-expanded={open} title="OBS stats: click for details" onClick={() => setOpen(!open)}>
+        <ObsLogo size={13} />
         {live
           ? <span className={s.stream.reconnecting ? 'obs-state bad' : 'obs-state live'}><span className="obs-dot" /> {s.stream.reconnecting ? 'RECONNECTING' : 'LIVE'} {clock(running(s.stream.durationMs, s.at, now))}</span>
           : <span className="obs-state"><span className="obs-dot ready" /> OBS ready</span>}

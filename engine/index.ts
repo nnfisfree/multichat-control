@@ -121,6 +121,7 @@ export async function startEngine(): Promise<void> {
   const builtIn = await core.builtInLogins()
 
   const applyOpacity = (): Promise<void> => invoke('window_opacity', { value: store.settings.windowOpacity })
+  const applyWobble = (): Promise<void> => invoke('window_wobble', { enabled: store.settings.windowWobble, intensity: store.settings.wobbleIntensity })
   const saveSettings = (patch: Partial<Settings>): Settings => {
     const next = store.saveSettings(patch)
     tell(settingsListeners, next)
@@ -201,6 +202,7 @@ export async function startEngine(): Promise<void> {
       const before = store.settings
       const next = saveSettings(patch)
       if (patch.windowOpacity !== undefined) await applyOpacity()
+      if (patch.windowWobble !== undefined || patch.wobbleIntensity !== undefined) await applyWobble()
       if (patch.emoteProviders) await hub.refreshEmotes()
       // Turning history off also deletes what was saved.
       if (patch.keepChatHistory === false && !demo) chatLog.clear()
@@ -285,6 +287,7 @@ export async function startEngine(): Promise<void> {
   window.nnf = api
 
   await applyOpacity().catch(() => {})
+  await applyWobble().catch(() => {})
   if (demo) startDemoObs(sendObs)
   else obs.start()
   startSb()

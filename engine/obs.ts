@@ -72,6 +72,8 @@ export class ObsLink {
   }
 
   private set(next: ObsState): void {
+    // Connected once: OBS is set up, so the one-time OBS tip never needs to show.
+    if (next.status === 'connected' && !store.settings.obsSetUp) store.saveSettings({ obsSetUp: true })
     this.state = next
     this.send(next)
   }

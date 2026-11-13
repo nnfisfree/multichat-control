@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0
+
+**New**
+
+- **Wobbly window.** The window bends like jelly while you drag it by the title bar and settles when you let go, inspired by KDE Plasma's Wobbly Windows on Linux. It can be clicked, scrolled and typed in while it settles. Off by default; Settings → Appearance → Window, with an Intensity slider.
+- **The window remembers where it was**: size, position, monitor and maximized state. If that monitor isn't connected, it opens on the main monitor.
+- **Gift bombs, sub by sub.** The summary card ("gifted 5 subs to the community") is followed by one line per sub showing who received it.
+- **Custom Power-ups show their name** instead of "a custom Power-up".
+- **Animated badge icons** on events: a train for Hype Trains, a present for gifts, a die for channel points, a Bits gem for cheers, a flame for Power-ups and a heart for follows. They stay still when Windows is set to reduce motion.
+- **Badges on the user card**: VIP, moderator, artist, subscriber and the event badge a viewer wears in chat, with their pictures.
+- **Two new skins: Kanagawa and Sweet**, two favourites from the Linux community.
+- **OBS tip.** A one-time note on how to connect OBS, for new installs and anyone who never set OBS up.
+
+**Changed**
+
+- **Twitch purple** for Twitch gifts, Power-ups and Hype Trains, and their badges.
+- **Channel stats moved to the title bar**, and OBS stats moved under the message box, next to the clock. The clock and OBS stats now look just like the title-bar stats in every skin, and OBS's logo always leads the OBS stats.
+- **OBS stats are on by default** for new installs. Streamer.bot stays off until you turn it on.
+- **Nord and Gruvbox were removed.** Anyone using them goes back to POS Club.
+- A thinner window edge, and capsules of one size without outlines.
+
 ## 0.2.7
 
 **Fixed**

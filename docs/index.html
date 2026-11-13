@@ -15,6 +15,8 @@
     <span class="name">MultichatControl</span>
     <nav>
       <a href="./" aria-current="page">Home</a>
+      <a href="#download">Download</a>
+      <a href="#guide">Guide</a>
       <a href="privacy/">Privacy Policy</a>
       <a href="https://github.com/nnfisfree/multichat-control">GitHub</a>
     </nav>
@@ -25,9 +27,9 @@
       <h1>MultichatControl</h1>
       <p class="also">NoName's Multichat Control</p>
       <p class="lead">Read and write Twitch, YouTube and Kick chat together, see every event as it happens, and run channel actions in one click. A free, open-source Windows app for streamers who go live on several platforms at once.</p>
-      <a class="btn" href="https://github.com/nnfisfree/multichat-control/releases/latest">Download for Windows</a>
-      <a class="btn ghost" href="privacy/">Privacy Policy</a>
-      <p class="version">Latest version: <a id="version" href="https://github.com/nnfisfree/multichat-control/releases/latest">0.2.7</a></p>
+      <a class="btn" href="#download">⬇️ Download for Windows</a>
+      <a class="btn ghost" href="#guide">🧭 How to start</a>
+      <p class="version">Latest version: <a id="version" href="https://github.com/nnfisfree/multichat-control/releases/latest">0.3.0</a></p>
       <img class="shot" src="media/chat.png" width="1000" height="760" alt="MultichatControl showing Twitch, YouTube and Kick chat merged in one window, with event cards, a highlighted message that tags the streamer, and OBS stats" />
       <p class="muted">Shown in demo mode, with invented chatters.</p>
     </div>
@@ -38,8 +40,66 @@
         <div class="card"><h3>💬 One merged chat</h3>Twitch, YouTube and Kick together, with a tab for each. Messages that tag you are highlighted in their platform's colour. Reply, and choose exactly where each message goes.</div>
         <div class="card"><h3>⚡ Every event</h3>Subscriptions, memberships, Super Chats, gifts, raids, redemptions, follows, donations and new clips of your stream in one list. YouTube videos and clips posted in chat get a preview.</div>
         <div class="card"><h3>🛡️ Moderation</h3>Delete messages, time out or ban on every platform, in one click. Allow or deny the messages Twitch's AutoMod holds, and spot suspicious users and "buy followers" spam bots.</div>
-        <div class="card"><h3>🎨 Made for live</h3>OBS stats in the title bar, nine colour skins, an emote picker and a clock.</div>
+        <div class="card"><h3>🎨 Made for live</h3>OBS stats and a clock under the message box, nine colour skins, an emote picker, and a wobbly window if you like.</div>
       </div>
+    </section>
+
+    <section id="download">
+      <h2>⬇️ Download</h2>
+      <div class="card download">
+        <div class="dl-main">
+          <img src="icon.png" alt="" width="64" height="64" />
+          <div>
+            <h3>Multichat Control for Windows</h3>
+            <p class="dl-meta">Version <b id="dl-version">0.3.0</b> · Windows 10 and 11 · <span id="dl-size">about 8 MB</span> · Free</p>
+          </div>
+        </div>
+        <a class="btn big" id="dl-button" href="https://github.com/nnfisfree/multichat-control/releases/latest">⬇️ Download Multichat Control</a>
+        <ul class="perks">
+          <li>📦 One file, nothing to install</li>
+          <li>🔄 Updates itself</li>
+          <li>🔓 Free and open source</li>
+          <li>🔒 Your logins stay on your PC</li>
+        </ul>
+        <p class="muted small">Looking for older versions or the source code? Everything is on <a href="https://github.com/nnfisfree/multichat-control/releases">GitHub</a>.</p>
+      </div>
+    </section>
+
+    <section id="guide">
+      <h2>🧭 Getting started, step by step</h2>
+      <p class="muted">No GitHub account and no technical knowledge needed. It takes about two minutes.</p>
+      <ol class="steps">
+        <li class="card">
+          <h3>⬇️ Download the app</h3>
+          <p>Click <b>Download Multichat Control</b> above. Your browser saves one file, <code>Multichat-Control-…-portable.exe</code>, usually in your <b>Downloads</b> folder.</p>
+          <p class="tip">💡 If your browser says the file <i>isn't commonly downloaded</i>, open the download list, click the <b>…</b> next to the file and choose <b>Keep</b>.</p>
+        </li>
+        <li class="card">
+          <h3>📁 Give it its own folder</h3>
+          <p>Create a new folder, for example <b>Documents → Multichat Control</b>, and move the file into it. The app keeps your settings in a <code>user-data</code> folder next to itself, so a folder of its own keeps everything tidy.</p>
+        </li>
+        <li class="card">
+          <h3>▶️ Open it</h3>
+          <p>Double-click the file. The first time, Windows may show a blue <b>"Windows protected your PC"</b> box, because small free apps like this one aren't signed with a paid certificate. Click <b>More info</b>, then <b>Run anyway</b>. Windows only asks once.</p>
+        </li>
+        <li class="card">
+          <h3>🔑 Log in to your platforms</h3>
+          <p>Settings open on the first start. Under <b>Connections</b>, click <b>Log in</b> next to Twitch, YouTube and Kick. Each one opens that platform's own login page, so the app never sees your password.</p>
+          <p class="tip">💡 For YouTube, Google shows <i>"Google hasn't verified this app"</i>. That's expected: click <b>Advanced</b>, then <b>Go to MultichatControl</b>.</p>
+        </li>
+        <li class="card">
+          <h3>🎥 Optional: OBS stats</h3>
+          <p>To see your bitrate, dropped frames and FPS under the message box, open OBS, go to <b>Tools → WebSocket Server Settings</b> and tick <b>Enable WebSocket server</b>. Then follow <b>Settings → Connections → OBS Studio</b> in the app.</p>
+        </li>
+        <li class="card">
+          <h3>🤖 Optional: Streamer.bot</h3>
+          <p>Already using Streamer.bot? Run its actions and commands right from the message box. In Streamer.bot, open <b>Servers/Clients → WebSocket Server</b>, tick <b>Auto Start</b> and click <b>Start Server</b>. Then turn on <b>Settings → Connections → Streamer.bot → Use Streamer.bot</b> in the app. If you set a password in Streamer.bot, paste it there too.</p>
+        </li>
+        <li class="card">
+          <h3>🎉 You're ready</h3>
+          <p>Go live and chat with everyone in one window. When a new version comes out, the app tells you and updates itself in one click. Pick a skin you like in <b>Settings → Appearance</b>.</p>
+        </li>
+      </ol>
     </section>
 
     <section>
@@ -57,13 +117,8 @@
     </section>
 
     <section>
-      <h2>Download</h2>
-      <p>Free on <a href="https://github.com/nnfisfree/multichat-control/releases/latest">GitHub</a>, for Windows 10 and 11. One small file, nothing to install. The source code is public under the MIT License.</p>
-    </section>
-
-    <section>
       <h2>Contact</h2>
-      <p>Questions or problems: <a href="mailto:onlynonamefound@gmail.com">onlynonamefound@gmail.com</a>, or <a href="https://github.com/nnfisfree/multichat-control/issues">open an issue on GitHub</a>.</p>
+      <p>Questions or problems: <a href="mailto:nnfisfree@gmail.com">nnfisfree@gmail.com</a>, or <a href="https://github.com/nnfisfree/multichat-control/issues">open an issue on GitHub</a>.</p>
     </section>
   </main>
 
@@ -75,16 +130,41 @@
   </footer>
 </div>
 <script>
-  // Shows the newest release, so this page never needs editing after a release.
+  // Shows the newest release and links straight to its app file, so this page never needs
+  // editing after a release. Without GitHub's answer the links open the release page instead.
   fetch('https://api.github.com/repos/nnfisfree/multichat-control/releases/latest')
     .then((r) => (r.ok ? r.json() : null))
     .then((r) => {
       if (!r || !r.tag_name) return
+      const version = r.tag_name.replace(/^v/, '')
       const el = document.getElementById('version')
-      el.textContent = r.tag_name.replace(/^v/, '')
+      el.textContent = version
       el.href = r.html_url
+      document.getElementById('dl-version').textContent = version
+      const exe = (r.assets || []).find((a) => /-portable\.exe$/i.test(a.name))
+      if (exe) {
+        document.getElementById('dl-button').href = exe.browser_download_url
+        document.getElementById('dl-size').textContent = (exe.size / 1048576).toFixed(1) + ' MB'
+      }
     })
     .catch(() => {})
+
+  // The glow that follows the mouse, as in the app's settings.
+  if (window.matchMedia('(hover: hover)').matches) {
+    const root = document.documentElement
+    window.addEventListener('pointermove', (e) => {
+      root.style.setProperty('--mx', e.clientX + 'px')
+      root.style.setProperty('--my', e.clientY + 'px')
+      root.classList.add('glow')
+      const card = e.target.closest && e.target.closest('.card')
+      if (card) {
+        const b = card.getBoundingClientRect()
+        card.style.setProperty('--cx', e.clientX - b.left + 'px')
+        card.style.setProperty('--cy', e.clientY - b.top + 'px')
+      }
+    }, { passive: true })
+    document.documentElement.addEventListener('pointerleave', () => root.classList.remove('glow'))
+  }
 </script>
 </body>
 </html>

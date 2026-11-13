@@ -17,33 +17,37 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
-    icon: <Icon.shield />,
-    title: 'Held messages and suspicious users',
-    text: 'Messages Twitch\'s AutoMod holds show in chat with Allow and Deny. Suspicious users get a warning with Delete and Ban. Log in to Twitch again to turn this on.',
-    show: { cat: 'connections' }
+    icon: <Icon.bolt />,
+    title: 'Wobbly window',
+    text: 'Inspired by KDE Plasma on Linux: turn it on and the window bends like jelly while you drag it, then settles when you let go. A slider sets how much it wobbles.',
+    show: { cat: 'appearance', target: 'window-settings' }
   },
   {
-    icon: <Icon.warn />,
-    title: 'Spam warnings everywhere',
-    text: '"Buy followers" bots are marked on Twitch, Kick and YouTube, with Delete and Ban right on the message.',
-    show: { cat: 'chat', target: 'messages-settings' }
+    icon: <Icon.palette />,
+    title: 'Two new skins: Kanagawa and Sweet',
+    text: 'Two favourites from the Linux community take the place of Nord and Gruvbox.',
+    show: { cat: 'appearance', target: 'skins-settings' }
   },
   {
-    icon: <Icon.all />,
-    title: 'Video and clip previews',
-    text: 'YouTube links and Twitch, Kick or YouTube clips get a card with the picture, title and length.',
-    show: { cat: 'chat', target: 'messages-settings' }
+    icon: <Icon.gem />,
+    title: 'Gift bombs, Power-ups and badges',
+    text: 'A gift bomb lists every sub and who got it, custom Power-ups show their name, Twitch gifts, Power-ups and Hype Trains are Twitch purple, and event badges have small animated icons.'
   },
   {
-    icon: <Icon.events />,
-    title: 'New clips in chat',
-    text: 'When anyone clips your stream on Twitch or Kick, the clip shows up in chat and in Events.',
-    show: { cat: 'chat', target: 'chat-events-settings' }
+    icon: <Icon.pin />,
+    title: 'The window stays where you put it',
+    text: 'Its size, position, monitor and maximized state are kept for the next start. If that monitor is not connected, the window opens on your main monitor instead.'
   },
   {
-    icon: <Icon.check />,
-    title: 'Fixes',
-    text: 'The "Log in again" notice now goes away once you have logged in again. The first messages after start-up no longer show twice. The version now shows in the title bar.'
+    icon: <Icon.users />,
+    title: 'Channel stats in the title bar',
+    text: 'Followers and subscribers now sit in the middle of the title bar, and OBS stats moved under the message box, next to the clock.',
+    show: { cat: 'app', target: 'stats-settings' }
+  },
+  {
+    icon: <Icon.palette />,
+    title: 'A cleaner look',
+    text: 'The window edge is as thin as a normal window, and the clock and OBS stats under the message box now look just like the channel stats in the title bar, in every skin.'
   }
 ]
 

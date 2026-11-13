@@ -74,6 +74,14 @@ export function UserCardPanel({ platform, user, x, y, onClose, onReply, onResult
   const self = card?.roles?.includes('Broadcaster')
   const latestLive = card?.messages.find((m) => !m.history && !m.deleted)
   const fresh = card?.createdAt !== undefined && Date.now() - card.createdAt < 30 * DAY
+  // The badges they show in chat (VIP, moderator, artist, subscriber, event badges...), from
+  // their newest message. Roles already shown as a badge aren't repeated as a chip.
+  const badges = useMemo(() => {
+    const m = card?.messages.find((x) => x.author.badges.length > 0)
+    const seen = new Set<string>()
+    return (m?.author.badges ?? []).filter((b) => b.title && !seen.has(b.id) && seen.add(b.id))
+  }, [card?.messages])
+  const roles = (card?.roles ?? []).filter((r) => !badges.some((b) => b.title.toLowerCase().startsWith(r.toLowerCase())))
 
   return (
     <aside ref={box} className="popover user-card" role="dialog" aria-label={`User card: ${user.name}`} style={{ left: place.left, top: place.top, maxHeight: place.maxHeight }}>
@@ -82,7 +90,16 @@ export function UserCardPanel({ platform, user, x, y, onClose, onReply, onResult
         <div className="uc-who">
           <h2 style={{ color: card?.color ?? user.color }}>{card?.name ?? user.name}</h2>
           <span className="uc-platform"><PlatformIcon platform={platform} size={14} /> {PLATFORM_LABEL[platform]}{card?.login && card.login.toLowerCase() !== (card.name ?? '').toLowerCase() ? ` · ${card.login}` : ''}</span>
-          {card?.roles && card.roles.length > 0 && <div className="uc-roles">{card.roles.map((r) => <span key={r} className="uc-chip">{r}</span>)}</div>}
+          {(badges.length > 0 || roles.length > 0) && (
+            <div className="uc-roles">
+              {badges.map((b) => (
+                <span key={b.id} className="uc-badge" title={b.title}>
+                  {b.url && <img src={b.url} alt="" width={18} height={18} />}{b.title}
+                </span>
+              ))}
+              {roles.map((r) => <span key={r} className="uc-chip">{r}</span>)}
+            </div>
+          )}
         </div>
         <button className="icon-btn" aria-label="Close user card" onClick={onClose}><Icon.close /></button>
       </header>

@@ -19,7 +19,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: a message held by Twitch's AutoMod allowed with one click next to a suspicious user and a spam bot, video and clip previews in chat, the commands list searched for raids, a Streamer.bot action run with /sb, a raid with its countdown, a user card, users in chat, OBS stats, the connections menu, and the nine skins changing the whole app's colours" />
+<img src="docs/media/chat.png" width="760" alt="NoName's Multichat Control: Twitch, YouTube and Kick chat merged in one window, with a raid, a clip and a Super Chat as event cards, channel stats in the title bar and OBS stats and a clock under the message box" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -55,7 +55,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - On All, choose exactly where a message goes
 - **Chat from your last 5 streams**, so you can read what you missed
 - **Messages that tag you stand out**, in the colour of the platform they came from: purple for Twitch, red for YouTube, green for Kick
-- **Click any name for a user card**: account age, follow and sub, and everything they said in your channel
+- **Click any name for a user card**: account age, follow and sub, their badges (VIP, moderator, artist, subscriber, event badges) and everything they said in your channel
 - **Users in Chat** for every platform, grouped Broadcaster · Moderators · VIPs · Users, with live viewer counts
 - **Previews for videos and clips**: YouTube links and Twitch, Kick or YouTube clips get a card with the picture, length, title and channel
 - Reply, delete, time out (even for 1 second, to clear messages), ban or shout out
@@ -68,7 +68,8 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - **Recent events from every platform, in time order**, kept between sessions
 - Filter by platform and type, sort newest or oldest first
 - Your own test redeems are tagged, and cleared in one click
-- Gift bombs become one big card, not fifty rows
+- **Gift bombs**: one summary card, then a line for every sub and who received it
+- **Custom Power-ups by name**, and animated icons on every event badge
 - Hype Train banner with level, progress and countdown
 
 </td>
@@ -110,7 +111,9 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td valign="top">
 
 ### 🎨 Skins and emotes
-- **9 skins**: POS Club, Myst Bourne, Dracula, Catppuccin Mocha, Tokyo Night, Nord, Gruvbox Dark, Rosé Pine and OLED Black, Twitch's panel included
+- **9 skins**: POS Club, Myst Bourne, Dracula, Catppuccin Mocha, Tokyo Night, Kanagawa, Sweet, Rosé Pine and OLED Black, Twitch's panel included
+- **Wobbly window**, inspired by KDE Plasma on Linux: it bends like jelly while you drag it (optional, with an intensity slider)
+- **Remembers its size and place**, monitor included
 - Picker that follows the active tab, with search
 - Twitch, BetterTTV, 7TV, FrankerFaceZ and Kick emotes
 - Overlay emotes, animated cheermotes and Twitch chat GIFs
@@ -120,11 +123,11 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td valign="top">
 
 ### 📈 Stream health and updates
-- **OBS stats in the title bar**: live, uptime, bitrate, dropped frames, FPS and CPU
+- **OBS stats under the message box**: live, uptime, bitrate, dropped frames, FPS and CPU
 - Click for everything: encoder, canvas and output resolution, render and encoding lag
 - A status menu for every connection, with reconnect and log in
-- **Followers and subscribers** of every connected platform, under the message box
-- **A clock** beside them: point at it for the date. Both follow the skin and can be hidden.
+- **Followers and subscribers** of every connected platform, in the title bar
+- **A clock** beside the OBS stats: point at it for the date. Everything follows the skin and can be hidden.
 - Installs new versions in one click, checked against GitHub's checksum, and shows **what's new** after each update
 
 </td>
@@ -135,36 +138,15 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
-<td align="center"><img src="docs/media/chat.png" alt="Merged chat from Twitch, YouTube and Kick with event cards, OBS stats in the title bar, and followers and subscribers for each platform beside the clock under the message box" /><br /><b>Every chat in one place, with your stream's health on top</b></td>
-<td align="center"><img src="docs/media/raid.png" alt="Raid bar above the pinned message: the raided channel's picture with a LIVE tag, its game and viewers, the stream title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view, and Raid Now when you're ready</b></td>
-</tr>
-<tr>
 <td align="center"><img src="docs/media/moderation.png" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and a spam bot offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots, one click away</b></td>
-<td align="center"><img src="docs/media/previews.png" alt="Chat with cards under a YouTube link and Kick clip links, and a new clip of the stream shown as an event card" /><br /><b>See a video or clip before you click it</b></td>
+<td align="center"><img src="docs/media/raid.png" alt="Raid bar at the top of chat: the raided channel's picture with a LIVE tag, its game, viewers and title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view, and Raid Now when you're ready</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/usercard.png" alt="User card with account age, follow and subscription, moderation buttons and the user's messages" /><br /><b>Know who you're talking to</b></td>
-<td align="center"><img src="docs/media/users.png" alt="Users in Chat with Twitch, YouTube and Kick sections, viewer counts and role groups" /><br /><b>Who's in chat, on every platform</b></td>
+<td align="center"><img src="docs/media/usercard.png" alt="User card with the viewer's badge, account age, follow and subscription, moderation buttons and their messages" /><br /><b>Know who you're talking to</b></td>
+<td align="center"><img src="docs/media/streamerbot.png" alt="Typing /sb S suggests the Streamer.bot actions that match, in the commands list" /><br /><b>Run Streamer.bot actions from the message box</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/obs.png" alt="OBS stats panel with encoder, canvas and output resolution, frames and the stream table" /><br /><b>OBS stats at a glance</b></td>
-<td align="center"><img src="docs/media/events.png" alt="Events drop-down with platform filters, type filter, sort and Clear buttons, and a redeem tagged TEST" /><br /><b>Recent events, filtered, sorted and tidy</b></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/media/commands.png" alt="The commands list with a search box, grouped into Multichat Control and Streamer.bot commands with their icons" /><br /><b>Every command, grouped and searchable</b></td>
-<td align="center"><img src="docs/media/streamerbot.png" alt="A Streamer.bot action just ran, and typing /sb S suggests the Streamer.bot actions that match" /><br /><b>Run Streamer.bot actions from the message box</b></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/media/skins.png" alt="Settings, Appearance: nine skin cards from POS Club and Myst Bourne to OLED Black" /><br /><b>Nine skins, one click each</b></td>
-<td align="center"><img src="docs/media/connections.png" alt="Connections menu listing Twitch, YouTube, Kick and Streamer.bot with their state" /><br /><b>Every connection at a glance</b></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/media/history.png" alt="Chat from a past stream under a divider showing its date and number of messages" /><br /><b>Read what you missed in your last streams</b></td>
-<td align="center"><img src="docs/media/emotes.png" alt="Emote picker grouped by provider, with search" /><br /><b>Emote picker for every provider</b></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/media/settings.png" alt="Settings with categories on the left, one-row logins for each platform, alert services marked Soon and the OBS Studio card" /><br /><b>Clear settings, one-click logins</b></td>
-<td align="center"><img src="docs/media/support.png" alt="About page, Support tab, with Donate, Subscribe on Twitch and Gadgets Store buttons" /><br /><b>The story behind it, inside the app</b></td>
+<td align="center" colspan="2"><img src="docs/media/skins.png" width="50%" alt="Settings, Appearance: nine skin cards from POS Club and Myst Bourne to Kanagawa, Sweet and OLED Black" /><br /><b>Nine skins, one click each</b></td>
 </tr>
 </table>
 
@@ -192,9 +174,11 @@ Open the gear icon and click **Log in** beside each platform you stream on. You 
 - **The status menu** next to the gear shows every connection. Click a row to reconnect or log in.
 - **Users in Chat, held messages, suspicious users and some commands** need a newer Twitch login. If the app asks, click **Log in again** once.
 - **Held messages:** these appear only if AutoMod is on for your channel (Twitch's Creator Dashboard → Settings → Moderation). To catch spam bots' links, also turn on **Block hyperlinks** there.
-- **OBS stats (optional):** in OBS, open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info**. Then turn on **Settings → Connections → OBS Studio → Show OBS Stats** and paste it. The app only reads from OBS and never changes anything there.
+- **OBS stats (optional):** in OBS, open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info**. Then paste it in **Settings → Connections → OBS Studio** (Show OBS Stats is on by default). The app only reads from OBS and never changes anything there.
 - **Streamer.bot (optional):** in Streamer.bot, open **Servers/Clients → WebSocket Server**, tick **Auto Start** and click **Start Server** (address `127.0.0.1`, port `8080`, endpoint `/`). Then turn on **Settings → Connections → Streamer.bot → Use Streamer.bot**. If Authentication is on in Streamer.bot, paste its password there too.
 - **Skins:** **Settings → Appearance**. The window edge keeps its glow in every skin.
+- **Wobbly window:** **Settings → Appearance → Window**, with a slider for how much it wobbles.
+- **Step by step for beginners:** [multichat.nonamefound.lol](https://multichat.nonamefound.lol/#guide) walks through download, first start and logins.
 
 ### Commands
 

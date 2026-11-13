@@ -49,8 +49,9 @@ h2, h3 { margin: 0; }
 ::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-thumb:hover { background: var(--purple-2); background-clip: content-box; }
 
-/* The window edge is one unbroken gradient line: the page shows through as a 2px frame. */
-#root { padding: 2px; background: var(--edge); }
+/* The window edge is one unbroken gradient line, as thin as a normal Windows window border:
+   the page shows through as a 1px frame. Only its colour stands out, never its width. */
+#root { padding: 1px; background: var(--edge); }
 .app {
   height: 100%;
   position: relative;
@@ -63,7 +64,11 @@ h2, h3 { margin: 0; }
 /* Title bar */
 /* Dragging comes from data-tauri-drag-region only. No CSS app-region: WebView2 updates those
    areas late, and a stale one swallowed clicks on the window buttons. */
-.titlebar { height: 38px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 10px; }
+.titlebar { height: 38px; flex: none; display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, auto) minmax(80px, 1fr); align-items: center; gap: 16px; padding: 0 10px 0 10px; }
+/* Both sides are always equally wide (at least room for the window buttons), so the middle is
+   centred on the window. When space is short the app's name shortens instead. */
+.title-left, .title-right { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+.title-right { justify-content: flex-end; }
 .brand-icon { width: 20px; height: 20px; flex: none; }
 .brand { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* Smaller and dimmer than the name, so the two read as name and detail. */
@@ -190,6 +195,8 @@ h2, h3 { margin: 0; }
 .ev-follow { --c: 248, 113, 113; }
 .ev-paid { --c: 52, 227, 159; }
 .ev-hypetrain { --c: 255, 152, 56; }
+/* Twitch's own gifts, Power-ups and Hype Trains wear Twitch purple. */
+.ev-gift.on-twitch, .ev-powerup.on-twitch, .ev-hypetrain.on-twitch { --c: 145, 70, 255; }
 .ev-top { display: flex; align-items: center; gap: 6px; }
 .ev-top .pf { margin: 0; flex: none; }
 .ev-title { flex: 1; min-width: 0; font-weight: 400; color: color-mix(in srgb, var(--text) 88%, var(--muted)); overflow-wrap: anywhere; }
@@ -206,6 +213,7 @@ h2, h3 { margin: 0; }
 .badge-follow { --c: 239, 90, 90; }
 .badge-paid { --c: 30, 190, 130; }
 .badge-hypetrain { --c: 240, 130, 40; }
+.badge-gift.on-twitch, .badge-powerup.on-twitch, .badge-hypetrain.on-twitch { --c: 145, 70, 255; }
 .badge-announcement { --c: 240, 150, 40; }
 .badge-moderation { --c: 200, 70, 90; }
 .badge-clip, .ev-clip { --c: 99, 132, 255; }
@@ -288,6 +296,34 @@ select option { background: var(--solid); }
 /* Donations are a gold coin with a dollar sign. */
 .badge-donation { --c: 250, 190, 40; width: 24px; min-width: 24px; height: 24px; padding: 0; border-radius: 50%; color: #5a3a00; background: radial-gradient(circle at 35% 30%, #fff1a8, #f5c542 45%, #c98a0b 100%); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7), inset 0 -2px 3px rgba(120, 70, 0, 0.35), 0 0 9px rgba(250, 190, 40, 0.6); text-shadow: none; }
 .badge-donation svg { width: 15px; height: 15px; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.55)); }
+
+/* Animated pictures in event badges (BadgeIcons.tsx). Each moves briefly, then rests. */
+.ev-badge.has-icon { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px 0 5px; }
+.ev-badge .bi { flex: none; overflow: visible; color: #fff; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)); }
+.ev-badge .bi * { transform-box: fill-box; transform-origin: center; }
+.badge-redemption .bi { width: 15px; height: 15px; }
+.bi-train .bi-loco { animation: bi-chug 0.5s ease-in-out infinite alternate; }
+.bi-train .bi-wheels circle { transform-origin: center; animation: bi-bob 0.25s linear infinite alternate; }
+.bi-train .bi-smoke circle { opacity: 0; animation: bi-smoke 1.5s ease-out infinite; }
+.bi-train .bi-smoke circle:nth-child(2) { animation-delay: 0.5s; }
+.bi-train .bi-smoke circle:nth-child(3) { animation-delay: 1s; }
+.bi-gift .bi-lid { transform-origin: 50% 100%; animation: bi-lid 2.4s ease-in-out infinite; }
+.bi-dice { animation: bi-roll 3.2s cubic-bezier(0.3, 1.4, 0.5, 1) infinite; }
+.bi-bits { animation: bi-float 2.4s ease-in-out infinite; }
+.bi-bits .bi-glint { animation: bi-glint 2.4s ease-in-out infinite; }
+.bi-flame .bi-flame-out { transform-origin: 50% 100%; animation: bi-flicker 0.9s ease-in-out infinite alternate; }
+.bi-flame .bi-flame-in { transform-origin: 50% 100%; animation: bi-flicker 0.6s ease-in-out infinite alternate-reverse; }
+.bi-heart { animation: bi-beat 1.6s ease-in-out infinite; }
+@keyframes bi-chug { to { transform: translateY(-0.6px); } }
+@keyframes bi-bob { to { transform: translateY(0.4px); } }
+@keyframes bi-smoke { 0% { opacity: 0; transform: translate(2px, 3px) scale(0.5); } 25% { opacity: 0.9; } 100% { opacity: 0; transform: translate(-2px, -3px) scale(1.4); } }
+@keyframes bi-lid { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-2.5px) rotate(-8deg); } 80% { transform: translateY(-1px) rotate(5deg); } 90% { transform: translateY(-1.5px) rotate(-2deg); } }
+@keyframes bi-roll { 0%, 65% { transform: none; } 85% { transform: rotate(200deg) scale(0.85); } 100% { transform: rotate(360deg); } }
+@keyframes bi-float { 0%, 100% { transform: translateY(0.5px); } 50% { transform: translateY(-1px); } }
+@keyframes bi-glint { 0%, 55%, 100% { opacity: 0; transform: scale(0.4); } 70% { opacity: 1; transform: scale(1.3); } }
+@keyframes bi-flicker { 0% { transform: scale(1, 1) skewX(0deg); } 50% { transform: scale(0.94, 1.06) skewX(3deg); } 100% { transform: scale(1.04, 0.95) skewX(-3deg); } }
+@keyframes bi-beat { 0%, 40%, 100% { transform: scale(1); } 10% { transform: scale(1.22); } 20% { transform: scale(1); } 30% { transform: scale(1.14); } }
+@media (prefers-reduced-motion: reduce) { .ev-badge .bi, .ev-badge .bi * { animation: none !important; } .bi-train .bi-smoke circle { opacity: 0.8; } }
 /* Compact account rows: one line each, details only when needed. */
 .modal .account { padding: 6px 10px; gap: 4px; margin-bottom: 6px; }
 .modal .account header { gap: 6px; min-height: 30px; }
@@ -342,20 +378,21 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .composer textarea { flex: 1; resize: none; border: 0; outline: 0; background: none; padding: 5px 6px; font-size: 16px; max-height: 90px; min-width: 60px; field-sizing: content; }
 .composer textarea:placeholder-shown { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .targets { display: flex; gap: 2px; padding: 3px 2px; }
-/* The PC clock under the chat box's right-hand icons. Hovering shows the date. Every colour
+/* The row under the chat box: OBS stats in the middle, the PC clock on the right. Hovering shows the date. Every colour
    comes from the skin, so it changes with it. --clock-room is the height it adds below the box. */
-:root { --clock-room: 16px; }
+:root { --clock-room: 20px; }
 :root[data-clock="off"] { --clock-room: 0px; }
 .composer-wrap.no-clock { padding-bottom: 12px; }
-.clock-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 18px; margin-top: 4px; padding-right: 2px; }
+.clock-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 22px; margin-top: 4px; padding-right: 2px; container-type: inline-size; }
 .stats-cell { grid-column: 2; display: flex; justify-content: center; min-width: 0; }
 /* The clock always keeps the right-hand slot, whatever the middle shows. */
 .clock-cell { grid-column: 3; display: flex; justify-content: flex-end; min-width: 0; }
-/* Followers and subscribers of each connected platform, centred under the message box. Colours
+/* Followers and subscribers of each connected platform, centred in the title bar. Colours
    follow the skin; the heart and star keep their own. */
-.stats-bar { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; overflow: hidden; }
-.stat-pill { display: inline-flex; align-items: center; gap: 7px; height: 18px; padding: 0 9px 0 6px; border-radius: 999px; font: 600 12px/1 var(--ui-font), 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--text); background: rgba(var(--purple-rgb), 0.12); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.35); white-space: nowrap; cursor: default; transition: background 0.2s, box-shadow 0.2s; }
-.stat-pill:hover { background: rgba(var(--purple-rgb), 0.22); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.7), 0 0 12px rgba(var(--purple-rgb), 0.35); }
+/* Pills that don't fit wrap onto a hidden second line, so only whole pills ever show. */
+.stats-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 6px; height: 22px; min-width: 0; overflow: hidden; }
+.stat-pill { display: inline-flex; align-items: center; gap: 7px; height: 22px; padding: 0 10px 0 7px; border-radius: 999px; font: 600 12px/1 var(--ui-font), 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--text); background: rgba(var(--purple-rgb), 0.12); white-space: nowrap; cursor: default; transition: background 0.2s; }
+.stat-pill:hover { background: rgba(var(--purple-rgb), 0.22); }
 .stat b { font-weight: 600; }
 .stat-logo { display: grid; place-items: center; width: 14px; height: 14px; }
 .stat-pill.twitch .stat-logo { color: #a970ff; }
@@ -364,15 +401,13 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .stat { display: inline-flex; align-items: center; gap: 3px; }
 .stat-icon.star { color: #ffc83d; }
 .stat-icon.heart { color: #ff4d6d; }
-.clock { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 18px; padding: 0 9px; border-radius: 999px; font: 600 12px/1 var(--ui-font), 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--text); background: rgba(var(--purple-rgb), 0.12); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.35); cursor: default; outline: none; transition: background 0.2s, box-shadow 0.2s; }
-.clock:hover, .clock:focus-visible { background: rgba(var(--purple-rgb), 0.22); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.7), 0 0 12px rgba(var(--purple-rgb), 0.35); }
-.clock-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: linear-gradient(135deg, var(--purple), var(--blue)); box-shadow: 0 0 6px rgba(var(--blue-rgb), 0.8); animation: clock-pulse 2s ease-in-out infinite; }
-.clock-time { font-weight: 700; color: var(--blue-2); background: linear-gradient(90deg, var(--purple-2), var(--blue-2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.clock-half { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+.clock { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px; border-radius: 999px; font: 600 12px/1 var(--ui-font), 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--text); background: rgba(var(--purple-rgb), 0.12); cursor: default; outline: none; transition: background 0.2s; }
+.clock:hover, .clock:focus-visible { background: rgba(var(--purple-rgb), 0.22); }
+.clock-icon { flex: none; color: var(--blue-2); }
+.clock-time { font-weight: 600; color: var(--text); }
+.clock-half { margin-left: -3px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: var(--text); opacity: 0.8; }
 .clock-date { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 31; white-space: nowrap; padding: 6px 10px; font-size: 12.5px; font-weight: 600; letter-spacing: 0; color: var(--text); background: var(--solid); border: 1px solid var(--purple); border-radius: 8px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5), 0 0 12px rgba(var(--purple-rgb), 0.25); opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity 0.15s ease-out, transform 0.15s ease-out; }
 .clock:hover .clock-date, .clock:focus-visible .clock-date { opacity: 1; transform: none; }
-@keyframes clock-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
-@media (prefers-reduced-motion: reduce) { .clock-dot { animation: none; } }
 .send { width: 40px; height: 32px; display: grid; place-items: center; color: var(--on-accent); background: var(--blue); border-radius: 9px; flex: none; }
 .send:hover:not(:disabled) { background: var(--blue-2); }
 .replying { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); padding-bottom: 4px; }
@@ -672,7 +707,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .obs-item.warn { color: var(--orange); }
 .obs-item.bad { color: var(--bad); }
 @keyframes obs-pulse { 50% { opacity: 0.35; } }
-.obs-details { position: fixed; top: 44px; left: 50%; transform: translateX(-50%); width: 560px; max-width: calc(100vw - 24px); padding: 12px 14px; font-size: 13px; z-index: 45; }
+.obs-details { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 560px; max-width: calc(100vw - 24px); padding: 12px 14px; font-size: 13px; z-index: 45; }
 .obs-details dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 0 0 10px; }
 .obs-details dt { color: var(--muted); }
 .obs-details dd { margin: 0; color: var(--text); font-variant-numeric: tabular-nums; }
@@ -681,21 +716,27 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .obs-details td { padding: 4px 6px 4px 0; color: var(--text); }
 .obs-fields { display: grid; gap: 8px; margin-top: 6px; }
 .obs-fields input[type="number"] { width: 110px; }
-/* When space is short, the least important numbers go first: CPU, FPS, dropped frames, bitrate. */
+/* The OBS capsule under the message box, the same size as the stats and the clock. */
+/* Same look as the channel stats in the title bar, in every skin. */
+.clock-row .obs-strip { height: 22px; padding: 0 10px; gap: 10px; border-radius: 999px; font: 600 12px/1 var(--ui-font), 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--text); background: rgba(var(--purple-rgb), 0.12); transition: background 0.2s; }
+.clock-row .obs-strip.muted { font-weight: 600; }
+.clock-row .obs-item { color: var(--text); }
+.clock-row .obs-item.warn { color: var(--orange); }
+.clock-row .obs-item.bad { color: var(--bad); }
+.clock-row button.obs-strip:hover, .clock-row button.obs-strip[aria-expanded="true"] { background: rgba(var(--purple-rgb), 0.22); }
+.clock-row .obs-dot { width: 7px; height: 7px; }
+.clock-row .obs-strip.muted.bad { color: var(--orange); }
+.clock-row .obs-strip.muted.bad .obs-dot { background: var(--orange); }
 /* The status capsule in the title bar: centred, with room on both sides. */
-.title-status { flex: 1; min-width: 0; display: flex; justify-content: center; align-items: center; margin: 0 56px; container-type: inline-size; }
-.title-status .obs-strip { height: 26px; padding: 0 16px; gap: 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.045);
-  border: 1px solid transparent; background-clip: padding-box; box-shadow: 0 0 0 1px rgba(var(--purple-rgb), 0.35), 0 0 14px rgba(var(--blue-rgb), 0.12); }
-.title-status button.obs-strip:hover, .title-status button.obs-strip[aria-expanded="true"] { background: rgba(255, 255, 255, 0.09); box-shadow: 0 0 0 1px rgba(var(--blue-rgb), 0.6), 0 0 16px rgba(var(--purple-rgb), 0.3); }
-.title-status .obs-strip.live { box-shadow: 0 0 0 1px rgba(255, 92, 122, 0.45), 0 0 14px rgba(255, 92, 122, 0.15); }
+.title-status { min-width: 0; display: flex; justify-content: center; align-items: center; }
 .connect-slot { display: flex; justify-content: center; min-width: 0; padding: 0 12px; }
-@container (max-width: 470px) { .obs-strip .obs-cpu { display: none; } }
-@container (max-width: 390px) { .obs-strip .obs-fps { display: none; } }
-@container (max-width: 300px) { .obs-strip .obs-drop { display: none; } }
-@container (max-width: 210px) { .obs-strip .obs-rate { display: none; } }
+/* When space is short, the least important numbers go first: CPU, FPS, dropped frames, bitrate.
+   The middle of the row has the row's width minus room for the clock on both sides. */
+@container (max-width: 640px) { .obs-strip .obs-cpu { display: none; } }
+@container (max-width: 560px) { .obs-strip .obs-fps { display: none; } }
+@container (max-width: 470px) { .obs-strip .obs-drop { display: none; } }
+@container (max-width: 380px) { .obs-strip .obs-rate { display: none; } }
 
-.title-status .obs-strip.muted.bad { color: var(--orange); box-shadow: 0 0 0 1px rgba(255, 179, 71, 0.5); }
-.title-status .obs-strip.muted.bad .obs-dot { background: var(--orange); }
 .obs-setup .row-btns input { flex: 1; min-width: 0; }
 
 /* User card: who someone is and what they said in this channel. */
@@ -708,6 +749,9 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .uc-platform { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); }
 .uc-roles, .uc-flags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .uc-flags { padding: 0 14px; margin: 0 0 8px; }
+.uc-badge { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 24px; padding: 0 9px 0 4px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(var(--purple-rgb), 0.16); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.22); }
+.uc-badge img { flex: none; width: 18px; height: 18px; object-fit: contain; }
+.uc-badge:not(:has(img)) { padding-left: 9px; }
 .uc-chip { padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: var(--text); background: rgba(255, 255, 255, 0.1); }
 .uc-chip.warn { color: #1b1440; background: var(--orange); }
 .uc-chip.bad { background: var(--bad); color: #fff; }
@@ -819,7 +863,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .skin:hover { transform: translateY(-2px); border-color: rgba(var(--blue-rgb), 0.6); }
 .skin.on { border-color: transparent; box-shadow: 0 0 0 2px var(--purple-2), 0 0 20px rgba(var(--purple-rgb), 0.45); }
 .skin-shot { position: relative; display: flex; flex-direction: column; gap: 6px; height: 88px; padding: 9px; border-radius: 9px; overflow: hidden; }
-.skin-shot::before { content: ''; position: absolute; inset: 0; padding: 2px; border-radius: 9px; background: var(--edge); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+.skin-shot::before { content: ''; position: absolute; inset: 0; padding: 1px; border-radius: 9px; background: var(--edge); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
 .skin-bar { display: flex; gap: 4px; height: 13px; padding: 3px; border-radius: 4px; }
 .skin-bar i { width: 18px; border-radius: 3px; }
 .skin-line { height: 6px; border-radius: 3px; opacity: 0.95; }
@@ -865,3 +909,13 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .wn-text p { margin: 2px 0 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
 .wn-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
 .wn-foot .btn { min-width: 110px; font-size: 15px; padding: 8px 20px; }
+.wn-foot { gap: 10px; }
+/* The one-time OBS tip uses the "What's new" card, so it follows every skin. */
+.obs-tip { width: 460px; }
+.obs-tip-logo { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 10px; background: linear-gradient(135deg, rgba(var(--purple-rgb), 0.85), rgba(var(--blue-rgb), 0.85)); box-shadow: 0 0 12px rgba(var(--purple-rgb), 0.45); }
+.obs-tip p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.obs-tip ol { margin: 0; padding: 10px 12px 10px 30px; display: grid; gap: 6px; font-size: 13.5px; line-height: 1.4; border-radius: 10px; background: rgba(var(--purple-rgb), 0.12); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.25); }
+.obs-tip li { display: list-item; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.obs-tip li::marker { color: var(--blue-2); font-weight: 700; }
+/* OBS's own logo always leads the stats row; only the LIVE dot blinks. */
+.obs-strip .logo-img { flex: none; display: block; }

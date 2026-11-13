@@ -31,7 +31,10 @@ export function Clock(): JSX.Element {
   const now = useNow()
   return (
     <div className="clock" tabIndex={0} aria-label={`${time(now)} ${half(now)}, ${date(now)}`}>
-      <span className="clock-dot" aria-hidden="true" />
+      <svg className="clock-icon" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9.25" fill="none" stroke="currentColor" strokeWidth="2.2" />
+        <path d="M12 7v5.2l3.4 2.1" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
       <span className="clock-time">{time(now)}</span>
       <span className="clock-half">{half(now)}</span>
       <span className="clock-date" role="tooltip">{date(now)}</span>

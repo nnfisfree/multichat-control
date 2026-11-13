@@ -1,6 +1,7 @@
 import { parseText } from '../../../shared/parts'
 import type { EmoteLookup } from '../../../shared/parts'
 import type { Badge, ChatMessage, HypeTrain, MessagePart, StreamEvent } from '../../../shared/types'
+import { log } from '../../log'
 
 export type BadgeMap = ReadonlyMap<string, Badge>
 /** Cheermote prefix (lowercase) to its tiers, lowest first. */
@@ -91,9 +92,8 @@ export function notification(e: any, badges: BadgeMap, third: EmoteLookup): { me
     case 'resub':
       return { event: event(id, { type: 'sub', actor: who, text: `resubscribed to the channel (${e.resub?.cumulative_months ?? '?'} months)`, message: said, amount: TIER[e.resub?.is_prime ? 'prime' : e.resub?.sub_tier], details: { Streak: String(e.resub?.streak_months ?? 'hidden') } }) }
     case 'sub_gift':
-      // A gift bomb sends one of these per recipient; its summary notice covers them all.
-      if (e.sub_gift?.community_gift_id) return {}
-      return { event: event(id, { type: 'gift', actor: who, text: `gifted a sub to ${e.sub_gift?.recipient_user_name}`, amount: TIER[e.sub_gift?.sub_tier], details: { Recipient: e.sub_gift?.recipient_user_name ?? '', Months: String(e.sub_gift?.duration_months ?? 1) } }) }
+      // A gift bomb sends its summary notice first, then one of these per recipient: each gets its own line.
+      return { event: event(id, { type: 'gift', actor: who, text: `gifted a ${TIER[e.sub_gift?.sub_tier] ? `${TIER[e.sub_gift.sub_tier]} ` : ''}sub to`, subject: e.sub_gift?.recipient_user_name, details: { Recipient: e.sub_gift?.recipient_user_name ?? '', Tier: TIER[e.sub_gift?.sub_tier] ?? '', Months: String(e.sub_gift?.duration_months ?? 1) } }) }
     case 'community_sub_gift':
       return { event: event(id, { type: 'gift', big: e.community_sub_gift?.total >= 5, actor: who, text: `gifted ${e.community_sub_gift?.total} subs to the community`, amount: `${TIER[e.community_sub_gift?.sub_tier] ?? ''} x${e.community_sub_gift?.total}`.trim(), details: { Tier: TIER[e.community_sub_gift?.sub_tier] ?? '', 'Total gifted': String(e.community_sub_gift?.cumulative_total ?? 'hidden') } }) }
     case 'gift_paid_upgrade':
@@ -163,8 +163,14 @@ export function eventFromSub(type: string, id: string, e: any, manageable: Reado
         message: e.message?.text || e.user_input || undefined, details: { Reward: AUTOMATIC[reward] ?? reward }
       })
     }
-    case 'channel.custom_power_up_redemption.add':
-      return mk({ type: 'powerup', actor: e.user_name, text: 'used', subject: e.title ?? e.reward?.title ?? 'a custom Power-up', amount: e.bits != null ? `${e.bits} bits` : undefined, message: e.user_input || undefined })
+    case 'channel.custom_power_up_redemption.add': {
+      // Twitch's docs don't pin down where the name lives, so every likely spot is read.
+      const p = e.custom_power_up ?? e.power_up ?? e.reward ?? {}
+      const name = p.title ?? p.name ?? e.title ?? e.custom_power_up_title ?? e.power_up_title
+      const bits = p.bits ?? p.cost ?? e.bits
+      if (!name) log('twitch', `custom Power-up without a name: ${JSON.stringify(e).slice(0, 600)}`)
+      return mk({ type: 'powerup', actor: e.user_name, text: 'used', subject: name ?? 'a custom Power-up', amount: bits != null ? `${bits} bits` : undefined, message: e.user_input || e.message?.text || undefined, details: name ? { 'Power-up': name } : {} })
+    }
     case 'channel.bits.use': {
       if (e.type === 'power_up') {
         const name = POWER_UP[e.power_up?.type] ?? e.power_up?.type ?? 'a Power-up'

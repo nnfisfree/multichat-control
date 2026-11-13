@@ -149,7 +149,7 @@ function AlertsPicker(): JSX.Element {
   )
 }
 
-/** Connects to OBS's WebSocket server to show stream health in the title bar. */
+/** Connects to OBS's WebSocket server to show stream health under the message box. */
 function ObsSettings(): JSX.Element {
   const s = useStore((x) => x.settings!)
   const saved = useStore((x) => x.secrets.obsPassword)
@@ -162,7 +162,7 @@ function ObsSettings(): JSX.Element {
 
   useEffect(() => {
     if (checking === null) return
-    if (obs.status === 'connected') { setResult({ ok: true, text: 'Connected to OBS. Your stats are in the title bar.' }); setChecking(null) }
+    if (obs.status === 'connected') { setResult({ ok: true, text: 'Connected to OBS. Your stats are under the message box.' }); setChecking(null) }
     else if (obs.status === 'error') { setResult({ ok: false, text: obs.detail ?? 'OBS refused the connection.' }); setChecking(null) }
   }, [obs.status, obs.detail, checking])
   // OBS that never answers is most often closed, or its WebSocket server is off.
@@ -185,7 +185,7 @@ function ObsSettings(): JSX.Element {
   const state = !s.obsEnabled ? 'Off' : obs.status === 'connected' ? 'Connected' : obs.status === 'error' ? 'Needs attention' : 'Waiting for OBS…'
   return (
     <div id="obs-settings">
-      <Row title="Show OBS Stats" desc="Bitrate, dropped frames, FPS, CPU and your encoder from OBS, in the title bar. Only reads: the app never changes anything in OBS.">
+      <Row title="Show OBS Stats" desc="Bitrate, dropped frames, FPS, CPU and your encoder from OBS, in the row under the message box. Only reads: the app never changes anything in OBS.">
         <Toggle label="Show OBS stats" on={s.obsEnabled} onChange={(v) => { void updateSettings({ obsEnabled: v }); if (v) setChecking(Date.now()) }} />
       </Row>
       {s.obsEnabled && (
@@ -493,13 +493,24 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                 <Section id="skins-settings" title="Skins" desc="Change the colours of the whole app. The glowing window edge stays the same in every skin.">
                   <SkinPicker />
                 </Section>
-                <Section title="Window" desc="How the window looks on your screen">
+                <Section id="window-settings" title="Window" desc="How the window looks on your screen">
                   <Row title="Window Opacity" desc="See through the whole window. Ctrl+Shift+O returns to 100%.">
                     <div className="slider">
                       <output>{percent}%</output>
                       <input type="range" aria-label="Window opacity" min="0" max="100" step="1" value={percent} onChange={(e) => void updateSettings({ windowOpacity: Number(e.target.value) / 100 })} />
                     </div>
                   </Row>
+                  <Row title="Wobbly Window" desc="The window bends like jelly while you drag it by the title bar, and settles when you let go. Inspired by the Wobbly Windows effect built into KDE Plasma, the Linux desktop.">
+                    <Toggle label="Wobbly window" on={s.windowWobble} onChange={(v) => void updateSettings({ windowWobble: v })} />
+                  </Row>
+                  {s.windowWobble && (
+                    <Row title="Wobble Intensity" desc="Low is a light sway, high is soft jelly">
+                      <div className="slider">
+                        <output>{s.wobbleIntensity}%</output>
+                        <input type="range" aria-label="Wobble intensity" min="0" max="100" step="1" value={s.wobbleIntensity} onChange={(e) => void updateSettings({ wobbleIntensity: Number(e.target.value) })} />
+                      </div>
+                    </Row>
+                  )}
                 </Section>
                 <Section title="Text" desc="Fonts and sizes">
                   <Row title="Interface Font" desc="Used for menus, tabs and settings">
@@ -574,11 +585,11 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                     <Toggle label="Confirm big actions" on={s.confirmActions} onChange={(v) => void updateSettings({ confirmActions: v })} />
                   </Row>
                 </Section>
-                <Section id="stats-settings" title="Clock & Stats" desc="The row under the message box">
+                <Section id="stats-settings" title="Clock & Stats" desc="The clock under the message box, the stats in the title bar">
                   <Row title="Show the Clock" desc="hh:mm:ss AM/PM, in the skin's colours. Point at it to see the date.">
                     <Toggle label="Show the clock" on={s.showClock} onChange={(v) => void updateSettings({ showClock: v })} />
                   </Row>
-                  <Row title="Show Channel Stats" desc="Followers and subscribers of each connected platform, in the middle. On YouTube, its subscribers; YouTube doesn't share member counts.">
+                  <Row title="Show Channel Stats" desc="Followers and subscribers of each connected platform, in the middle of the title bar. On YouTube, its subscribers; YouTube doesn't share member counts.">
                     <Toggle label="Show channel stats" on={s.showStats ?? true} onChange={(v) => void updateSettings({ showStats: v })} />
                   </Row>
                 </Section>

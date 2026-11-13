@@ -3,6 +3,7 @@
 //! Closing is decided by the engine (it knows the "When closing the window" setting and can ask
 //! the question in the app's own style). The core only reports the request and carries it out.
 
+use crate::placement;
 use crate::storage::log;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use tauri::menu::{Menu, MenuItem};
@@ -55,13 +56,24 @@ pub fn watch_close(window: &WebviewWindow) {
         }
         // Maximizing, restoring and similar changes rewrite the window's style and drop
         // see-through, so it is put back after each of them.
-        WindowEvent::Resized(_) | WindowEvent::Focused(_) | WindowEvent::ScaleFactorChanged { .. } => apply_opacity(&win),
+        WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
+            apply_opacity(&win);
+            placement::changed(&win);
+        }
+        WindowEvent::Focused(_) => apply_opacity(&win),
+        // The window's place is kept for the next start.
+        WindowEvent::Moved(_) => placement::changed(&win),
         _ => {}
     });
 }
 
 /// The chosen opacity, 0 to 255. Kept here so it can be put back whenever Windows loses it.
 static ALPHA: AtomicU8 = AtomicU8::new(255);
+
+/// The chosen opacity, 0 to 255.
+pub fn alpha() -> u8 {
+    ALPHA.load(Ordering::Relaxed)
+}
 
 /// See-through window, from 5% (never fully invisible) to 100%.
 #[tauri::command]
@@ -73,33 +85,50 @@ pub fn window_opacity(app: AppHandle, value: f64) {
     }
 }
 
+/// Set while the wobbly window effect draws the window: the real window is then almost fully
+/// see-through (but still takes clicks) under the effect's picture.
+static VEILED: AtomicBool = AtomicBool::new(false);
+
 /// Sets the window's see-through level, adding the layered style if Windows dropped it.
 fn apply_opacity(w: &WebviewWindow) {
-    let alpha = ALPHA.load(Ordering::Relaxed);
     #[cfg(windows)]
     if let Ok(hwnd) = w.hwnd() {
-        use windows_sys::Win32::UI::WindowsAndMessaging::{GetLayeredWindowAttributes, GetWindowLongPtrW, SetLayeredWindowAttributes, SetWindowLongPtrW, GWL_EXSTYLE, LWA_ALPHA, WS_EX_LAYERED};
-        let h = hwnd.0 as windows_sys::Win32::Foundation::HWND;
-        unsafe {
-            let style = GetWindowLongPtrW(h, GWL_EXSTYLE);
-            let layered = style & WS_EX_LAYERED as isize != 0;
-            // Fully opaque and never made see-through: nothing to do.
-            if alpha == 255 && !layered {
-                return;
-            }
-            if !layered {
-                SetWindowLongPtrW(h, GWL_EXSTYLE, style | WS_EX_LAYERED as isize);
-            } else {
-                let (mut key, mut current, mut flags) = (0u32, 0u8, 0u32);
-                if GetLayeredWindowAttributes(h, &mut key, &mut current, &mut flags) != 0 && flags & LWA_ALPHA != 0 && current == alpha {
-                    return;
-                }
-            }
-            SetLayeredWindowAttributes(h, 0, alpha, LWA_ALPHA);
-        }
+        apply_alpha(hwnd.0 as isize);
     }
     #[cfg(not(windows))]
-    let _ = (w, alpha);
+    let _ = w;
+}
+
+/// Hides the window under the wobbly effect's picture, or brings it back. It stays clickable.
+#[cfg(windows)]
+pub fn veil(hwnd: isize, on: bool) {
+    VEILED.store(on, Ordering::Relaxed);
+    apply_alpha(hwnd);
+}
+
+#[cfg(windows)]
+fn apply_alpha(hwnd: isize) {
+    // 1, not 0: Windows sends no clicks to a fully see-through window.
+    let alpha = if VEILED.load(Ordering::Relaxed) { 1 } else { ALPHA.load(Ordering::Relaxed) };
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetLayeredWindowAttributes, GetWindowLongPtrW, SetLayeredWindowAttributes, SetWindowLongPtrW, GWL_EXSTYLE, LWA_ALPHA, WS_EX_LAYERED};
+    let h = hwnd as windows_sys::Win32::Foundation::HWND;
+    unsafe {
+        let style = GetWindowLongPtrW(h, GWL_EXSTYLE);
+        let layered = style & WS_EX_LAYERED as isize != 0;
+        // Fully opaque and never made see-through: nothing to do.
+        if alpha == 255 && !layered {
+            return;
+        }
+        if !layered {
+            SetWindowLongPtrW(h, GWL_EXSTYLE, style | WS_EX_LAYERED as isize);
+        } else {
+            let (mut key, mut current, mut flags) = (0u32, 0u8, 0u32);
+            if GetLayeredWindowAttributes(h, &mut key, &mut current, &mut flags) != 0 && flags & LWA_ALPHA != 0 && current == alpha {
+                return;
+            }
+        }
+        SetLayeredWindowAttributes(h, 0, alpha, LWA_ALPHA);
+    }
 }
 
 fn ensure_tray(app: &AppHandle) -> tauri::Result<()> {
@@ -160,6 +189,7 @@ fn guard_quit(app: &AppHandle) {
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(4));
         log("app", "exit (forced: shutting down took too long)");
+        placement::flush();
         app.exit(0);
         std::thread::sleep(std::time::Duration::from_secs(2));
         std::process::exit(0);
@@ -184,6 +214,7 @@ pub fn window_close(app: AppHandle) {
 #[tauri::command]
 pub fn app_exit(app: AppHandle) {
     log("app", "exit");
+    placement::flush();
     guard_quit(&app);
     std::thread::spawn(move || app.exit(0));
 }

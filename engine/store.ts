@@ -18,7 +18,12 @@ export const store = {
 export async function loadStore(): Promise<void> {
   try {
     const text = await core.readFile('settings.json')
-    if (text) store.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(text) }
+    if (!text) return
+    const saved = JSON.parse(text)
+    // Settings from before obsSetUp existed: OBS counts as set up if it was ever turned on
+    // (it used to be off by default) or given its own port.
+    if (!('obsSetUp' in saved)) saved.obsSetUp = saved.obsEnabled === true || (typeof saved.obsPort === 'number' && saved.obsPort !== DEFAULT_SETTINGS.obsPort)
+    store.settings = { ...DEFAULT_SETTINGS, ...saved }
   } catch {
     // A damaged file starts from the defaults; it is replaced on the next change.
   }

@@ -340,6 +340,10 @@ export interface Settings {
   setupDismissed: boolean
   /** 0 to 1. The main process keeps a small minimum so the window can't vanish. */
   windowOpacity: number
+  /** Bends like jelly while dragged by the title bar, like KDE's wobbly windows. */
+  windowWobble: boolean
+  /** 0 to 100: how much the window wobbles. */
+  wobbleIntensity: number
   uiFont: string
   chatFont: string
   showPronouns: boolean
@@ -359,6 +363,10 @@ export interface Settings {
   keepChatHistory: boolean
   /** Reads stream health from OBS's WebSocket server on this PC. */
   obsEnabled: boolean
+  /** The one-time tip about connecting OBS was shown and closed. */
+  obsTipSeen: boolean
+  /** OBS has been set up on this PC (it connected at least once), so the tip isn't needed. */
+  obsSetUp: boolean
   obsPort: number
   /** Lists and runs Streamer.bot actions through its WebSocket server on this PC. */
   sbEnabled: boolean
@@ -380,6 +388,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showTimestamps: false,
   setupDismissed: false,
   windowOpacity: 1,
+  windowWobble: false,
+  wobbleIntensity: 50,
   uiFont: 'Segoe UI',
   chatFont: 'Segoe UI',
   showPronouns: true,
@@ -392,7 +402,10 @@ export const DEFAULT_SETTINGS: Settings = {
   updatePrereleases: false,
   alertService: 'none',
   keepChatHistory: true,
-  obsEnabled: false,
+  // On for new installs; it just waits quietly until OBS is reachable.
+  obsEnabled: true,
+  obsTipSeen: false,
+  obsSetUp: false,
   obsPort: 4455,
   sbEnabled: false,
   sbPort: 8080,

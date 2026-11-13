@@ -10,6 +10,7 @@ import { UsersDrawer } from './components/UsersDrawer'
 import { UserCardPanel } from './components/UserCard'
 import { ClosePrompt } from './components/ClosePrompt'
 import { WhatsNew } from './components/WhatsNew'
+import { ObsTip } from './components/ObsTip'
 import { PinnedBar } from './components/PinnedBar'
 import { RaidBar } from './components/RaidBar'
 import { HypeBanner } from './components/HypeBanner'
@@ -116,7 +117,7 @@ function Main(): JSX.Element {
 
   return (
     <div className="app" style={{ '--chat-scale': settings.fontScale, '--ui-font': `"${settings.uiFont}"`, '--chat-font': `"${settings.chatFont}"` } as React.CSSProperties}>
-      <TitleBar demo={boot.demo} onObsSettings={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} />
+      <TitleBar demo={boot.demo} />
       <UpdateBanner />
       <div className="shell">
         <Tabs tab={tab} eventsOpen={events} usersOpen={users} onUsers={() => openUsers(!users)} onTab={(t) => { setTab(t); openEvents(false); openUsers(false) }} onEvents={() => openEvents(!events)} onSettings={() => setSettingsOpen(true)} />
@@ -129,7 +130,7 @@ function Main(): JSX.Element {
           <UsersDrawer open={users} onClose={() => openUsers(false)} onUser={onUser} onCard={(platform, u, x, y) => setCard({ platform, user: u, x, y })} />
           {toast && <div className={toast.ok ? 'toast good' : 'toast bad'} role="status">{toast.message ?? (toast.ok ? 'Done.' : 'Failed.')}</div>}
         </main>
-        <Composer tab={tab} pop={pop} setPop={(p) => { setPop(p); if (p) { openEvents(false); openUsers(false) } }} replyTo={replyTo} clearReply={() => setReplyTo(null)} insert={insert} onSettings={() => setSettingsOpen(true)} onOpenUser={(u) => setCard({ platform: 'twitch', user: u, x: window.innerWidth / 2 - 210, y: 120 })} />
+        <Composer tab={tab} pop={pop} setPop={(p) => { setPop(p); if (p) { openEvents(false); openUsers(false) } }} replyTo={replyTo} clearReply={() => setReplyTo(null)} insert={insert} onSettings={() => setSettingsOpen(true)} onObsSettings={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} onOpenUser={(u) => setCard({ platform: 'twitch', user: u, x: window.innerWidth / 2 - 210, y: 120 })} />
         {pop === 'emotes' && <EmotePicker scope={replyTo?.platform ?? tab} onPick={(text) => setInsert({ text, n: (insert?.n ?? 0) + 1 })} onClose={() => setPop(null)} />}
         {pop === 'actions' && <ActionDeck scope={tab} onClose={() => setPop(null)} onRewards={() => setPop('rewards')} />}
         {pop === 'rewards' && <RewardsPanel onClose={() => setPop(null)} />}
@@ -138,6 +139,7 @@ function Main(): JSX.Element {
       {card && <UserCardPanel platform={card.platform} user={card.user} x={card.x} y={card.y} onClose={() => setCard(null)} onReply={setReplyTo} onResult={setToast} />}
       {settingsOpen && <Settings focus={typeof settingsOpen === 'object' ? settingsOpen : undefined} onClose={() => setSettingsOpen(false)} />}
       {!settingsOpen && !boot.demo && <WhatsNew onSettings={(f) => setSettingsOpen(f)} onCommands={() => setPop('commands')} />}
+      {!settingsOpen && !boot.demo && <ObsTip onSetup={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} />}
       <ClosePrompt />
     </div>
   )
