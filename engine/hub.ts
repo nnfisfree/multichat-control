@@ -1,13 +1,15 @@
 import type { AlertContext } from './integrations/alerts'
 import type { Connector, ConnectorContext } from './platforms/connector'
 import { eventToMessage } from '../shared/events'
-import { serializeFor } from '../shared/parts'
+import { plainText, serializeFor } from '../shared/parts'
+import { spamReasons } from '../shared/spam'
 import type {
   ActionResult, AlertSource, ChannelStats, ChatMessage, CommandOutcome, PinnedMessage, PlatformUsers, RaidInfo, UserCard, UserEntry, UserGroups, UserProfile, UsersInfo, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
 } from '../shared/types'
 import { PLATFORMS } from '../shared/types'
 import { log } from './log'
 import { message } from './net'
+import { store } from './store'
 
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
@@ -120,7 +122,7 @@ export class Hub {
   async userCard(platform: Platform, user: UserEntry): Promise<UserCard> {
     const c = this.connectors.get(platform)
     const profile: UserProfile = c?.profile ? await c.profile(user).catch((): UserProfile => ({})) : {}
-    const live = this.messages.filter((m) => m.platform === platform && m.author.id === user.id && m.kind !== 'event' && !m.divider)
+    const live = this.messages.filter((m) => m.platform === platform && m.author.id === user.id && m.kind !== 'event' && m.kind !== 'system' && !m.divider && !m.held)
     const saved = this.recorder?.messagesBy?.(platform, user.id)
     // Messages from this stream are also in the saved file, so each message counts once.
     const seen = new Set<string>()
@@ -170,12 +172,41 @@ export class Hub {
   }
 
   private addMessage(m: ChatMessage): void {
-    this.noteChatter(m)
-    this.recorder?.add(m)
+    this.markSpam(m)
+    // A held message isn't in chat yet, and notices aren't chat: neither goes into the history.
+    if (!m.held && m.kind !== 'system') {
+      this.noteChatter(m)
+      this.recorder?.add(m)
+    }
     this.messages.push(m)
     if (this.messages.length > MAX_MESSAGES) this.messages.splice(0, this.messages.length - MAX_MESSAGES)
     this.pending.messages.push(m)
     this.schedule()
+  }
+
+  /**
+   * Marks "buy followers" spam for moderators. The streamer, moderators and VIPs are never
+   * marked, and a message Twitch already flagged keeps Twitch's warning.
+   */
+  private markSpam(m: ChatMessage): void {
+    if (!store.settings.spamWarnings || m.flag || m.history || (m.kind !== 'chat' && m.kind !== 'action')) return
+    const a = m.author
+    if (a.isBroadcaster || a.isMod || a.isVip) return
+    const notes = spamReasons(plainText(m.parts))
+    if (notes) m.flag = { kind: 'spam', label: 'Looks like spam', notes }
+  }
+
+  /** Replaces a message in chat with a changed copy, so the interface redraws it. */
+  private patchMessage(id: string, change: (m: ChatMessage) => Partial<ChatMessage>): boolean {
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      if (this.messages[i].id !== id) continue
+      const next = { ...this.messages[i], ...change(this.messages[i]) }
+      this.messages[i] = next
+      ;(this.pending.updated ??= []).push(next)
+      this.schedule()
+      return true
+    }
+    return false
   }
 
   /**
@@ -230,6 +261,7 @@ export class Hub {
   context(platform: Platform): ConnectorContext {
     return {
       message: (m) => this.addMessage(m),
+      patch: (id, change) => this.patchMessage(id, change),
       event: (e) => this.addEvent(e),
       deleted: (id) => {
         this.recorder?.deleted(id)
@@ -288,12 +320,17 @@ export class Hub {
     }, FLUSH_MS)
   }
 
+  /**
+   * Everything so far, for the interface's start. The engine runs in the same page, so these are
+   * copies: handing over the hub's own lists would let later messages land in the interface twice,
+   * once through the shared list and once through the next batch.
+   */
   snapshot() {
     return {
       statuses: PLATFORMS.map((p) => this.statuses.get(p) ?? ({ platform: p, status: 'disabled' } as ConnectionState)),
-      messages: this.messages,
-      events: this.events,
-      pronouns: this.pronouns,
+      messages: [...this.messages],
+      events: [...this.events],
+      pronouns: { ...this.pronouns },
       hype: this.hype,
       integrations: [...this.integrations.values()],
       pinned: this.pinned,
@@ -363,6 +400,17 @@ export class Hub {
         return { ok: done > 0 || theirs.length === 0, message: theirs.length ? `Deleted ${done} message${done === 1 ? '' : 's'} from ${req.userName} on Kick.` : `${req.userName} has no messages to clear.` }
       }
       return await this.get(platform).moderate(req)
+    } catch (err) {
+      return { ok: false, message: message(err) }
+    }
+  }
+
+  /** Allow or Deny on a message Twitch's AutoMod held. */
+  async automod(messageId: string, allow: boolean): Promise<ActionResult> {
+    const c = this.connectors.get('twitch')
+    if (!c?.automod) return { ok: false, message: 'Log in to Twitch to review held messages.' }
+    try {
+      return await c.automod(messageId, allow)
     } catch (err) {
       return { ok: false, message: message(err) }
     }

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.6
+
+**New**
+
+- **Held messages (Twitch AutoMod).** When AutoMod holds a message, it shows in chat with an amber highlight, the reason (AutoMod category and level, a blocked term, or a blocked link) and **Allow** / **Deny** buttons. Once anyone decides, here or on Twitch, the row says "Allowed by …", "Denied by …" or "Expired". Needs a fresh Twitch login (the app asks for it).
+- **Suspicious users (Twitch).** Messages from users Twitch marks as suspicious or restricted get a red highlight with Twitch's reasons (likely ban evader, banned in channels that share ban info with you) and **Delete** / **Ban** buttons.
+- **Spam warnings on every platform.** Messages that offer to sell followers or viewers and point to a site (also disguised as `site . com`) or ask to be messaged are marked "Looks like spam" on Twitch, Kick and YouTube, with **Delete** / **Ban**. The streamer, moderators and VIPs are never marked, and nothing is deleted on its own. Settings → Chat → Spam Warnings.
+- **Video and clip previews.** YouTube videos, Shorts and lives, and Twitch, Kick and YouTube clips get a card under the message: picture, length, title, channel, who clipped it and views. Click to open. Settings → Chat → Link Previews.
+- **New clips in chat.** When anyone clips your stream on Twitch or Kick, a card with the clip appears in chat and in Events. Settings → Chat → Events in Chat → New Clips.
+- **The version** shows next to the app name in the title bar.
+
+**Changed**
+
+- **Follows** now show in chat by default on new installs. A choice you already made is kept.
+
+**Fixed**
+
+- The first messages and events after start-up could appear twice.
+
 ## 0.2.5
 
 **New**

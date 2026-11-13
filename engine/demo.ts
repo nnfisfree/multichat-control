@@ -1,10 +1,27 @@
-import { parseText } from '../shared/parts'
+import { parseText, type PreviewTarget } from '../shared/parts'
 import { PLATFORMS, type HistorySession, type ObsState, type StreamerbotState, type UserEntry, type UserProfile, type UsersInfo } from '../shared/types'
 import type {
-  ActionDef, ActionResult, ChannelStats, ChatMessage, CommandOutcome, Emote, EventType, HypeTrain, ModerationRequest, Platform, StreamEvent
+  ActionDef, ActionResult, ChannelStats, ChatMessage, CommandOutcome, Emote, EventType, HypeTrain, LinkPreview, ModerationRequest, Platform, StreamEvent
 } from '../shared/types'
 import type { Connector, ConnectorContext } from './platforms/connector'
 import { store } from './store'
+
+/** A made-up video picture: a sky, hills and a sun, in the given colours. */
+const demoThumb = (sky: string, hill: string, sun: string): string =>
+  'data:image/svg+xml,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky}"/><stop offset="1" stop-color="#140c2c"/></linearGradient></defs>` +
+    `<rect width="320" height="180" fill="url(#s)"/><circle cx="226" cy="74" r="30" fill="${sun}"/><path d="M0 140 Q70 92 150 132 T320 120 V180 H0z" fill="${hill}"/><path d="M0 160 Q90 128 190 158 T320 150 V180 H0z" fill="#0d0820" opacity="0.7"/></svg>`
+  )
+
+const DEMO_PREVIEWS: Record<PreviewTarget['kind'], LinkPreview> = {
+  'youtube': { url: 'https://www.youtube.com/', platform: 'youtube', kind: 'video', title: 'Lo-fi beats to stream to (1 hour mix)', channel: 'Chill Corner', thumbnail: demoThumb('#ff6a88', '#5a2a7a', '#ffd36e') },
+  'youtube-clip': { url: 'https://www.youtube.com/', platform: 'youtube', kind: 'clip', title: 'That speedrun skip', channel: 'DemoStreamer', thumbnail: demoThumb('#4fb3ff', '#2a4a7a', '#fff3b0') },
+  'twitch-clip': { url: 'https://www.twitch.tv/', platform: 'twitch', kind: 'clip', title: 'The jump that should not have worked', channel: 'DemoStreamer', clippedBy: 'PixelNomad', seconds: 28, views: 1342, thumbnail: demoThumb('#9146ff', '#3b1f7a', '#ffb454') },
+  'kick-clip': { url: 'https://kick.com/', platform: 'kick', kind: 'clip', title: 'Clutch 1v3 on stream', channel: 'DemoStreamer', clippedBy: 'kickfan99', seconds: 45, views: 213, thumbnail: demoThumb('#1fbf6a', '#145a33', '#e6ff7a') }
+}
+
+/** The demo's answer for a link card. */
+export const demoPreview = (t: PreviewTarget): LinkPreview => ({ ...DEMO_PREVIEWS[t.kind] })
 
 const emoteUrl = (bg: string, face: string): string =>
   'data:image/svg+xml,' + encodeURIComponent(
@@ -44,13 +61,16 @@ const LINES = [
   'dude haha', 'that was insane', 'nnfHype nnfHype nnfHype', 'gg', 'KEKW', 'catJAM catJAM', 'what game is next?',
   'first time here, love the stream', 'https://example.com/clip check this out', 'PogChamp that play', 'lol', 'KICKHYPE lets go',
   'how long have you been streaming today? this run has been really fun to watch and I hope you keep going for a while',
-  '🔥🔥🔥', 'monkaS', 'hello from the demo!', '@DemoStreamer can you read this? 👀', '@demostreamer what are your settings?'
+  '🔥🔥🔥', 'monkaS', 'hello from the demo!', '@DemoStreamer can you read this? 👀', '@demostreamer what are your settings?',
+  'https://youtu.be/dEmOVid3o01 this song slaps', 'https://clips.twitch.tv/DemoJumpThatWorked-n1ce LMAO look at this',
+  'https://kick.com/demostreamer/clips/clip_01DEMOCLIP000000000000 replay this'
 ]
 const COLORS = ['#4fd1ff', '#ff7ad9', '#7dff9b', '#ffb454', '#b794ff', '#ff6b6b']
 
-const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean; source?: StreamEvent['source'] }[]> = {
+const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean; source?: StreamEvent['source']; preview?: LinkPreview }[]> = {
   twitch: [
     { type: 'follow', text: 'followed' },
+    { type: 'clip', text: 'made a clip', preview: DEMO_PREVIEWS['twitch-clip'] },
     { type: 'redemption', text: 'redeemed', subject: 'Daily Check-in', amount: '1', details: { Reward: 'KEKW! [MP3]', Status: 'Unfulfilled' } },
     { type: 'sub', text: 'resubscribed to the channel (5 months)', amount: 'Prime', message: 'u deserve' },
     { type: 'sub', text: 'subscribed to the channel', amount: 'Tier 1' },
@@ -71,7 +91,8 @@ const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string
     { type: 'sub', text: 'subscribed', amount: '1 month' },
     { type: 'gift', text: 'gifted 3 subs', amount: '3' },
     { type: 'follow', text: 'followed' },
-    { type: 'redemption', text: 'redeemed', subject: 'Hydrate!', amount: '250' }
+    { type: 'redemption', text: 'redeemed', subject: 'Hydrate!', amount: '250' },
+    { type: 'clip', text: 'made a clip', preview: DEMO_PREVIEWS['kick-clip'] }
   ]
 }
 
@@ -143,9 +164,11 @@ export class DemoConnector implements Connector {
   private tickEvent(): void {
     const e = pick(EVENTS[this.platform])
     const id = `${this.platform}-ev-${++this.seq}`
+    const actor = pick(CHATTERS[this.platform])
     const ev: StreamEvent = {
-      id, platform: this.platform, ts: Date.now(), actor: pick(CHATTERS[this.platform]), details: {},
+      id, platform: this.platform, ts: Date.now(), actor, details: {},
       ...e,
+      preview: e.preview && { ...e.preview, clippedBy: actor },
       actions: e.type === 'redemption'
         ? [{ actionId: 'reward.fulfill', label: 'Fulfil', args: { id }, tone: 'good' }, { actionId: 'reward.cancel', label: 'Refund', args: { id }, tone: 'bad' }]
         : undefined
@@ -173,6 +196,16 @@ export class DemoConnector implements Connector {
     }
     for (let i = 0; i < 12; i++) this.tickChat()
     for (let i = 0; i < 4; i++) this.tickEvent()
+    // One of each moderator warning soon after start, then now and then.
+    const soon = (ms: number, run: () => void): void => { this.timers.push(setTimeout(run, ms)) }
+    if (this.platform === 'twitch') {
+      // Close together, so all three can be seen at once.
+      soon(6000, () => this.tickModeration('held'))
+      soon(6600, () => this.tickModeration('suspicious'))
+      soon(7200, () => this.tickModeration('spam'))
+      this.timers.push(setInterval(() => this.tickModeration(pick(['held', 'suspicious'] as const)), 75000))
+    } else soon(30000 + Math.random() * 30000, () => this.tickModeration('spam'))
+    this.timers.push(setInterval(() => this.tickModeration('spam'), 120000 + Math.random() * 60000))
   }
 
   private startHype(): void {
@@ -277,6 +310,40 @@ export class DemoConnector implements Connector {
     return { ok: true, message: `Demo: ${name} done.` }
   }
 
+  /** Allow shows the held message in chat, as Twitch does; Deny keeps it out. */
+  async automod(rowId: string, allow: boolean): Promise<ActionResult> {
+    let held: ChatMessage | undefined
+    const found = this.ctx.patch(rowId, (m) => {
+      held = m
+      return { held: { ...m.held!, status: allow ? 'allowed' : 'denied', by: 'DemoStreamer' } }
+    })
+    if (!found) return { ok: false, message: 'That message is gone.' }
+    if (allow && held) this.ctx.message({ ...held, id: `${this.platform}-${++this.seq}`, ts: Date.now(), held: undefined })
+    return { ok: true }
+  }
+
+  /** The moderator warnings: a message AutoMod held, a suspicious user, and a "buy followers" bot. */
+  private tickModeration(which: 'held' | 'suspicious' | 'spam'): void {
+    if (which === 'held') {
+      const text = pick(['this streamer is so bad lmao', 'go touch grass you absolute clown', 'check my channel twitch.tv/notabot'])
+      this.ctx.message(this.msg('QuietStorm', text, {
+        id: `held:demo-${++this.seq}`,
+        held: { reason: pick(['AutoMod: Bullying (level 2)', 'AutoMod: Swearing (level 3)', 'Blocked term', 'Blocked link']), status: 'pending' }
+      }))
+    } else if (which === 'suspicious') {
+      this.ctx.message(this.msg('n0t_a_banned_guy', 'hey guys im new here', {
+        author: { id: 'n0t_a_banned_guy', name: 'n0t_a_banned_guy', login: 'n0t_a_banned_guy', color: '#ff6b6b', badges: [] },
+        flag: { kind: 'suspicious', label: 'Suspicious user', notes: ['Likely ban evader', 'Banned in 2 channels that share ban info with you'] }
+      }))
+    } else {
+      // No flag here: the hub's spam check finds it, as it would in real chat.
+      const bot = this.platform === 'kick' ? 'promo_kick_42' : this.platform === 'youtube' ? 'Grow Your Stream' : 'streampromo_88'
+      this.ctx.message(this.msg(bot, 'Wanna become famous? Buy followers, primes and viewers on streamb00st . com', {
+        author: { id: bot, name: bot, login: bot.toLowerCase(), color: '#9aa0a6', badges: [] }
+      }))
+    }
+  }
+
   async moderate(req: ModerationRequest): Promise<ActionResult> {
     if (req.kind === 'delete') this.ctx.deleted(req.messageId)
     if (req.kind === 'timeout' || req.kind === 'ban') this.ctx.purged(req.userId)
@@ -315,7 +382,7 @@ export const demoHistory = (() => {
     return {
       id: `${id}-${i}`, platform, ts: start + i * 45000, kind: 'chat' as const, history: true,
       author: { id: name, name, login: name.toLowerCase(), color: COLORS[(i * 5) % COLORS.length], badges: [] },
-      parts: [{ type: 'text' as const, text: LINES[(i * 3) % LINES.length] }]
+      parts: parseText(LINES[(i * 3) % LINES.length])
     }
   })
   const sessions = (): HistorySession[] => (cleared ? [] : [

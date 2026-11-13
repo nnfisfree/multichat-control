@@ -7,13 +7,14 @@ import {
 } from '../shared/types'
 import { ChatLog } from './chat-log'
 import { core, onAuthChanged } from './core'
-import { DEMO_STREAMERBOT, DemoConnector, demoHistory, startDemoObs } from './demo'
+import { DEMO_STREAMERBOT, DemoConnector, demoHistory, demoPreview, startDemoObs } from './demo'
 import { loadEvents, loadRemoved, saveEvents, saveRemoved } from './event-log'
 import { Hub } from './hub'
 import { StreamElements } from './integrations/streamelements'
 import { Streamlabs } from './integrations/streamlabs'
 import { log } from './log'
 import { ObsLink } from './obs'
+import { Previews } from './previews'
 import type { Connector } from './platforms/connector'
 import { KickConnector } from './platforms/kick/connector'
 import { TwitchConnector } from './platforms/twitch/connector'
@@ -70,6 +71,9 @@ export async function startEngine(): Promise<void> {
     connectors.set(p, c)
     hub.register(c)
   }
+
+  // Cards for video and clip links in chat. Demo mode invents them, without asking anyone.
+  const previews = new Previews((id) => twitch?.clipPreview(id) ?? Promise.resolve(null), demo ? demoPreview : undefined)
 
   // Alert services: only the one the streamer picked runs.
   const alerts = {
@@ -186,6 +190,7 @@ export async function startEngine(): Promise<void> {
     onPanelSignedIn: on(panelListeners),
     send: (targets, text, replyTo) => hub.send(targets, text, replyTo),
     moderate: (p, req) => hub.moderate(p, req),
+    automod: (id, allow) => hub.automod(String(id ?? ''), allow === true),
     emotes: (p) => hub.get(p).emotes(),
     actions: (p) => hub.get(p).actions(),
     runAction: (p, id, args) => hub.runAction(p, id, args),
@@ -217,6 +222,7 @@ export async function startEngine(): Promise<void> {
     stats: (p) => hub.stats(p),
     userCard: (p, u) => hub.userCard(p, { id: String(u?.id ?? ''), name: String(u?.name ?? ''), login: u?.login, color: u?.color }),
     twitchCommand: (text) => hub.twitchCommand(String(text ?? '')),
+    linkPreview: (url) => previews.get(String(url ?? '')),
     history: {
       sessions: async () => (demo ? demoHistory.sessions() : chatLog.sessions()),
       load: async (id) => (demo ? demoHistory.load(id) : chatLog.load(String(id))),

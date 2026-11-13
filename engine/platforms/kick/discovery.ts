@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { fetchJson } from '../../net'
+import { fetchJson, HttpError } from '../../net'
 
 const WEB = 'https://web.kick.com/api/v1'
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36'
@@ -50,6 +50,40 @@ const followersOf = (channel: any): number | undefined => {
 export async function fetchFollowers(slug: string): Promise<number | undefined> {
   if (!/^[a-z0-9_-]+$/i.test(slug)) return undefined
   return fetchJson(`https://kick.com/api/v2/channels/${slug}`, { headers: HEADERS }).then(followersOf, () => undefined)
+}
+
+/** When Cloudflare last refused a plain clip request. For a while after, the hidden page is used directly. */
+let refusedAt = 0
+const REFUSED_FOR_MS = 30 * 60 * 1000
+
+/**
+ * Clip data from kick.com: a plain request first, and when Cloudflare refuses it, the core reads
+ * the same address in a hidden window (only clip addresses are allowed there).
+ */
+async function kickJson(path: string): Promise<any> {
+  if (Date.now() - refusedAt > REFUSED_FOR_MS) {
+    try {
+      return await fetchJson(`https://kick.com${path}`, { headers: HEADERS })
+    } catch (err) {
+      // A missing clip is an answer, not a refusal.
+      if (err instanceof HttpError && err.status === 404) return null
+      refusedAt = Date.now()
+    }
+  }
+  return invoke<any>('kick_json_via_page', { path })
+}
+
+/** One clip, from the data Kick's website uses. Null when there is no such clip. */
+export async function fetchKickClip(id: string): Promise<any | null> {
+  if (!/^clip_[a-z0-9]+$/i.test(id)) return null
+  return (await kickJson(`/api/v2/clips/${id}`))?.clip ?? null
+}
+
+/** The channel's clips from the last day, newest first. Throws when Kick can't be reached. */
+export async function fetchKickClips(slug: string): Promise<any[]> {
+  if (!/^[a-z0-9_-]+$/i.test(slug)) return []
+  const r = await kickJson(`/api/v2/channels/${slug}/clips?sort=date&time=day`)
+  return Array.isArray(r?.clips) ? r.clips : []
 }
 
 /**

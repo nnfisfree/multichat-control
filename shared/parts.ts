@@ -28,6 +28,59 @@ export function linkify(text: string): MessagePart[] {
   return out
 }
 
+/** A link that gets a preview card: a YouTube video, short or clip, or a Twitch or Kick clip. */
+export type PreviewTarget =
+  | { kind: 'youtube'; id: string; short?: boolean }
+  | { kind: 'youtube-clip'; id: string }
+  | { kind: 'twitch-clip'; id: string }
+  | { kind: 'kick-clip'; id: string }
+
+const YT_ID = /^[\w-]{11}$/
+const TWITCH_SLUG = /^[\w-]{3,100}$/
+const KICK_CLIP = /^clip_[A-Z0-9]{10,40}$/i
+
+/** Recognises the links that get a preview card, in the shapes the platforms share them. */
+export function previewTarget(raw: string): PreviewTarget | null {
+  let u: URL
+  try {
+    u = new URL(raw)
+  } catch {
+    return null
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null
+  const host = u.hostname.toLowerCase().replace(/^(www|m)\./, '')
+  const seg = u.pathname.split('/').filter(Boolean)
+  if (host === 'youtu.be') return YT_ID.test(seg[0] ?? '') ? { kind: 'youtube', id: seg[0] } : null
+  if (host === 'youtube.com' || host === 'music.youtube.com') {
+    const v = u.searchParams.get('v')
+    if (seg[0] === 'watch' && v && YT_ID.test(v)) return { kind: 'youtube', id: v }
+    if (['shorts', 'live', 'embed', 'v'].includes(seg[0]) && YT_ID.test(seg[1] ?? '')) return { kind: 'youtube', id: seg[1], short: seg[0] === 'shorts' }
+    if (seg[0] === 'clip' && /^Ugk[\w-]{20,40}$/.test(seg[1] ?? '')) return { kind: 'youtube-clip', id: seg[1] }
+    return null
+  }
+  if (host === 'clips.twitch.tv') {
+    const id = seg[0] === 'embed' ? u.searchParams.get('clip') : seg.length === 1 ? seg[0] : null
+    return id && TWITCH_SLUG.test(id) ? { kind: 'twitch-clip', id } : null
+  }
+  if (host === 'twitch.tv') {
+    // twitch.tv/<channel>/clip/<slug>, and the mobile site's twitch.tv/clip/<slug>.
+    const at = seg.indexOf('clip')
+    return at >= 0 && at <= 1 && TWITCH_SLUG.test(seg[at + 1] ?? '') ? { kind: 'twitch-clip', id: seg[at + 1] } : null
+  }
+  if (host === 'kick.com') {
+    // kick.com/<channel>/clips/<id>, and kick.com/<channel>?clip=<id>.
+    const id = seg[1] === 'clips' ? seg[2] : u.searchParams.get('clip')
+    return id && KICK_CLIP.test(id) ? { kind: 'kick-clip', id } : null
+  }
+  return null
+}
+
+/** The first link in a message that gets a preview card, as Twitch's own chat shows one per message. */
+export function firstPreviewLink(parts: MessagePart[]): string | null {
+  for (const p of parts) if (p.type === 'link' && previewTarget(p.url)) return p.url
+  return null
+}
+
 export type EmoteLookup = ReadonlyMap<string, { name: string; url: string; overlay?: boolean }>
 
 function emoteWords(text: string, emotes: EmoteLookup): MessagePart[] {

@@ -32,6 +32,7 @@ moderator:read:followers channel:moderate channel:manage:redemptions channel:man
 channel:manage:predictions channel:manage:raids channel:manage:broadcast channel:edit:commercial \
 channel:read:subscriptions channel:read:hype_train channel:read:goals channel:read:ads bits:read clips:edit \
 moderator:read:chatters moderation:read channel:read:vips channel:manage:moderators channel:manage:vips \
+moderator:manage:automod moderator:read:suspicious_users \
 moderator:manage:warnings user:manage:chat_color user:manage:blocked_users user:manage:whispers";
 const KICK_SCOPES: &str = "user:read channel:read channel:write channel:rewards:read channel:rewards:write chat:write moderation:ban moderation:chat_message:manage kicks:read";
 

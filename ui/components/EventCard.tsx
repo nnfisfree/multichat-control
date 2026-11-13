@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { eventBadge } from '../../shared/events'
 import { ALERT_SOURCE_LABEL, type StreamEvent } from '../../shared/types'
 import { DollarIcon, PlatformIcon } from './Icons'
+import { PreviewCard } from './LinkPreview'
 
 /** Short label marking an event's type. Channel points use a round coin. */
 export function EventBadge({ e }: { e: Pick<StreamEvent, 'type' | 'text'> }): JSX.Element {
@@ -29,6 +30,7 @@ export function EventCard({ e }: { e: StreamEvent }): JSX.Element {
         <EventBadge e={e} />
       </div>
       {e.message && <div className="ev-msg">{e.message}</div>}
+      {e.preview && <PreviewCard p={e.preview} />}
     </div>
   )
 }

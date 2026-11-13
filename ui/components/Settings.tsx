@@ -322,7 +322,8 @@ const CHAT_EVENT_ROWS: [ChatEventGroup, string, string][] = [
   ['paid', 'Super Stickers and KICKs', 'Paid messages already appear in chat'],
   ['donations', 'Donations', 'Tips from StreamElements and Streamlabs'],
   ['cheers', 'Kick Cheers', 'Twitch cheers always show as messages'],
-  ['follows', 'Follows', 'Off by default, because follow bots can flood chat']
+  ['clips', 'New Clips', 'Clips of your stream on Twitch and Kick, with a preview. YouTube doesn\'t share its clips.'],
+  ['follows', 'Follows', 'New followers. Turn this off if follow bots flood your chat.']
 ]
 
 function UpdatesRow(): JSX.Element {
@@ -521,7 +522,7 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
               </>}
 
               {cat === 'chat' && <>
-                <Section title="Messages" desc="Choose what each message shows">
+                <Section id="messages-settings" title="Messages" desc="Choose what each message shows">
                   <Row title="Show Timestamps" desc="Show the time beside each message">
                     <Toggle label="Show timestamps" on={s.showTimestamps} onChange={(v) => void updateSettings({ showTimestamps: v })} />
                   </Row>
@@ -531,8 +532,14 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                   <Row title="Show Pronouns" desc="Twitch only, for chatters who set them at pronouns.alejo.io. Sends chatter names to that service.">
                     <Toggle label="Show pronouns" on={s.showPronouns} onChange={(v) => void updateSettings({ showPronouns: v })} />
                   </Row>
+                  <Row title="Link Previews" desc="A card with the picture and title under YouTube links and Twitch, Kick or YouTube clip links. The details come from those sites.">
+                    <Toggle label="Link previews" on={s.linkPreviews ?? true} onChange={(v) => void updateSettings({ linkPreviews: v })} />
+                  </Row>
+                  <Row title="Spam Warnings" desc="Marks messages that offer to sell followers or viewers and point to a site, on every platform, with Delete and Ban buttons. Twitch's own held messages and suspicious-user warnings always show.">
+                    <Toggle label="Spam warnings" on={s.spamWarnings ?? true} onChange={(v) => void updateSettings({ spamWarnings: v })} />
+                  </Row>
                 </Section>
-                <Section title="Events in Chat" desc="Show these as cards in chat. They always appear in the Events drop-down.">
+                <Section id="chat-events-settings" title="Events in Chat" desc="Show these as cards in chat. They always appear in the Events drop-down.">
                   {CHAT_EVENT_ROWS.map(([key, title, desc]) => (
                     <Row key={key} title={title} desc={desc}>
                       <Toggle label={`${title} in chat`} on={s.chatEvents[key] ?? true} onChange={(v) => void updateSettings({ chatEvents: { ...s.chatEvents, [key]: v } })} />

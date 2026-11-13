@@ -66,3 +66,70 @@ pub async fn kick_via_page(app: AppHandle, slug: String) -> Result<serde_json::V
     let text = url::form_urlencoded::parse(format!("x={encoded}").as_bytes()).next().map(|(_, v)| v.into_owned()).unwrap_or_default();
     serde_json::from_str(&text).map_err(|_| "Kick sent something unexpected.".into())
 }
+
+const JSON_LABEL: &str = "kick-json";
+/// One hidden JSON window at a time; a second request waits for the first.
+static JSON_TURN: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// The only kick.com addresses read this way: one clip, or a channel's clips from the last day.
+fn allowed_json_path(path: &str) -> bool {
+    let name = |s: &str| !s.is_empty() && s.len() <= 64 && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+    if let Some(id) = path.strip_prefix("/api/v2/clips/") {
+        return id.starts_with("clip_") && name(id);
+    }
+    path.strip_prefix("/api/v2/channels/").and_then(|rest| rest.strip_suffix("/clips?sort=date&time=day")).is_some_and(name)
+}
+
+/// Clip details for link cards and new-clip checks, when Cloudflare refuses plain requests.
+///
+/// Lighter than kick_via_page: the hidden window opens the JSON address itself rather than the
+/// channel page, so no live player loads. It reads the text once Cloudflare's check lets it in.
+#[tauri::command]
+pub async fn kick_json_via_page(app: AppHandle, path: String) -> Result<serde_json::Value, String> {
+    if !allowed_json_path(&path) {
+        return Err("That Kick address isn't allowed.".into());
+    }
+    let _turn = JSON_TURN.lock().await;
+    if let Some(old) = app.get_webview_window(JSON_LABEL) {
+        let _ = old.destroy();
+    }
+    let (tx, rx) = tokio::sync::oneshot::channel::<String>();
+    let tx = Mutex::new(Some(tx));
+    // Cloudflare's check page isn't JSON, so the script waits for the next page load after it.
+    let script = format!(
+        r#"(() => {{
+  if (location.hostname !== 'kick.com' || window.__nnfJson) return;
+  let data;
+  try {{ data = JSON.parse(document.body ? document.body.innerText : '') }} catch {{ return }}
+  window.__nnfJson = true;
+  location.href = 'https://{RESULT_HOST}/#' + encodeURIComponent(JSON.stringify(data));
+}})()"#
+    );
+    let url = url::Url::parse(&format!("https://kick.com{path}")).map_err(|e| e.to_string())?;
+    let window = WebviewWindowBuilder::new(&app, JSON_LABEL, WebviewUrl::External(url))
+        .visible(false)
+        .skip_taskbar(true)
+        .data_directory(crate::paths::webview_dir())
+        .additional_browser_args(&crate::browser_args())
+        .on_navigation(move |u| {
+            if u.host_str() == Some(RESULT_HOST) {
+                if let Some(tx) = tx.lock().unwrap().take() {
+                    let _ = tx.send(u.fragment().unwrap_or_default().to_string());
+                }
+                return false;
+            }
+            u.scheme() == "https" && u.host_str().is_some_and(|h| h == "kick.com" || h.ends_with(".kick.com") || h.ends_with("cloudflare.com"))
+        })
+        .on_page_load(move |w, payload| {
+            if payload.event() == PageLoadEvent::Finished {
+                let _ = w.eval(&script);
+            }
+        })
+        .build()
+        .map_err(|e| e.to_string())?;
+    let result = tokio::time::timeout(Duration::from_secs(20), rx).await;
+    let _ = window.destroy();
+    let encoded = result.map_err(|_| "Kick didn't answer in time.".to_string())?.map_err(|_| "Kick didn't answer.".to_string())?;
+    let text = url::form_urlencoded::parse(format!("x={encoded}").as_bytes()).next().map(|(_, v)| v.into_owned()).unwrap_or_default();
+    serde_json::from_str(&text).map_err(|_| "Kick sent something unexpected.".into())
+}

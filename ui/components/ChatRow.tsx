@@ -1,10 +1,12 @@
-import { memo, type JSX, type MouseEvent } from 'react'
-import { plainText } from '../../shared/parts'
+import { memo, useMemo, type JSX, type MouseEvent } from 'react'
+import { firstPreviewLink, plainText } from '../../shared/parts'
 import type { ChatMessage, MessagePart } from '../../shared/types'
 import { Icon, PlatformIcon } from './Icons'
 import { useStore } from '../lib/store'
 import { mentionsStreamer } from '../lib/mentions'
 import { EventCard } from './EventCard'
+import { LinkPreviewFor } from './LinkPreview'
+import { ModBar } from './ModBar'
 
 function Part({ p }: { p: MessagePart }): JSX.Element {
   if (p.type === 'gif') return <img className="gif" src={p.url} alt={p.alt} title={p.alt} />
@@ -61,10 +63,25 @@ export const ChatRow = memo(function ChatRow({ m, showPlatform, showTime, onMenu
   const pronoun = useStore((s) => (s.settings?.showPronouns && m.platform === 'twitch' && m.author.login ? s.pronouns[m.author.login] : undefined))
   // Messages that tag the streamer stand out, in the colour of the platform they came from.
   const tagged = useStore((s) => mentionsStreamer(m, s.statuses[m.platform]?.mentions))
+  // A YouTube video or a clip gets a card under the message, as in Twitch's own chat.
+  const previews = useStore((s) => s.settings?.linkPreviews ?? true)
+  // Held or flagged messages never get a card: their links are exactly the ones not to advertise.
+  const previewUrl = useMemo(() => (previews && !m.deleted && !m.held && !m.flag ? firstPreviewLink(m.parts) : null), [previews, m.deleted, m.held, m.flag, m.parts])
   if (m.divider) return <div className="history-divider" role="separator"><span>{m.divider}</span></div>
   if (m.event) return <div className="row kind-event"><EventCard e={m.event} /></div>
+  if (m.kind === 'system') {
+    return (
+      <div className={`row kind-system sys-${m.platform}`}>
+        <PlatformIcon platform={m.platform} size={16} />
+        <span>{plainText(m.parts)}</span>
+        {m.id.startsWith('relogin-') && <button className="btn sm" onClick={() => void window.nnf.login(m.platform)}>Log in again</button>}
+      </div>
+    )
+  }
+  const mod = m.held ? ` held held-${m.held.status}` : m.flag ? ` flagged flagged-${m.flag.kind}` : ''
   return (
-    <div className={`row kind-${m.kind}${m.firstTime ? ' first' : ''}${m.effect ? ` effect-${m.effect}` : ''}${tagged ? ` mention mention-${m.platform}` : ''}`} onContextMenu={(e) => onMenu(e, m)}>
+    <div className={`row kind-${m.kind}${m.firstTime ? ' first' : ''}${m.effect ? ` effect-${m.effect}` : ''}${tagged && !mod ? ` mention mention-${m.platform}` : ''}${mod}`} onContextMenu={(e) => onMenu(e, m)}>
+      {(m.held || m.flag) && <ModBar m={m} />}
       {m.reply && (
         <div className="reply"><Icon.reply /> Replying to <b>{m.reply.author}</b>: {m.reply.text}</div>
       )}
@@ -82,6 +99,7 @@ export const ChatRow = memo(function ChatRow({ m, showPlatform, showTime, onMenu
           ? <span className="deleted" title={plainText(m.parts)}>[message deleted]</span>
           : <span className={m.kind === 'action' ? 'body action' : 'body'}><Pieces parts={m.parts} /></span>}
       </div>
+      {previewUrl && <LinkPreviewFor url={previewUrl} />}
     </div>
   )
 })

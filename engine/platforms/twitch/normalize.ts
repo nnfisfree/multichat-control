@@ -17,7 +17,7 @@ export function cheermoteUrl(cheers: CheerMap, prefix: string, bits: number): st
 const emoteUrl = (id: string, format: string[] = []): string =>
   `https://static-cdn.jtvnw.net/emoticons/v2/${id}/${format.includes('animated') ? 'default' : 'static'}/dark/2.0`
 
-function fragmentsToParts(fragments: any[] | undefined, text: string, third: EmoteLookup, cheers: CheerMap = NO_CHEERS): MessagePart[] {
+export function fragmentsToParts(fragments: any[] | undefined, text: string, third: EmoteLookup, cheers: CheerMap = NO_CHEERS): MessagePart[] {
   if (!fragments?.length) return parseText(text, third)
   return fragments.flatMap((f): MessagePart[] => {
     if (f.type === 'emote' && f.emote) return [{ type: 'emote', name: f.text, url: emoteUrl(f.emote.id, f.emote.format) }]

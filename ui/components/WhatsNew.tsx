@@ -1,6 +1,6 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { updateSettings, useStore } from '../lib/store'
-import { Icon, StreamerbotLogo } from './Icons'
+import { Icon } from './Icons'
 import type { SettingsFocus } from './Settings'
 
 /**
@@ -17,33 +17,33 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
-    icon: <StreamerbotLogo size={22} />,
-    title: 'Streamer.bot',
-    text: 'Run your Streamer.bot actions straight from the message box with /sb. The list follows what you set up in Streamer.bot, live.',
-    show: { cat: 'connections', target: 'streamerbot-settings' }
+    icon: <Icon.shield />,
+    title: 'Held messages and suspicious users',
+    text: 'Messages Twitch\'s AutoMod holds show in chat with Allow and Deny. Suspicious users get a warning with Delete and Ban. Log in to Twitch again to turn this on.',
+    show: { cat: 'connections' }
   },
   {
-    icon: <Icon.slash />,
-    title: 'Commands, sorted and searchable',
-    text: 'The / button moved to the left. Its list is split into Twitch, app and Streamer.bot commands, with a search box on top.',
-    show: 'commands'
+    icon: <Icon.warn />,
+    title: 'Spam warnings everywhere',
+    text: '"Buy followers" bots are marked on Twitch, Kick and YouTube, with Delete and Ban right on the message.',
+    show: { cat: 'chat', target: 'messages-settings' }
   },
   {
-    icon: <Icon.users />,
-    title: 'Channel stats',
-    text: 'Your followers and subscribers on each platform, under the message box next to the clock.',
-    show: { cat: 'app', target: 'stats-settings' }
+    icon: <Icon.all />,
+    title: 'Video and clip previews',
+    text: 'YouTube links and Twitch, Kick or YouTube clips get a card with the picture, title and length.',
+    show: { cat: 'chat', target: 'messages-settings' }
   },
   {
-    icon: <Icon.palette />,
-    title: 'New skin: Myst Bourne',
-    text: 'A purple and white skin, for Alex.',
-    show: { cat: 'appearance', target: 'skins-settings' }
+    icon: <Icon.events />,
+    title: 'New clips in chat',
+    text: 'When anyone clips your stream on Twitch or Kick, the clip shows up in chat and in Events.',
+    show: { cat: 'chat', target: 'chat-events-settings' }
   },
   {
     icon: <Icon.check />,
-    title: 'Popups close by themselves',
-    text: 'Click anywhere outside a popup and it closes.'
+    title: 'Fixes',
+    text: 'The first messages after start-up no longer show twice. The version now shows in the title bar.'
   }
 ]
 

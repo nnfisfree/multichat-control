@@ -105,6 +105,7 @@ fn main() {
             auth::obs_auth,
             auth::sb_auth,
             kick::kick_via_page,
+            kick::kick_json_via_page,
             youtube::youtube_stream_start,
             youtube::youtube_stream_stop,
             window::window_opacity,

@@ -58,6 +58,10 @@ function apply(b: HubBatch): void {
     const limit = holdHistory ? MAX_HELD : MAX_MESSAGES
     if (messages.length > limit) messages = messages.slice(messages.length - limit)
   }
+  if (b.updated?.length) {
+    const changed = new Map(b.updated.map((m) => [m.id, m]))
+    messages = messages.map((m) => changed.get(m.id) ?? m)
+  }
   if (b.deleted.length || b.purged.length) {
     const ids = new Set(b.deleted)
     messages = messages.map((m) => (

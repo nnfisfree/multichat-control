@@ -29,7 +29,11 @@ function platformService(p: (typeof PLATFORMS)[number], st?: ConnectionState): S
     ? [{ label: 'Reconnect', run: () => window.nnf.reconnect(p) }, { label: 'Log out', run: () => window.nnf.logout(p) }]
     : [login]
   switch (st?.status) {
-    case 'connected': return { ...base, tone: 'good', text: 'Connected', tracked: true, pending: false, actions }
+    case 'connected':
+      // Connected, but a newer feature needs a fresh login: say which, and offer it.
+      return st.relogin
+        ? { ...base, tone: 'wait', text: 'Connected · log in again', tracked: true, pending: false, actions: [{ label: 'Log in again', run: () => window.nnf.login(p) }, ...actions], hint: st.relogin }
+        : { ...base, tone: 'good', text: 'Connected', tracked: true, pending: false, actions }
     case 'waiting': return { ...base, tone: 'good', text: p === 'youtube' ? 'Waiting for a live stream' : (st.detail ?? 'Waiting'), tracked: true, pending: false, actions }
     case 'connecting': return { ...base, tone: 'warn', text: 'Connecting…', tracked: true, pending: true, actions: [] }
     case 'authorizing': return { ...base, tone: 'warn', text: 'Finish logging in in your browser', tracked: true, pending: true, actions: [login], hint: st.device ? `Code: ${st.device.code}` : undefined }

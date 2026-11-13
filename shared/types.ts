@@ -10,6 +10,24 @@ export type MessagePart =
 
 export interface Badge { id: string; title: string; url?: string }
 
+/** What the card under a message shows for a YouTube video or a Twitch, Kick or YouTube clip. */
+export interface LinkPreview {
+  /** Where a click goes. */
+  url: string
+  /** Where the video or clip lives. */
+  platform: Platform
+  kind: 'video' | 'short' | 'clip'
+  title: string
+  /** The channel it is from. */
+  channel?: string
+  thumbnail?: string
+  /** Length in seconds, where the platform shares it. */
+  seconds?: number
+  views?: number
+  /** Who made the clip. */
+  clippedBy?: string
+}
+
 interface Author {
   id: string
   name: string
@@ -117,6 +135,26 @@ export interface ChatMessage {
   history?: boolean
   /** A line between past streams and this one, rather than a message. */
   divider?: string
+  /** Twitch's AutoMod held this message: no one else sees it until a moderator allows it. */
+  held?: HeldInfo
+  /** A warning for moderators: Twitch marked the sender as suspicious, or the message looks like spam. */
+  flag?: MessageFlag
+}
+
+export interface HeldInfo {
+  /** Why it was held, in plain words, such as "AutoMod: Profanity (level 3)" or "Blocked link". */
+  reason: string
+  status: 'pending' | 'allowed' | 'denied' | 'expired'
+  /** The moderator who allowed or denied it. */
+  by?: string
+}
+
+export interface MessageFlag {
+  /** 'suspicious' comes from Twitch; 'spam' is this app's own check, on every platform. */
+  kind: 'suspicious' | 'spam'
+  label: string
+  /** The reasons, such as "Likely ban evader". */
+  notes: string[]
 }
 
 /** One saved past stream's chat. */
@@ -124,13 +162,13 @@ export interface HistorySession { id: string; start: number; end: number; count:
 
 export type EventType =
   | 'follow' | 'sub' | 'gift' | 'cheer' | 'bits' | 'redemption' | 'powerup' | 'raid' | 'hypetrain'
-  | 'poll' | 'prediction' | 'goal' | 'ad' | 'shoutout' | 'moderation' | 'stream' | 'paid' | 'donation' | 'announcement' | 'other'
+  | 'poll' | 'prediction' | 'goal' | 'ad' | 'shoutout' | 'moderation' | 'stream' | 'paid' | 'donation' | 'announcement' | 'clip' | 'other'
 
 export const EVENT_TYPE_LABEL: Record<EventType, string> = {
   follow: 'Follows', sub: 'Subs', gift: 'Gifts', cheer: 'Cheers', bits: 'Bits', redemption: 'Redemptions',
   powerup: 'Power-ups', raid: 'Raids', hypetrain: 'Hype Train', poll: 'Polls', prediction: 'Predictions',
   goal: 'Goals', ad: 'Ads', shoutout: 'Shoutouts', moderation: 'Moderation', stream: 'Stream', paid: 'Paid', donation: 'Donations',
-  announcement: 'Announcements', other: 'Other'
+  announcement: 'Announcements', clip: 'Clips', other: 'Other'
 }
 
 interface EventAction { actionId: string; label: string; args: Record<string, string>; tone?: 'good' | 'bad' }
@@ -157,6 +195,8 @@ export interface StreamEvent {
   history?: boolean
   /** Reported by an alert service rather than the platform itself. */
   source?: AlertSource
+  /** A new clip's card, shown under the event. */
+  preview?: LinkPreview
 }
 
 /** Alert and donation services that report events for the platforms. */
@@ -197,6 +237,8 @@ export interface ConnectionState {
   detail?: string
   /** Shown while Twitch device login waits for the user. */
   device?: { code: string; url: string }
+  /** Connected, but a newer feature needs the user to log in again; says which. */
+  relogin?: string
 }
 
 export interface Emote {
@@ -255,7 +297,7 @@ export type ModerationRequest =
   | { kind: 'ban'; userId: string; userName: string }
   | { kind: 'shoutout'; userId: string; userName: string }
 
-export type ChatEventGroup = 'subs' | 'gifts' | 'cheers' | 'raids' | 'redemptions' | 'powerups' | 'follows' | 'paid' | 'donations' | 'hype'
+export type ChatEventGroup = 'subs' | 'gifts' | 'cheers' | 'raids' | 'redemptions' | 'powerups' | 'follows' | 'paid' | 'donations' | 'hype' | 'clips'
 
 export type CloseAction = 'exit' | 'ask' | 'tray'
 
@@ -301,6 +343,10 @@ export interface Settings {
   uiFont: string
   chatFont: string
   showPronouns: boolean
+  /** A card under YouTube links and clip links in chat. */
+  linkPreviews: boolean
+  /** Marks messages that look like "buy followers" spam, on every platform. */
+  spamWarnings: boolean
   emoteProviders: EmoteProviders
   chatEvents: Record<ChatEventGroup, boolean>
   closeAction: CloseAction
@@ -337,8 +383,9 @@ export const DEFAULT_SETTINGS: Settings = {
   uiFont: 'Segoe UI',
   chatFont: 'Segoe UI',
   showPronouns: true,
+  linkPreviews: true,
+  spamWarnings: true,
   emoteProviders: { bttv: true, seventv: true, ffz: true },
-  // Follows start off because follow bots can flood chat.
   closeAction: 'ask',
   eventFilter: { platforms: { twitch: true, youtube: true, kick: true }, hiddenTypes: [] },
   autoUpdate: true,
@@ -350,7 +397,8 @@ export const DEFAULT_SETTINGS: Settings = {
   sbEnabled: false,
   sbPort: 8080,
   theme: 'pos',
-  chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: false, paid: true, donations: true, hype: true }
+  // Every event type starts on; each can be turned off in Settings. A saved choice is kept.
+  chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: true, paid: true, donations: true, hype: true, clips: true }
 }
 
 /** Client secrets are write-only from the UI: it learns only whether one is stored. */
@@ -431,6 +479,8 @@ export interface HubBatch {
   messages: ChatMessage[]
   events: StreamEvent[]
   deleted: string[]
+  /** Messages that changed, such as a held message being allowed. They replace the ones with the same id. */
+  updated?: ChatMessage[]
   /** Removes all of one user's messages (ban), or a whole platform's (chat clear). */
   purged: { platform: Platform; userId?: string }[]
   statuses: ConnectionState[]
@@ -470,6 +520,8 @@ export interface NnfApi {
   updates: { check(): Promise<UpdateState>; download(): Promise<void>; install(): Promise<void>; openPage(): Promise<void> }
   send(targets: Platform[], text: string, replyTo?: { platform: Platform; messageId: string }): Promise<SendResult[]>
   moderate(platform: Platform, req: ModerationRequest): Promise<ActionResult>
+  /** Allows or denies a message Twitch's AutoMod held, by its held-message row id. */
+  automod(messageId: string, allow: boolean): Promise<ActionResult>
   emotes(platform: Platform): Promise<Emote[]>
   actions(platform: Platform): Promise<ActionDef[]>
   runAction(platform: Platform, actionId: string, args: Record<string, string>): Promise<ActionResult>
@@ -483,6 +535,8 @@ export interface NnfApi {
   /** Followers and subscribers, as far as the platform shares them; null when not connected. */
   stats(platform: Platform): Promise<ChannelStats | null>
   userCard(platform: Platform, user: UserEntry): Promise<UserCard>
+  /** The card for a YouTube video or a clip link; null when the link has none or the lookup fails. */
+  linkPreview(url: string): Promise<LinkPreview | null>
   /** Runs a Twitch chat command such as /raid or /pin. */
   twitchCommand(text: string): Promise<CommandOutcome>
   history: {

@@ -3,19 +3,20 @@ import type { ActionDef, ActionResult, ChannelStats, Emote, ModerationRequest, U
 import { core } from '../../core'
 import { load7tv, toLookup } from '../../emotes/third-party'
 import { api, fetchJson, message, sleep } from '../../net'
+import { ClipWatch, kickClipPreview, type NewClip } from '../../previews'
 import { store } from '../../store'
 import type { Connector, ConnectorContext } from '../connector'
-import { fetchChannel, fetchFollowers, fetchRealtime, type KickChannel } from './discovery'
+import { fetchChannel, fetchFollowers, fetchKickClips, fetchRealtime, type KickChannel } from './discovery'
+import { normalize } from './normalize'
+import { KickSocket } from './socket'
+
+const API = 'https://api.kick.com/public/v1'
 
 /** A non-negative whole number from Kick's API, or undefined. */
 const count = (v: unknown): number | undefined => {
   const n = typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : v
   return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : undefined
 }
-import { normalize } from './normalize'
-import { KickSocket } from './socket'
-
-const API = 'https://api.kick.com/public/v1'
 
 export class KickConnector implements Connector {
   readonly platform = 'kick' as const
@@ -29,8 +30,22 @@ export class KickConnector implements Connector {
   private third: EmoteLookup = new Map()
   private emoteCache: Emote[] | null = null
   private run = 0
+  private clips: ClipWatch
 
-  constructor(private ctx: ConnectorContext) {}
+  constructor(private ctx: ConnectorContext) {
+    // Every 2 minutes: when Cloudflare refuses plain requests, each check opens a hidden window.
+    this.clips = new ClipWatch('kick', (since) => this.newClips(since), (e) => ctx.event(e), 120000)
+  }
+
+  /** The channel's clips made since a time, by anyone, from the data Kick's website uses. */
+  private async newClips(since: number): Promise<NewClip[]> {
+    if (!this.slug) return []
+    return (await fetchKickClips(this.slug)).flatMap((c: any) => {
+      const createdAt = Date.parse(c.created_at)
+      const preview = createdAt >= since ? kickClipPreview(c) : null
+      return preview ? [{ id: String(c.id), createdAt, preview }] : []
+    })
+  }
 
   /** A request as the user's Kick account; the core adds and renews the token. */
   private async api(method: string, path: string, body?: unknown): Promise<any> {
@@ -77,6 +92,8 @@ export class KickConnector implements Connector {
         onState: (s, detail) => this.ctx.status({ status: s, account: this.name, mentions: this.mentions, detail })
       })
       this.socket.start()
+      // Kick's chat doesn't announce new clips, so the channel's clip list is checked instead.
+      this.clips.start()
       void this.emotes()
     } catch (err) {
       if (run !== this.run) return
@@ -175,6 +192,7 @@ export class KickConnector implements Connector {
 
   async stop(): Promise<void> {
     this.run++
+    this.clips.stop()
     this.socket?.stop()
     this.socket = null
   }

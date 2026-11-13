@@ -35,7 +35,8 @@ export function ContextMenu({ x, y, m, onClose, onReply, onResult, userOnly, onC
     <div className="popover ctx" role="menu" style={{ left: Math.min(x, window.innerWidth - 210), top: Math.max(8, Math.min(y, window.innerHeight - 380)) }}>
       <div className="ctx-name">{m.author.name}</div>
       {onCard && <button role="menuitem" onClick={() => onCard(m)}>View user card</button>}
-      {!userOnly && <>
+      {/* A held message isn't in chat, so it can't be replied to, deleted or pinned: Allow or Deny it instead. */}
+      {!userOnly && !m.held && <>
         <button role="menuitem" onClick={() => onReply(m)}>Reply</button>
         <button role="menuitem" onClick={() => void navigator.clipboard.writeText(plainText(m.parts))}>Copy text</button>
         <button role="menuitem" disabled={m.deleted} onClick={mod({ kind: 'delete', messageId: m.id })}>Delete message</button>
@@ -43,6 +44,7 @@ export function ContextMenu({ x, y, m, onClose, onReply, onResult, userOnly, onC
           <button role="menuitem" onClick={() => void window.nnf.twitchCommand(`/pinmessage ${m.id}`).then((r) => onResult({ ok: r.ok, message: r.message }), (e) => onResult({ ok: false, message: String(e) }))}>Pin message</button>
         )}
       </>}
+      {!userOnly && m.held && <button role="menuitem" onClick={() => void navigator.clipboard.writeText(plainText(m.parts))}>Copy text</button>}
       {userOnly && self && <div className="ctx-note">That is you.</div>}
       {!self && <>
         <button role="menuitem" title="Clears their messages from chat, without really timing them out" onClick={mod({ kind: 'timeout', seconds: 1, ...user })}>Timeout 1 second</button>

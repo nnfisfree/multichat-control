@@ -5,6 +5,11 @@ import type {
 /** How a connector reports to the hub. */
 export interface ConnectorContext {
   message(m: ChatMessage): void
+  /**
+   * Changes a message already in chat, such as a held message being allowed. Returns false when
+   * no message has that id (yet).
+   */
+  patch(messageId: string, change: (m: ChatMessage) => Partial<ChatMessage>): boolean
   event(e: StreamEvent): void
   deleted(messageId: string): void
   purged(userId?: string): void
@@ -42,4 +47,6 @@ export interface Connector {
   profile?(user: UserEntry): Promise<UserProfile>
   /** Runs a typed chat command; null when the command is not one this platform knows. */
   command?(text: string): Promise<CommandOutcome | null>
+  /** Allows or denies a message the platform's AutoMod held (Twitch). */
+  automod?(messageId: string, allow: boolean): Promise<ActionResult>
 }

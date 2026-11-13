@@ -4,7 +4,7 @@
 
 <br />
 
-[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1805&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
+[![Download](https://img.shields.io/github/v/release/nnfisfree/multichat-control?label=Download&style=for-the-badge&color=34e39f&cacheSeconds=1806&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik00IDJoMTNsNSA1djEzYTIgMiAwIDAgMS0yIDJINGEyIDIgMCAwIDEtMi0yVjRhMiAyIDAgMCAxIDItMnptMiAydjZoMTFWNEg2em04IDFoMnY0aC0yVjV6TTYgMTR2NmgxMnYtNkg2eiIvPjwvc3ZnPg%3D%3D)](https://github.com/nnfisfree/multichat-control/releases/latest)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-5b35f0?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDQuNWw4LjUtMS4ydjguMkgyem05LjUwMC0xLjMwMEwyMiAxLjgwMHY5LjcwMEgxMS41MDB6TTIgMTIuNTAwaDguNTAwdjguMjAwTDIgMTkuNTAwem05LjUwMCAwSDIydjkuNzAwbC0xMC41MDAtMS40MDB6Ii8%2BPC9zdmc%2B)
 ![Size](https://img.shields.io/badge/Size-8%20MB-a838e0?style=for-the-badge)
 [![License](https://img.shields.io/badge/License-MIT-27a9e8?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik01IDJoMTNhMiAyIDAgMCAxIDIgMnYxNEg2LjVhMS41MDAgMS41MDAgMCAwIDAgMCAzSDIwdjFINi41MDBBMi41MDAgMi41MDAgMCAwIDEgNCAxOS41MDBWM2ExIDEgMCAwIDEgMS0xem0zIDR2Mmg4VjZIOHoiLz48L3N2Zz4%3D)](LICENSE)
@@ -19,7 +19,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: the commands list searched for Streamer.bot actions and raids, a Streamer.bot action run with /sb, a raid starting with its raid bar and countdown, a user card, users in chat, OBS stats, the connections menu, and the nine skins changing the whole app's colours, with follower and subscriber counts under the message box" />
+<img src="docs/media/demo.gif" width="760" alt="Animated tour of NoName's Multichat Control: a message held by Twitch's AutoMod allowed with one click next to a suspicious user and a spam bot, video and clip previews in chat, the commands list searched for raids, a Streamer.bot action run with /sb, a raid with its countdown, a user card, users in chat, OBS stats, the connections menu, and the nine skins changing the whole app's colours" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -57,13 +57,14 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - **Messages that tag you stand out**, in the colour of the platform they came from: purple for Twitch, red for YouTube, green for Kick
 - **Click any name for a user card**: account age, follow and sub, and everything they said in your channel
 - **Users in Chat** for every platform, grouped Broadcaster · Moderators · VIPs · Users, with live viewer counts
+- **Previews for videos and clips**: YouTube links and Twitch, Kick or YouTube clips get a card with the picture, length, title and channel
 - Reply, delete, time out (even for 1 second, to clear messages), ban or shout out
 
 </td>
 <td width="50%" valign="top">
 
 ### ⚡ Events and history
-- Subs, gifts, raids and redemptions as coloured cards in chat
+- Subs, gifts, raids, redemptions, follows and **new clips of your stream** as coloured cards in chat
 - **Recent events from every platform, in time order**, kept between sessions
 - Filter by platform and type, sort newest or oldest first
 - Your own test redeems are tagged, and cleared in one click
@@ -74,6 +75,12 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 </tr>
 <tr>
 <td valign="top">
+
+### 🛡️ Moderation
+- **Messages Twitch's AutoMod holds** appear in chat with the reason and **Allow** / **Deny**, and show who decided
+- **Suspicious users** flagged by Twitch, such as likely ban evaders, are highlighted with Twitch's reasons
+- **"Buy followers" spam bots** are marked on Twitch, Kick and YouTube
+- **Delete** and **Ban** right on the warning, so a bot is gone in one click
 
 ### 🤖 Streamer.bot
 - **Run any Streamer.bot action** from the message box: `/sb Action name`, with text after the name passed to the action
@@ -132,6 +139,10 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td align="center"><img src="docs/media/raid.png" alt="Raid bar above the pinned message: the raided channel's picture with a LIVE tag, its game and viewers, the stream title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view, and Raid Now when you're ready</b></td>
 </tr>
 <tr>
+<td align="center"><img src="docs/media/moderation.png" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and a spam bot offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots, one click away</b></td>
+<td align="center"><img src="docs/media/previews.png" alt="Chat with cards under a YouTube link and Kick clip links, and a new clip of the stream shown as an event card" /><br /><b>See a video or clip before you click it</b></td>
+</tr>
+<tr>
 <td align="center"><img src="docs/media/usercard.png" alt="User card with account age, follow and subscription, moderation buttons and the user's messages" /><br /><b>Know who you're talking to</b></td>
 <td align="center"><img src="docs/media/users.png" alt="Users in Chat with Twitch, YouTube and Kick sections, viewer counts and role groups" /><br /><b>Who's in chat, on every platform</b></td>
 </tr>
@@ -179,7 +190,8 @@ Open the gear icon and click **Log in** beside each platform you stream on. You 
 - **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in. Your custom Power-ups and points only show once you're signed in.
 - **Alerts & Donations:** Streamlabs and StreamElements are marked **Soon..** until both services approve the app.
 - **The status menu** next to the gear shows every connection. Click a row to reconnect or log in.
-- **Users in Chat and some commands** need a newer Twitch login. If the app asks, click **Log in again** once.
+- **Users in Chat, held messages, suspicious users and some commands** need a newer Twitch login. If the app asks, click **Log in again** once.
+- **Held messages:** these appear only if AutoMod is on for your channel (Twitch's Creator Dashboard → Settings → Moderation). To catch spam bots' links, also turn on **Block hyperlinks** there.
 - **OBS stats (optional):** in OBS, open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info**. Then turn on **Settings → Connections → OBS Studio → Show OBS Stats** and paste it. The app only reads from OBS and never changes anything there.
 - **Streamer.bot (optional):** in Streamer.bot, open **Servers/Clients → WebSocket Server**, tick **Auto Start** and click **Start Server** (address `127.0.0.1`, port `8080`, endpoint `/`). Then turn on **Settings → Connections → Streamer.bot → Use Streamer.bot**. If Authentication is on in Streamer.bot, paste its password there too.
 - **Skins:** **Settings → Appearance**. The window edge keeps its glow in every skin.
@@ -316,6 +328,9 @@ These limits come from the platforms.
 | **Streamer.bot** | The app connects to Streamer.bot on the same PC. Its chat commands (like `!lurk`) run when Streamer.bot sees them in chat, so they're sent as normal messages. |
 | **YouTube** | The subscriber count is rounded by YouTube, and member counts aren't shared with apps. |
 | **Kick** | Kick's API has no follower count, so it's read from Kick's public channel page every few minutes. |
+| **All** | Neither Twitch nor Kick announces new clips, so the app checks your channel's clip list: every minute on Twitch, every 2 minutes on Kick. Twitch lists a new clip after a short delay. **YouTube** doesn't share clips with apps. |
+| **Kick** | Clip details come from Kick's website data. When Kick's protection turns plain requests away, the app reads them in a hidden window, like the channel page. |
+| **All** | Kick and YouTube don't flag spam to apps, so **spam warnings there come from the app's own check** of the message text. It only marks messages that offer followers or viewers and point somewhere, and it never deletes anything by itself. |
 
 ## About the YouTube login warning
 
@@ -347,6 +362,7 @@ The [privacy policy](https://multichat.nonamefound.lol/privacy/) has every detai
 - **Updates are verified.** The app only installs a download that matches GitHub's checksum, and never touches `user-data`.
 - **Twitch's panel is isolated.** It's Twitch's own page and can't reach the app or its logins; links to other sites open in your browser.
 - **Chat can't run code.** Messages are displayed as plain text, and links open only in your browser.
+- **Link previews ask the site.** To show a video or clip card, the app asks YouTube, Twitch or Kick for its title and picture, the same way it loads emotes. Turn it off under Settings → Chat → Link Previews. Held and flagged messages never get a preview.
 - **Third parties:** the app contacts the platforms and alert service you connect, GitHub to check for updates, plus BetterTTV, 7TV, FrankerFaceZ and pronouns.alejo.io for the features you leave on. Each can be turned off in Settings.
 
 ## Support the project

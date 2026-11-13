@@ -66,6 +66,8 @@ h2, h3 { margin: 0; }
 .titlebar { height: 38px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 10px; }
 .brand-icon { width: 20px; height: 20px; flex: none; }
 .brand { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Smaller and dimmer than the name, so the two read as name and detail. */
+.brand-version { margin-left: 6px; font-size: 11px; font-weight: 500; letter-spacing: 0.02em; color: color-mix(in srgb, var(--muted) 72%, transparent); }
 .demo-tag { font-size: 11px; font-weight: 700; color: #151040; background: var(--orange); padding: 0 8px; border-radius: 8px; }
 .win-btn { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; line-height: 1; color: var(--win-glyph); background: var(--win-min); transition: filter 0.15s, box-shadow 0.15s; }
 .win-btn:hover { filter: brightness(1.15); box-shadow: 0 0 8px color-mix(in srgb, var(--win-min) 70%, transparent); }
@@ -146,6 +148,31 @@ h2, h3 { margin: 0; }
 .row.effect-giant .emote:last-of-type { height: 5em; margin: 2px 2px; }
 .gif { display: block; max-width: min(320px, 100%); max-height: 200px; margin: 4px 0 2px; border-radius: 8px; }
 
+/* Moderator warnings: messages Twitch's AutoMod held (amber), suspicious users and likely spam
+   (red). A strip above the message says why and holds the buttons. */
+.row.held, .row.flagged { --mc: var(--orange); background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 20%, transparent), color-mix(in srgb, var(--mc) 5%, transparent) 80%); border-left: 3px solid var(--mc); }
+.row.flagged { --mc: var(--bad); }
+.row.held:hover, .row.flagged:hover { background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 27%, transparent), color-mix(in srgb, var(--mc) 8%, transparent) 80%); }
+.row.held-allowed { --mc: var(--good); }
+.row.held-denied, .row.held-expired { --mc: var(--muted); }
+.row.held-denied .body, .row.held-expired .body { opacity: 0.55; text-decoration: line-through; text-decoration-thickness: 1px; }
+.modbar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 3px; font-size: 0.7em; font-weight: 400; line-height: 1.35; color: color-mix(in srgb, var(--text) 85%, var(--mc)); }
+.modbar-icon { display: inline-grid; flex: none; color: var(--mc); }
+.modbar-icon svg { width: 16px; height: 16px; }
+.modbar-text { flex: 1 1 12em; min-width: 0; }
+.modbar-text b { font-weight: 700; color: var(--text); }
+.modbar-why { color: var(--muted); }
+.modbar .btn.sm { padding: 2px 10px; font-size: 12px; line-height: 1.5; }
+.modbar-note { flex-basis: 100%; color: var(--muted); }
+
+/* Notices from the app itself, such as asking to log in again. */
+.row.kind-system { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin: 4px 10px; padding: 7px 12px; font-size: 0.74em; font-weight: 400; color: var(--text); background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; }
+.row.kind-system > svg { flex: none; }
+.row.kind-system > span { flex: 1 1 14em; }
+.row.sys-twitch > svg { color: var(--twitch); }
+.row.sys-kick > svg { color: var(--kick); }
+.row.sys-youtube > svg { color: var(--youtube); }
+
 /* Event cards in chat */
 .row.kind-event { padding: 3px 10px; }
 .row.kind-event:hover { background: none; }
@@ -177,7 +204,34 @@ h2, h3 { margin: 0; }
 .badge-hypetrain { --c: 240, 130, 40; }
 .badge-announcement { --c: 240, 150, 40; }
 .badge-moderation { --c: 200, 70, 90; }
+.badge-clip, .ev-clip { --c: 99, 132, 255; }
 .ev-msg { margin: 3px 0 0 24px; font-weight: 600; overflow-wrap: anywhere; }
+
+/* Link preview cards: YouTube videos and clips, under the message. A fixed height, so the
+   empty card shown while loading is exactly as tall as the finished one. */
+.lp { --pf: var(--twitch); display: flex; gap: 10px; box-sizing: border-box; width: min(100%, 34em); height: calc(5.4em + 14px); margin: 5px 0 2px; padding: 6px; font-size: 0.72em; font-weight: 400; line-height: 1.3; color: var(--text); text-decoration: none; overflow-wrap: normal; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--pf); border-radius: 10px; overflow: hidden; }
+.lp-youtube { --pf: var(--youtube); }
+.lp-kick { --pf: var(--kick); }
+a.lp:hover { background: var(--surface-2); border-color: color-mix(in srgb, var(--pf) 55%, var(--line)); }
+.lp-thumb { position: relative; flex: none; height: 100%; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: color-mix(in srgb, var(--pf) 20%, #000); }
+.lp-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lp-play { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.35); opacity: 0; transition: opacity 0.15s; }
+.lp-play svg { width: 2.2em; height: 2.2em; fill: #fff; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6)); }
+a.lp:hover .lp-play { opacity: 1; }
+.lp-time { position: absolute; right: 4px; bottom: 4px; padding: 0 4px; font-size: 0.86em; font-weight: 700; line-height: 1.35; color: #fff; background: rgba(0, 0, 0, 0.78); border-radius: 4px; }
+.lp-info { display: flex; flex-direction: column; justify-content: center; gap: 2px; flex: 1; min-width: 0; }
+.lp-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 700; }
+.lp-channel, .lp-facts { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp-channel svg { vertical-align: -2px; color: var(--pf); }
+.lp-facts { font-size: 0.92em; color: var(--muted); }
+.lp-bar { display: block; width: 80%; height: 0.9em; border-radius: 4px; background: var(--surface-2); animation: lp-wait 1.2s ease-in-out infinite; }
+.lp-bar.short { width: 45%; margin-top: 6px; }
+.lp-loading { --pf: var(--line); }
+.lp-loading .lp-thumb { background: var(--surface-2); animation: lp-wait 1.2s ease-in-out infinite; }
+@keyframes lp-wait { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .lp-bar, .lp-loading .lp-thumb { animation: none; } .lp-play { transition: none; } }
+.ev .lp { margin: 7px 0 1px 24px; width: min(calc(100% - 24px), 34em); background: rgba(0, 0, 0, 0.22); }
+.event-body .lp { margin: 0 0 8px; font-size: 13px; }
 .ev-big { position: relative; overflow: hidden; padding: 11px 14px; font-size: 1.12em; border-width: 2px; border-left-width: 5px; box-shadow: 0 0 22px rgba(var(--c), 0.42); }
 .ev-big::after { content: ''; position: absolute; inset: 0 auto 0 -40%; width: 30%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.2), transparent); animation: ev-shine 1.8s ease-out 2; pointer-events: none; }
 @keyframes ev-shine { to { left: 120%; } }

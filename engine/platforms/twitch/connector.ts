@@ -1,10 +1,11 @@
 import type { EmoteLookup } from '../../../shared/parts'
-import type { ActionDef, ActionResult, Badge, ChannelStats, RaidInfo, Emote, ModerationRequest, CommandOutcome, StreamEvent, UserEntry, UserGroups, UserProfile, UsersInfo } from '../../../shared/types'
+import type { ActionDef, ActionResult, Badge, ChannelStats, RaidInfo, Emote, LinkPreview, MessageFlag, ModerationRequest, CommandOutcome, StreamEvent, UserEntry, UserGroups, UserProfile, UsersInfo } from '../../../shared/types'
 import { core, onDeviceCode } from '../../core'
 import { loadEmoteCache, saveEmoteCache } from '../../emotes/cache'
 import { loadTwitchExtras, toLookup } from '../../emotes/third-party'
 import { log } from '../../log'
 import { api, HttpError, message } from '../../net'
+import { ClipWatch, twitchClipPreview, type NewClip } from '../../previews'
 import { Pronouns } from '../../pronouns'
 import { store } from '../../store'
 import type { Connector, ConnectorContext } from '../connector'
@@ -12,9 +13,14 @@ import { buildActions, runTwitchAction } from './actions'
 import { runTwitchCommand } from './commands'
 import { buildEmoteList, fetchOwners, smallAvatar } from './emotes'
 import { EventSub } from './eventsub'
+import { heldMessage, heldRowId, heldStatus, suspiciousFlag, suspiciousMessage } from './moderation'
 import { chatMessage, eventFromSub, hypeTrain, notification, type CheerMap } from './normalize'
 
 const HELIX = 'https://api.twitch.tv/helix'
+/** The permissions for held messages (AutoMod) and suspicious-user warnings. */
+const MOD_SCOPES = ['moderator:manage:automod', 'moderator:read:suspicious_users']
+/** How long a suspicious-user warning waits for its chat message before showing the message itself. */
+const SUSPICIOUS_WAIT_MS = 3000
 /** Twitch asks apps to check their login hourly. */
 const CHECK_MS = 55 * 60 * 1000
 
@@ -48,13 +54,36 @@ export class TwitchConnector implements Connector {
   private checkTimer: ReturnType<typeof setInterval> | null = null
   private pinTimer: ReturnType<typeof setInterval> | null = null
   private pinState = ''
+  private clips: ClipWatch
+  /** Set when the login lacks the permissions for held messages and suspicious users. */
+  private relogin: string | undefined
+  /** Suspicious-user warnings waiting a moment for their chat message to arrive. */
+  private suspicious = new Map<string, { flag: MessageFlag; timer: ReturnType<typeof setTimeout> }>()
 
   constructor(private ctx: ConnectorContext) {
     this.pronouns = new Pronouns((login, label) => ctx.pronoun(login, label))
+    this.clips = new ClipWatch('twitch', (since) => this.newClips(since), (e) => ctx.event(e))
   }
 
   channelLogin(): string | undefined {
     return this.login_ || undefined
+  }
+
+  /** The card for a clip link, from any channel. Needs the Twitch login. */
+  async clipPreview(slug: string): Promise<LinkPreview | null> {
+    if (!this.loggedIn) return null
+    const r = await this.helix('GET', '/clips', { id: slug })
+    return twitchClipPreview(r?.data?.[0])
+  }
+
+  /** Clips of this channel made since a time, by anyone. */
+  private async newClips(since: number): Promise<NewClip[]> {
+    if (!this.userId) return []
+    const r = await this.helix('GET', '/clips', { broadcaster_id: this.userId, started_at: new Date(since).toISOString(), first: '20' })
+    return (r?.data ?? []).flatMap((c: any) => {
+      const preview = twitchClipPreview(c)
+      return preview ? [{ id: String(c.id), createdAt: Date.parse(c.created_at), preview }] : []
+    })
   }
 
   /** The core found the login gone (revoked or expired): stop and ask for a new one. */
@@ -95,10 +124,17 @@ export class TwitchConnector implements Connector {
     this.avatar = smallAvatar(users.data?.[0]?.profile_image_url)
     this.emoteCache = await loadEmoteCache(`twitch-${who.user_id}`)
     await Promise.all([this.loadBadges(), this.loadThirdParty(), this.loadManageable(), this.loadCheers()])
+    // Logins from before held messages and suspicious users need to log in again for them.
+    const missing = MOD_SCOPES.filter((s) => !who.scopes?.includes(s))
+    this.relogin = missing.length ? 'Log in to Twitch again to see messages AutoMod holds for review and warnings about suspicious users.' : undefined
+    if (this.relogin) {
+      log('twitch', `login lacks ${missing.join(', ')}`)
+      this.ctx.message({ id: `relogin-${Date.now()}`, platform: 'twitch', ts: Date.now(), kind: 'system', author: { id: '', name: '', badges: [] }, parts: [{ type: 'text', text: this.relogin }] })
+    }
     this.sub = new EventSub({
       onSession: (id) => this.subscribeAll(id),
       onNotification: (type, id, e) => this.onEvent(type, id, e),
-      onState: (s, detail) => this.ctx.status({ status: s, account: this.displayName, mentions: this.mentions, detail })
+      onState: (s, detail) => this.ctx.status({ status: s, account: this.displayName, mentions: this.mentions, detail, relogin: this.relogin })
     })
     this.sub.start()
     if (this.checkTimer) clearInterval(this.checkTimer)
@@ -107,6 +143,8 @@ export class TwitchConnector implements Connector {
     if (this.pinTimer) clearInterval(this.pinTimer)
     this.pinTimer = setInterval(() => void this.refreshPin(), 20000)
     void this.refreshPin()
+    // Twitch sends no notice for new clips either.
+    this.clips.start()
     // Ready before the picker is first opened.
     void this.refreshList()
     void this.loadHistory()
@@ -339,6 +377,9 @@ export class TwitchConnector implements Connector {
     this.checkTimer = null
     if (this.pinTimer) clearInterval(this.pinTimer)
     this.pinTimer = null
+    this.clips.stop()
+    for (const w of this.suspicious.values()) clearTimeout(w.timer)
+    this.suspicious.clear()
     this.sub?.stop()
     this.sub = null
   }
@@ -436,6 +477,9 @@ export class TwitchConnector implements Connector {
       ['channel.goal.begin', '1', b], ['channel.goal.end', '1', b],
       ['channel.ad_break.begin', '1', b],
       ['stream.online', '1', b], ['stream.offline', '1', b],
+      // Held messages and suspicious users, for the moderator (here, the streamer).
+      ['automod.message.hold', '2', mod], ['automod.message.update', '2', mod],
+      ['channel.suspicious_user.message', '1', mod],
       ['channel.channel_points_custom_reward.add', '1', b], ['channel.channel_points_custom_reward.update', '1', b], ['channel.channel_points_custom_reward.remove', '1', b]
     ]
     const results = await Promise.allSettled(subs.map(([type, version, condition]) =>
@@ -449,9 +493,27 @@ export class TwitchConnector implements Connector {
 
   private onEvent(type: string, id: string, e: any): void {
     switch (type) {
-      case 'channel.chat.message':
+      case 'channel.chat.message': {
         if (store.settings.showPronouns) this.pronouns.request(e.chatter_user_login)
-        return this.ctx.message(chatMessage(e, this.badges, this.third, this.cheers))
+        const m = chatMessage(e, this.badges, this.third, this.cheers)
+        // Its suspicious-user warning may have come first.
+        const waiting = this.suspicious.get(m.id)
+        if (waiting) {
+          clearTimeout(waiting.timer)
+          this.suspicious.delete(m.id)
+          m.flag = waiting.flag
+        }
+        return this.ctx.message(m)
+      }
+      case 'automod.message.hold':
+        return this.ctx.message(heldMessage(e, this.third, this.cheers))
+      case 'automod.message.update': {
+        const status = heldStatus(e.status)
+        if (status) this.ctx.patch(heldRowId(String(e.message_id)), (m) => ({ held: { ...m.held!, status, by: e.moderator_user_name || undefined } }))
+        return
+      }
+      case 'channel.suspicious_user.message':
+        return this.onSuspicious(e)
       case 'channel.chat.notification': {
         const n = notification(e, this.badges, this.third)
         if (n.message) this.ctx.message(n.message)
@@ -492,6 +554,41 @@ export class TwitchConnector implements Connector {
     }
     const ev = eventFromSub(type, id, e, this.manageable)
     if (ev) this.ctx.event(ev)
+  }
+
+  /**
+   * Twitch's warning about a suspicious user's message. It goes on the chat message with the
+   * same id; when that message doesn't come (restricted users), the warning shows it itself.
+   */
+  private onSuspicious(e: any): void {
+    const flag = suspiciousFlag(e)
+    const id = String(e.message?.message_id ?? '')
+    if (!flag || !id) return
+    if (this.ctx.patch(id, () => ({ flag }))) return
+    const timer = setTimeout(() => {
+      this.suspicious.delete(id)
+      if (!this.ctx.patch(id, () => ({ flag }))) this.ctx.message(suspiciousMessage(e, flag, this.third, this.cheers))
+    }, SUSPICIOUS_WAIT_MS)
+    this.suspicious.set(id, { flag, timer })
+  }
+
+  /** Allow or Deny on a held message. The row updates at once; Twitch's own notice follows. */
+  async automod(rowId: string, allow: boolean): Promise<ActionResult> {
+    const msgId = rowId.replace(/^held:/, '')
+    try {
+      await this.helix('POST', '/moderation/automod/message', undefined, { user_id: this.userId, msg_id: msgId, action: allow ? 'ALLOW' : 'DENY' })
+    } catch (err) {
+      if (err instanceof HttpError && err.status === 400) {
+        // Already handled by someone else, or too old: Twitch says which in its message.
+        return { ok: false, message: `Twitch couldn't ${allow ? 'allow' : 'deny'} it: ${message(err)}` }
+      }
+      if (err instanceof HttpError && (err.status === 401 || err.status === 403)) {
+        return { ok: false, message: 'Log in to Twitch again so the app can review held messages.' }
+      }
+      throw err
+    }
+    this.ctx.patch(rowId, (m) => ({ held: { ...m.held!, status: allow ? 'allowed' : 'denied', by: this.displayName } }))
+    return { ok: true }
   }
 
   async send(text: string, replyTo?: string): Promise<void> {
@@ -565,6 +662,8 @@ export class TwitchConnector implements Connector {
     const r = await runTwitchAction(this.helix, this.userId, actionId, args)
     if (r.raid !== undefined) this.setRaid(r.raid)
     if (actionId === 'reward.create') await this.loadManageable()
+    // Twitch needs a few seconds to finish a new clip, so look for it soon rather than in a minute.
+    if (actionId === 'clip' && r.ok) for (const wait of [15000, 35000]) setTimeout(() => void this.clips.check(true), wait)
     return r
   }
 }

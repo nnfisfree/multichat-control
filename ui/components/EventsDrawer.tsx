@@ -3,6 +3,7 @@ import { ALERT_SOURCE_LABEL, EVENT_TYPE_LABEL, PLATFORMS, PLATFORM_LABEL, type E
 import { Icon, PlatformIcon } from './Icons'
 import { removeEvents, updateSettings, useStore } from '../lib/store'
 import { EventBadge, SourceTag } from './EventCard'
+import { PreviewCard } from './LinkPreview'
 
 const ALL_TYPES = Object.keys(EVENT_TYPE_LABEL) as EventType[]
 
@@ -35,6 +36,7 @@ function EventRow({ e, open, own, onToggle }: { e: StreamEvent; open: boolean; o
       {open && (
         <div className="event-body">
           {e.message && <p className="event-msg">{e.message}</p>}
+          {e.preview && <PreviewCard p={e.preview} />}
           <dl>
             <dt>Time</dt><dd>{new Date(e.ts).toLocaleString()}</dd>
             {e.type !== 'donation' && <><dt>Platform</dt><dd>{PLATFORM_LABEL[e.platform]}</dd></>}
@@ -62,7 +64,8 @@ function useOwnCheck(): (e: StreamEvent) => boolean {
   const statuses = useStore((s) => s.statuses)
   return (e) => {
     const me = statuses[e.platform]?.account?.toLowerCase()
-    return !!me && !!e.actor && e.actor.toLowerCase() === me
+    // The streamer's own clips are real clips, not tests.
+    return !!me && !!e.actor && e.type !== 'clip' && e.actor.toLowerCase() === me
   }
 }
 
