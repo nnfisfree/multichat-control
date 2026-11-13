@@ -7,6 +7,7 @@ import type {
   ActionResult, AlertSource, ChannelStats, ChatMessage, CommandOutcome, PinnedMessage, PlatformUsers, RaidInfo, UserCard, UserEntry, UserGroups, UserProfile, UsersInfo, ConnectionState, Emote, HubBatch, HypeTrain, IntegrationState, ModerationRequest, Platform, SendResult, StreamEvent
 } from '../shared/types'
 import { PLATFORMS } from '../shared/types'
+import { isReloginNotice, reloginDone } from '../shared/relogin'
 import { log } from './log'
 import { message } from './net'
 import { store } from './store'
@@ -305,6 +306,8 @@ export class Hub {
         const before = this.statuses.get(platform)
         if (before?.status !== state.status || before?.detail !== state.detail) log(platform, `${state.status}${state.detail ? `: ${state.detail}` : ''}`)
         this.statuses.set(platform, state)
+        // A login with the missing permissions retires the "log in again" notices; the interface fades its copies.
+        if (reloginDone(state)) this.messages = this.messages.filter((m) => !(m.platform === platform && isReloginNotice(m)))
         this.pending.statuses.push(state)
         this.schedule()
       }

@@ -43,7 +43,7 @@ const NEW_THINGS: NewThing[] = [
   {
     icon: <Icon.check />,
     title: 'Fixes',
-    text: 'The first messages after start-up no longer show twice. The version now shows in the title bar.'
+    text: 'The "Log in again" notice now goes away once you have logged in again. The first messages after start-up no longer show twice. The version now shows in the title bar.'
   }
 ]
 

@@ -169,6 +169,10 @@ h2, h3 { margin: 0; }
 .row.kind-system { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin: 4px 10px; padding: 7px 12px; font-size: 0.74em; font-weight: 400; color: var(--text); background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; }
 .row.kind-system > svg { flex: none; }
 .row.kind-system > span { flex: 1 1 14em; }
+/* A "log in again" notice that the new login answered; removed from chat when this ends (RELOGIN_FADE_MS). */
+.row.kind-system.relogin-done { animation: relogin-done 0.6s ease forwards; pointer-events: none; }
+@keyframes relogin-done { to { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .row.kind-system.relogin-done { animation-duration: 0.01s; } }
 .row.sys-twitch > svg { color: var(--twitch); }
 .row.sys-kick > svg { color: var(--kick); }
 .row.sys-youtube > svg { color: var(--youtube); }

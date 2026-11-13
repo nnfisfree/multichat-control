@@ -1,5 +1,6 @@
 import { memo, useMemo, type JSX, type MouseEvent } from 'react'
 import { firstPreviewLink, plainText } from '../../shared/parts'
+import { isReloginNotice, reloginDone } from '../../shared/relogin'
 import type { ChatMessage, MessagePart } from '../../shared/types'
 import { Icon, PlatformIcon } from './Icons'
 import { useStore } from '../lib/store'
@@ -66,15 +67,17 @@ export const ChatRow = memo(function ChatRow({ m, showPlatform, showTime, onMenu
   // A YouTube video or a clip gets a card under the message, as in Twitch's own chat.
   const previews = useStore((s) => s.settings?.linkPreviews ?? true)
   // Held or flagged messages never get a card: their links are exactly the ones not to advertise.
+  // A "log in again" notice fades out once the new login has the permissions it asked for.
+  const reloginFixed = useStore((s) => isReloginNotice(m) && reloginDone(s.statuses[m.platform]))
   const previewUrl = useMemo(() => (previews && !m.deleted && !m.held && !m.flag ? firstPreviewLink(m.parts) : null), [previews, m.deleted, m.held, m.flag, m.parts])
   if (m.divider) return <div className="history-divider" role="separator"><span>{m.divider}</span></div>
   if (m.event) return <div className="row kind-event"><EventCard e={m.event} /></div>
   if (m.kind === 'system') {
     return (
-      <div className={`row kind-system sys-${m.platform}`}>
+      <div className={`row kind-system sys-${m.platform}${reloginFixed ? ' relogin-done' : ''}`}>
         <PlatformIcon platform={m.platform} size={16} />
         <span>{plainText(m.parts)}</span>
-        {m.id.startsWith('relogin-') && <button className="btn sm" onClick={() => void window.nnf.login(m.platform)}>Log in again</button>}
+        {isReloginNotice(m) && !reloginFixed && <button className="btn sm" onClick={() => void window.nnf.login(m.platform)}>Log in again</button>}
       </div>
     )
   }

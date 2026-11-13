@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { chatEventGroup } from '../../shared/events'
 import { PLATFORMS } from '../../shared/types'
+import { isReloginNotice, reloginDone } from '../../shared/relogin'
 import type { AlertSource, HistorySession, ObsState, StreamerbotState, PinnedMessage, PlatformUsers, RaidInfo, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
 
 const MAX_MESSAGES = 3000
@@ -71,6 +72,7 @@ function apply(b: HubBatch): void {
   const events = incoming.events.length ? state.events.concat(incoming.events).slice(-MAX_EVENTS) : state.events
   const statuses = { ...state.statuses }
   for (const s of b.statuses) statuses[s.platform] = s
+  retireRelogin(b.statuses.map((s) => s.platform))
   const pronouns = Object.keys(b.pronouns).length ? { ...state.pronouns, ...b.pronouns } : state.pronouns
   const hype = b.hype === undefined ? state.hype : b.hype
   let actionsVersion = state.actionsVersion
@@ -79,6 +81,24 @@ function apply(b: HubBatch): void {
   const raid = b.raid === undefined ? state.raid : b.raid
   const integrations = b.integrations?.length ? { ...state.integrations, ...Object.fromEntries(b.integrations.map((i) => [i.source, i])) } : state.integrations
   set({ messages, events, statuses, pronouns, hype, actionsVersion, integrations, pinned, raid, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.filter((e) => !e.history).length })
+}
+
+/** How long a retired "log in again" notice takes to fade out; matches .relogin-done in theme.css. */
+const RELOGIN_FADE_MS = 600
+let reloginTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * Once a platform connects with a login that has every permission, its "log in again" notices
+ * fade (ChatRow sees the same status) and are then removed. The timer doesn't depend on the row
+ * being on screen, so notices scrolled out of view go too.
+ */
+function retireRelogin(platforms: Platform[]): void {
+  if (!platforms.length || reloginTimer) return
+  reloginTimer = setTimeout(() => {
+    reloginTimer = null
+    const gone = (m: ChatMessage): boolean => isReloginNotice(m) && reloginDone(state.statuses[m.platform])
+    if (state.messages.some(gone)) set({ messages: state.messages.filter((m) => !gone(m)) })
+  }, RELOGIN_FADE_MS)
 }
 
 async function init(): Promise<void> {

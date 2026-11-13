@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.7
+
+**Fixed**
+
+- The "Log in to Twitch again" notice stayed in chat after logging in again. It now fades out as soon as the new login has the permissions it asked for.
+
 ## 0.2.6
 
 **New**
