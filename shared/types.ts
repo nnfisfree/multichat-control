@@ -162,13 +162,13 @@ export interface HistorySession { id: string; start: number; end: number; count:
 
 export type EventType =
   | 'follow' | 'sub' | 'gift' | 'cheer' | 'bits' | 'redemption' | 'powerup' | 'raid' | 'hypetrain'
-  | 'poll' | 'prediction' | 'goal' | 'ad' | 'shoutout' | 'moderation' | 'stream' | 'paid' | 'donation' | 'announcement' | 'clip' | 'other'
+  | 'poll' | 'prediction' | 'goal' | 'ad' | 'shoutout' | 'moderation' | 'stream' | 'paid' | 'donation' | 'announcement' | 'other'
 
 export const EVENT_TYPE_LABEL: Record<EventType, string> = {
   follow: 'Follows', sub: 'Subs', gift: 'Gifts', cheer: 'Cheers', bits: 'Bits', redemption: 'Redemptions',
   powerup: 'Power-ups', raid: 'Raids', hypetrain: 'Hype Train', poll: 'Polls', prediction: 'Predictions',
   goal: 'Goals', ad: 'Ads', shoutout: 'Shoutouts', moderation: 'Moderation', stream: 'Stream', paid: 'Paid', donation: 'Donations',
-  announcement: 'Announcements', clip: 'Clips', other: 'Other'
+  announcement: 'Announcements', other: 'Other'
 }
 
 interface EventAction { actionId: string; label: string; args: Record<string, string>; tone?: 'good' | 'bad' }
@@ -197,12 +197,18 @@ export interface StreamEvent {
   source?: AlertSource
   /** A new clip's card, shown under the event. */
   preview?: LinkPreview
+  /** A test alert (Streamer.bot test trigger, StreamElements or Streamlabs test). Never saved, so it's gone after a restart. */
+  test?: boolean
 }
 
 /** Alert and donation services that report events for the platforms. */
-export type AlertSource = 'streamelements' | 'streamlabs'
-export const ALERT_SOURCES: AlertSource[] = ['streamelements', 'streamlabs']
-export const ALERT_SOURCE_LABEL: Record<AlertSource, string> = { streamelements: 'StreamElements', streamlabs: 'Streamlabs' }
+export type AlertSource = 'streamelements' | 'streamlabs' | 'buymeacoffee'
+/** The alert services the streamer picks one of. Buy Me a Coffee runs beside them, not instead. */
+export type PickedAlertSource = 'streamelements' | 'streamlabs'
+export const ALERT_SOURCES: PickedAlertSource[] = ['streamelements', 'streamlabs']
+export const ALERT_SOURCE_LABEL: Record<AlertSource, string> = { streamelements: 'StreamElements', streamlabs: 'Streamlabs', buymeacoffee: 'Buy Me a Coffee' }
+/** Where a Buy Me a Coffee creator makes the read-only token the app connects with. */
+export const BMC_TOKEN_URL = 'https://developers.buymeacoffee.com/dashboard'
 
 export interface IntegrationState {
   source: AlertSource
@@ -297,7 +303,7 @@ export type ModerationRequest =
   | { kind: 'ban'; userId: string; userName: string }
   | { kind: 'shoutout'; userId: string; userName: string }
 
-export type ChatEventGroup = 'subs' | 'gifts' | 'cheers' | 'raids' | 'redemptions' | 'powerups' | 'follows' | 'paid' | 'donations' | 'hype' | 'clips'
+export type ChatEventGroup = 'subs' | 'gifts' | 'cheers' | 'raids' | 'redemptions' | 'powerups' | 'follows' | 'paid' | 'donations' | 'hype'
 
 export type CloseAction = 'exit' | 'ask' | 'tray'
 
@@ -353,12 +359,16 @@ export interface Settings {
   spamWarnings: boolean
   emoteProviders: EmoteProviders
   chatEvents: Record<ChatEventGroup, boolean>
+  /** New events also pop up above the message box for a few seconds. */
+  eventPopups: boolean
+  /** How long each pop-up stays, in seconds. */
+  eventPopupSeconds: number
   closeAction: CloseAction
   eventFilter: EventFilter
   autoUpdate: boolean
   updatePrereleases: boolean
   /** The one alert service this streamer uses, if any. */
-  alertService: AlertSource | 'none'
+  alertService: PickedAlertSource | 'none'
   /** Saves chat from the last five streams on this PC. */
   keepChatHistory: boolean
   /** Reads stream health from OBS's WebSocket server on this PC. */
@@ -397,6 +407,8 @@ export const DEFAULT_SETTINGS: Settings = {
   spamWarnings: true,
   emoteProviders: { bttv: true, seventv: true, ffz: true },
   closeAction: 'ask',
+  eventPopups: true,
+  eventPopupSeconds: 6,
   eventFilter: { platforms: { twitch: true, youtube: true, kick: true }, hiddenTypes: [] },
   autoUpdate: true,
   updatePrereleases: false,
@@ -411,7 +423,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sbPort: 8080,
   theme: 'pos',
   // Every event type starts on; each can be turned off in Settings. A saved choice is kept.
-  chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: true, paid: true, donations: true, hype: true, clips: true }
+  chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: true, paid: true, donations: true, hype: true }
 }
 
 /** Client secrets are write-only from the UI: it learns only whether one is stored. */
@@ -561,6 +573,8 @@ export interface NnfApi {
     login(source: AlertSource): Promise<void>
     logout(source: AlertSource): Promise<void>
     reconnect(source: AlertSource): Promise<void>
+    /** Buy Me a Coffee: saves a pasted token (checked first), then starts. */
+    connect(source: 'buymeacoffee', token: string): Promise<void>
   }
   openExternal(url: string): Promise<void>
   showPanel(bounds: PanelBounds): Promise<ActionResult>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
 import { ALERTS_READY, KICK_REDIRECT_URI } from '../../shared/app-config'
-import { ALERT_SOURCE_LABEL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform } from '../../shared/types'
-import { Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
+import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform } from '../../shared/types'
+import { BmcLogo, Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
 import { About } from './About'
 import { statusText } from './Tabs'
@@ -144,6 +144,78 @@ function AlertsPicker(): JSX.Element {
         )}
       </header>
       {st?.detail && st.status !== 'needs-setup' && <div className={st.status === 'error' || st.status === 'needs-login' ? 'notice bad' : 'notice'} role="status">{st.detail}</div>}
+      {err && err !== st?.detail && <div className="notice bad" role="alert">{err}</div>}
+    </article>
+  )
+}
+
+const BMC_STATUS: Partial<Record<IntegrationState['status'], string>> = {
+  'needs-login': 'Not connected', authorizing: 'Checking the token…', connecting: 'Connecting…', connected: 'Connected',
+  reconnecting: 'Retrying soon…', off: 'Not connected'
+}
+
+/**
+ * Buy Me a Coffee has no "Log in" button for apps, so this is the next best thing: one click
+ * opens the token page, the streamer pastes the token once, and the app checks it.
+ */
+function BmcRow(): JSX.Element {
+  const st = useStore((s) => s.integrations.buymeacoffee)
+  const demo = useStore((s) => !!s.boot?.demo)
+  const [open, setOpen] = useState(false)
+  const [token, setToken] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const live = st?.status === 'connected' || st?.status === 'reconnecting' || st?.status === 'connecting'
+  const clean = (e: any): string => String(e?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+  const connect = (): void => {
+    setErr('')
+    setOpen(true)
+    void window.nnf.openExternal(BMC_TOKEN_URL)
+  }
+  const save = async (): Promise<void> => {
+    setBusy(true)
+    setErr('')
+    try {
+      await window.nnf.alerts.connect('buymeacoffee', token)
+      setToken('')
+      setOpen(false)
+    } catch (e) {
+      setErr(clean(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const act = (fn: () => Promise<unknown>) => () => { setErr(''); fn().catch((e) => setErr(clean(e))) }
+  return (
+    <article className="account bmc" id="bmc-settings">
+      <header>
+        <span className="pf"><BmcLogo size={18} /></span>
+        <h3>Buy Me a Coffee</h3>
+        <span className="state">{st ? BMC_STATUS[st.status] ?? ALERT_STATUS[st.status] : 'Not connected'}</span>
+        <div className="row-btns">
+          {live && <button className="btn ghost sm" onClick={act(() => window.nnf.alerts.reconnect('buymeacoffee'))}>Reconnect</button>}
+          {live
+            ? <button className="btn ghost sm" onClick={act(() => window.nnf.alerts.logout('buymeacoffee'))}>Disconnect</button>
+            : !open && <button className="btn sm" disabled={demo} title={demo ? 'Not available in demo mode' : undefined} onClick={connect}>Connect</button>}
+        </div>
+      </header>
+      {open && !live && (
+        <div className="bmc-connect">
+          <ol>
+            <li>Log in on the page that just opened with your Buy Me a Coffee account.</li>
+            <li>Click <b>Create new token</b>, name it "Multichat Control" and leave it <b>read only</b>.</li>
+            <li>Copy the token and paste it here.</li>
+          </ol>
+          <div className="row-btns">
+            <input type="password" autoComplete="off" spellCheck={false} placeholder="Paste your token" value={token} aria-label="Buy Me a Coffee token"
+              onChange={(e) => setToken(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && token.trim() && !busy) void save() }} />
+            <button className="btn sm" disabled={!token.trim() || busy} onClick={() => void save()}>{busy ? 'Checking…' : 'Save'}</button>
+            <button className="btn ghost sm" disabled={busy} onClick={() => { setOpen(false); setToken(''); setErr('') }}>Cancel</button>
+          </div>
+          <p className="hint"><button className="linkish" onClick={() => void window.nnf.openExternal(BMC_TOKEN_URL)}>Open the token page again</button> · The token stays encrypted on this PC and is only sent to Buy Me a Coffee.</p>
+        </div>
+      )}
+      {st?.detail && st.status !== 'connected' && <div className={st.status === 'needs-login' ? 'notice bad' : 'notice'} role="status">{st.detail}</div>}
       {err && err !== st?.detail && <div className="notice bad" role="alert">{err}</div>}
     </article>
   )
@@ -320,9 +392,8 @@ const CHAT_EVENT_ROWS: [ChatEventGroup, string, string][] = [
   ['redemptions', 'Redemptions', 'Channel point rewards'],
   ['powerups', 'Power-ups', 'On-Screen Celebrations and custom Power-ups'],
   ['paid', 'Super Stickers and KICKs', 'Paid messages already appear in chat'],
-  ['donations', 'Donations', 'Tips from StreamElements and Streamlabs'],
+  ['donations', 'Donations', 'Tips from StreamElements, Streamlabs and Buy Me a Coffee'],
   ['cheers', 'Kick Cheers', 'Twitch cheers always show as messages'],
-  ['clips', 'New Clips', 'Clips of your stream on Twitch and Kick, with a preview. YouTube doesn\'t share its clips.'],
   ['follows', 'Follows', 'New followers. Turn this off if follow bots flood your chat.']
 ]
 
@@ -481,6 +552,9 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                 <Section title="Alerts & Donations" desc="Pick only the one you use. It adds donations, plus past subs, gifts and Bits the platforms don't share.">
                   <AlertsPicker />
                 </Section>
+                <Section title="Buy Me a Coffee" desc="Tips, memberships (with every month they've supported you) and shop sales, live in chat and in Recent events. Works next to the service above.">
+                  <BmcRow />
+                </Section>
                 <Section title="OBS Studio" desc="See your stream's health at a glance, like OBS's Stats dock">
                   <ObsSettings />
                 </Section>
@@ -549,6 +623,19 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                   <Row title="Spam Warnings" desc="Marks messages that offer to sell followers or viewers and point to a site, on every platform, with Delete and Ban buttons. Twitch's own held messages and suspicious-user warnings always show.">
                     <Toggle label="Spam warnings" on={s.spamWarnings ?? true} onChange={(v) => void updateSettings({ spamWarnings: v })} />
                   </Row>
+                </Section>
+                <Section id="popup-settings" title="Event Pop-ups" desc="New subs, gifts, cheers, raids, follows and more rise above the message box, then slide away">
+                  <Row title="Show Pop-ups" desc="Hover a pop-up to keep it open, click it to close it now. Every event still goes to the Events drop-down.">
+                    <Toggle label="Event pop-ups" on={s.eventPopups ?? true} onChange={(v) => void updateSettings({ eventPopups: v })} />
+                  </Row>
+                  {(s.eventPopups ?? true) && (
+                    <Row title="Pop-up Duration" desc="How long each pop-up stays before it slides away">
+                      <div className="slider">
+                        <output>{s.eventPopupSeconds ?? 6} s</output>
+                        <input type="range" aria-label="Pop-up duration in seconds" min="2" max="30" step="1" value={s.eventPopupSeconds ?? 6} onChange={(e) => void updateSettings({ eventPopupSeconds: Number(e.target.value) })} />
+                      </div>
+                    </Row>
+                  )}
                 </Section>
                 <Section id="chat-events-settings" title="Events in Chat" desc="Show these as cards in chat. They always appear in the Events drop-down.">
                   {CHAT_EVENT_ROWS.map(([key, title, desc]) => (

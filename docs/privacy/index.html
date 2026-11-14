@@ -23,7 +23,7 @@
   <main>
     <div class="hero">
       <h1>Privacy Policy</h1>
-      <p class="also">NoName's Multichat Control (MultichatControl) · Effective date: November 11, 2026</p>
+      <p class="also">NoName's Multichat Control (MultichatControl) · Effective date: November 14, 2026</p>
     </div>
 
     <p>NoName's Multichat Control ("the app", also shown as MultichatControl) is a free, open-source Windows app made by NoNameFound. This policy explains what the app accesses, what it keeps, and how you stay in control.</p>
@@ -47,7 +47,7 @@
     </section>
 
     <section>
-      <h2>2. Streamlabs and StreamElements</h2>
+      <h2>2. Streamlabs, StreamElements and Buy Me a Coffee</h2>
       <p>These are optional. You pick at most one of them in Settings, and the app connects only after you click its "Log in" button and approve access on the service's own page.</p>
       <ul>
         <li><strong>Streamlabs</strong>: the app asks for <code>donations.read</code> and <code>socket.token</code> only.</li>
@@ -55,6 +55,10 @@
       </ul>
       <p>The app uses this access <strong>only</strong> to read your channel's name and to show your incoming alerts (donations and tips, follows, subs, cheers, raids and similar) in the app's Events list as they happen. It is read-only: it never creates, edits or deletes donations, alerts, settings or anything else on your Streamlabs or StreamElements account, and it never sends this data anywhere else.</p>
       <p>Logging out in Settings deletes the login from your computer. You can also remove the app's access at any time from your Streamlabs or StreamElements account settings.</p>
+      <h3>Buy Me a Coffee</h3>
+      <p>Also optional. Buy Me a Coffee has no login button for apps, so you connect it by pasting a <strong>read-only token</strong> that you create yourself in Buy Me a Coffee's developer dashboard. The app checks the token once, then keeps it encrypted on your computer like your other logins, and only ever sends it to <code>developers.buymeacoffee.com</code>.</p>
+      <p>The app uses it <strong>only</strong> to read your supporters, memberships and shop sales every few seconds and show them in chat and in the Events list: the supporter's name, the amount, their message (only if they made it public), the item they bought, and how many months a member has supported you. To add up a member's months across memberships, the app keeps a scrambled code (a one-way hash) made from the supporter's email in <code>bmc-state.json</code>. The email itself is never saved or shown. It is read-only: the app never changes anything on your Buy Me a Coffee page, and never sends this data anywhere else.</p>
+      <p>Disconnect in Settings deletes the token and <code>bmc-state.json</code> from your computer. You can also delete the token at any time in Buy Me a Coffee's developer dashboard.</p>
     </section>
 
     <section>
@@ -79,6 +83,7 @@
       <ul>
         <li><strong>Google and YouTube</strong> (<code>youtube.googleapis.com</code>, <code>www.googleapis.com</code>, <code>accounts.google.com</code>, <code>oauth2.googleapis.com</code>): for your YouTube login and live chat</li>
         <li><strong>Twitch, Kick, Streamlabs and StreamElements</strong>: only if you log in to them yourself</li>
+        <li><strong>Buy Me a Coffee</strong> (<code>developers.buymeacoffee.com</code>): only if you connect it yourself with your token</li>
         <li><strong>BetterTTV, 7TV, FrankerFaceZ and alejo.io pronouns</strong>: to show emotes and pronouns for Twitch and Kick chat</li>
         <li><strong>YouTube, Twitch and Kick, for link previews</strong> (<code>www.youtube.com</code>, <code>i.ytimg.com</code>, <code>kick.com</code> and the platforms' image servers): when someone posts a video or clip link in chat, the app fetches that video's public title and picture to show a preview. No account data is sent. Turn it off in Settings → Chat → Link Previews.</li>
         <li><strong>GitHub</strong>: to check for new versions of the app</li>

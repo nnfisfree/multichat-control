@@ -70,9 +70,10 @@ const COLORS = ['#4fd1ff', '#ff7ad9', '#7dff9b', '#ffb454', '#b794ff', '#ff6b6b'
 const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean; source?: StreamEvent['source']; preview?: LinkPreview }[]> = {
   twitch: [
     { type: 'follow', text: 'followed' },
-    { type: 'clip', text: 'made a clip', preview: DEMO_PREVIEWS['twitch-clip'] },
     { type: 'redemption', text: 'redeemed', subject: 'Daily Check-in', amount: '1', details: { Reward: 'KEKW! [MP3]', Status: 'Unfulfilled' } },
     { type: 'sub', text: 'resubscribed to the channel (5 months)', amount: 'Prime', message: 'u deserve' },
+    { type: 'sub', text: 'resubscribed to the channel (14 months)', amount: 'Tier 1', message: 'Over a year already, still the comfiest stream around 💜' },
+    { type: 'cheer', text: 'cheered', amount: '500 bits', message: 'Take my bits, legend! That clutch was unreal' },
     { type: 'sub', text: 'subscribed to the channel', amount: 'Tier 1' },
     { type: 'gift', text: 'gifted a sub to PixelNomad', amount: 'Tier 1' },
     { type: 'gift', text: 'gifted 50 subs to the community', amount: 'Tier 1 x50', big: true },
@@ -80,7 +81,12 @@ const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string
     { type: 'raid', text: 'raided with 42 viewers', amount: '42', big: true },
     { type: 'moderation', text: 'timed out TurboTaco', amount: '1m' },
     { type: 'donation', text: 'donated', amount: '$10.00', message: 'For the snacks!', source: 'streamlabs' },
-    { type: 'donation', text: 'donated', amount: '€25.00', message: 'Great stream today', source: 'streamelements', big: true }
+    { type: 'donation', text: 'donated', amount: '€25.00', message: 'Great stream today', source: 'streamelements', big: true },
+    { type: 'donation', text: 'bought 3 coffees', amount: '$15.00', message: 'Fuel for the next stream ☕', source: 'buymeacoffee', details: { Coffees: '3' } },
+    {
+      type: 'sub', text: 'renewed their membership (7 months)', amount: 'Coffee Club', source: 'buymeacoffee',
+      details: { Level: 'Coffee Club', 'Total months': '7', Plan: 'Monthly', Amount: '$5.00/month' }
+    }
   ],
   youtube: [
     { type: 'paid', text: 'sent a Super Chat', amount: '€5.00', message: 'Keep it up!' },
@@ -91,8 +97,7 @@ const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string
     { type: 'sub', text: 'subscribed', amount: '1 month' },
     { type: 'gift', text: 'gifted 3 subs', amount: '3' },
     { type: 'follow', text: 'followed' },
-    { type: 'redemption', text: 'redeemed', subject: 'Hydrate!', amount: '250' },
-    { type: 'clip', text: 'made a clip', preview: DEMO_PREVIEWS['kick-clip'] }
+    { type: 'redemption', text: 'redeemed', subject: 'Hydrate!', amount: '250' }
   ]
 }
 
@@ -151,11 +156,14 @@ export class DemoConnector implements Connector {
       this.ctx.message(this.msg(pick(CHATTERS.twitch), '', { kind: 'cheer', label: `${bits} BITS`, parts: [{ type: 'emote', name: `Cheer${bits}`, url: emoteUrl('#9146ff', 'B') }, { type: 'text', text: `${bits} let's go!` }] }))
       return
     }
-    if (this.platform === 'twitch' && r < 0.08) {
+    if (this.platform === 'twitch' && r < 0.06) {
       this.ctx.message(this.msg(pick(CHATTERS.twitch), '', { parts: [{ type: 'gif', url: DEMO_GIF, alt: 'Dancing cat' }] }))
       return
     }
-    this.ctx.message(this.msg(pick(CHATTERS[this.platform]), pick(LINES), {
+    // Links bring big preview cards, so they come up only now and then.
+    let line = pick(LINES)
+    if (line.includes('https://') && Math.random() > 0.2) line = pick(LINES.filter((l) => !l.includes('https://')))
+    this.ctx.message(this.msg(pick(CHATTERS[this.platform]), line, {
       firstTime: r < 0.04,
       reply: r > 0.93 ? { author: pick(CHATTERS[this.platform]), text: pick(LINES) } : undefined
     }))
@@ -181,19 +189,16 @@ export class DemoConnector implements Connector {
     this.ctx.status({ status: 'connecting' })
     const order = ['twitch', 'youtube', 'kick'].indexOf(this.platform)
     this.timers.push(setTimeout(() => this.ctx.status({ status: 'connected', account: 'DemoStreamer', mentions: ['DemoStreamer'] }), 2500 + order * 1800))
-    // The streamer testing their own reward, so the TEST tag and Clear menu have something to show.
+    // A Streamer.bot test trigger, so the TEST tag and Clear menu have something to show.
     if (this.platform === 'twitch') {
       this.timers.push(setTimeout(() => this.ctx.event({
         id: `twitch-test-${Date.now()}`, platform: 'twitch', ts: Date.now(), type: 'redemption', actor: 'DemoStreamer',
-        text: 'redeemed', subject: 'Hydrate!', amount: '500', details: {}
+        text: 'redeemed', subject: 'Hydrate!', amount: '500', details: {}, test: true
       }), 4000))
     }
     this.timers.push(setInterval(() => this.tickChat(), 60000 / this.ratePerMinute))
     this.timers.push(setInterval(() => this.tickEvent(), 5000 + Math.random() * 2000))
-    if (this.platform === 'twitch') {
-      this.startHype()
-      this.timers.push(setInterval(() => this.ctx.message(this.msg(pick(CHATTERS.twitch), '', { parts: [{ type: 'gif', url: DEMO_GIF, alt: 'Dancing cat' }] })), 4000))
-    }
+    if (this.platform === 'twitch') this.startHype()
     for (let i = 0; i < 12; i++) this.tickChat()
     for (let i = 0; i < 4; i++) this.tickEvent()
     // One of each moderator warning soon after start, then now and then.

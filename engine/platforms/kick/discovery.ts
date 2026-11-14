@@ -79,13 +79,6 @@ export async function fetchKickClip(id: string): Promise<any | null> {
   return (await kickJson(`/api/v2/clips/${id}`))?.clip ?? null
 }
 
-/** The channel's clips from the last day, newest first. Throws when Kick can't be reached. */
-export async function fetchKickClips(slug: string): Promise<any[]> {
-  if (!/^[a-z0-9_-]+$/i.test(slug)) return []
-  const r = await kickJson(`/api/v2/channels/${slug}/clips?sort=date&time=day`)
-  return Array.isArray(r?.clips) ? r.clips : []
-}
-
 /**
  * Fallback for when Cloudflare refuses plain requests: the core opens kick.com in a hidden window
  * and makes the same calls from the real page.

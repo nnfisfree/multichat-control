@@ -105,6 +105,7 @@ fn main() {
             auth::api_request,
             auth::net_fetch,
             auth::auth_login,
+            auth::auth_set_token,
             auth::auth_cancel,
             auth::auth_logout,
             auth::auth_state,

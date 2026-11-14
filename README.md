@@ -19,7 +19,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/chat.png" width="760" alt="NoName's Multichat Control: Twitch, YouTube and Kick chat merged in one window, with a raid, a clip and a Super Chat as event cards, channel stats in the title bar and OBS stats and a clock under the message box" />
+<img src="docs/media/chat.png" width="760" alt="NoName's Multichat Control: Twitch, YouTube and Kick chat merged in one window with subs and a Super Chat as event cards, and three event pop-ups rising above the message box, one a cheer with its message" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -64,10 +64,12 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td width="50%" valign="top">
 
 ### ⚡ Events and history
-- Subs, gifts, raids, redemptions, follows and **new clips of your stream** as coloured cards in chat
+- Subs, gifts, raids, redemptions, follows and donations as coloured cards in chat
+- **Event pop-ups** rise out of the message box and slide away after the time you pick (on by default, 6 seconds). Hover to keep one, click to close it
+- **The supporter's message always shows**: resubs, cheers, Super Chats and tips, in chat, in pop-ups and in Recent events
 - **Recent events from every platform, in time order**, kept between sessions
-- Filter by platform and type, sort newest or oldest first
-- Your own test redeems are tagged, and cleared in one click
+- Filter by platform and type, sort newest or oldest first. Pop-ups follow the same filters
+- **Test alerts** from Streamer.bot, StreamElements and Streamlabs are tagged **TEST**, never saved, and cleared in one click
 - **Gift bombs**: one summary card, then a line for every sub and who received it
 - **Custom Power-ups by name**, and animated icons on every event badge
 - Hype Train banner with level, progress and countdown
@@ -87,11 +89,12 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - **Run any Streamer.bot action** from the message box: `/sb Action name`, with text after the name passed to the action
 - The list **follows Streamer.bot live**: add, rename or turn off an action there and it updates here
 - Your Streamer.bot **chat commands** (like `!lurk`) are listed too, ready to send
+- **Test triggers** fired in Streamer.bot (follow, cheer, sub, gift, raid, redemption) show up in chat and Events, so you can try alerts while offline
 - Works with or without Streamer.bot's WebSocket password
 
-### 💸 Alerts and donations *(coming soon)*
-- One-click login with **Streamlabs** and **StreamElements**, once both approve the app
-- Donations and tips live, plus the past subs, gifts and Bits that platforms don't share
+### 💸 Alerts and donations
+- <img src="assets/buymeacoffee.png" width="16" height="16" alt=""> **Buy Me a Coffee**: tips, memberships and shop sales live in chat and in Recent events. Renewals show **how many months** each member has supported you
+- *(coming soon)* One-click login with **Streamlabs** and **StreamElements**, once both approve the app
 
 </td>
 <td valign="top">
@@ -138,6 +141,9 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
+<td align="center" colspan="2"><img src="docs/media/popups.gif" alt="Event pop-ups rising out of the message box one after another: subs, gifts, a resub with its message and a Super Chat, each with a bar that drains, then sliding back down" /><br /><b>Events pop up above the message box, then slide away</b></td>
+</tr>
+<tr>
 <td align="center"><img src="docs/media/moderation.png" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and a spam bot offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots, one click away</b></td>
 <td align="center"><img src="docs/media/raid.png" alt="Raid bar at the top of chat: the raided channel's picture with a LIVE tag, its game, viewers and title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view, and Raid Now when you're ready</b></td>
 </tr>
@@ -170,6 +176,7 @@ Open the gear icon and click **Log in** beside each platform you stream on. You 
 - **YouTube:** Google will show *"Google hasn't verified this app"*. **That's expected and safe:** click **Advanced**, then **Go to MultichatControl (unsafe)**. [Why it says that](#about-the-youtube-login-warning).
 - **Twitch** expires its logins after about 30 days, so the app may ask you to log in again.
 - **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in. Your custom Power-ups and points only show once you're signed in.
+- **Buy Me a Coffee:** click **Connect**. Buy Me a Coffee's developer page opens: log in, click **Create new token**, keep it read only, and paste the token into the app. That's it.
 - **Alerts & Donations:** Streamlabs and StreamElements are marked **Soon..** until both services approve the app.
 - **The status menu** next to the gear shows every connection. Click a row to reconnect or log in.
 - **Users in Chat, held messages, suspicious users and some commands** need a newer Twitch login. If the app asks, click **Log in again** once.
@@ -312,8 +319,8 @@ These limits come from the platforms.
 | **Streamer.bot** | The app connects to Streamer.bot on the same PC. Its chat commands (like `!lurk`) run when Streamer.bot sees them in chat, so they're sent as normal messages. |
 | **YouTube** | The subscriber count is rounded by YouTube, and member counts aren't shared with apps. |
 | **Kick** | Kick's API has no follower count, so it's read from Kick's public channel page every few minutes. |
-| **All** | Neither Twitch nor Kick announces new clips, so the app checks your channel's clip list: every minute on Twitch, every 2 minutes on Kick. Twitch lists a new clip after a short delay. **YouTube** doesn't share clips with apps. |
-| **Kick** | Clip details come from Kick's website data. When Kick's protection turns plain requests away, the app reads them in a hidden window, like the channel page. |
+| **Kick** | Previews of Kick clip links come from Kick's website data. When Kick's protection turns plain requests away, the app reads them in a hidden window, like the channel page. |
+| **StreamElements** | Its live connection doesn't document how test alerts are marked, so the app checks the usual flags. If an SE test alert shows without the **TEST** tag, please [report](../../issues) it. |
 | **All** | Kick and YouTube don't flag spam to apps, so **spam warnings there come from the app's own check** of the message text. It only marks messages that offer followers or viewers and point somewhere, and it never deletes anything by itself. |
 
 ## About the YouTube login warning
@@ -340,7 +347,7 @@ The [privacy policy](https://multichat.nonamefound.lol/privacy/) has every detai
 - **Logins are encrypted** with Windows' own protection for your Windows user, so moving to another PC means logging in again. The OBS and Streamer.bot WebSocket passwords are stored the same way.
 - **Logins never reach the app's window.** The part of the app written in Rust keeps them, adds them to each request itself, and only ever sends each one to that service's own servers.
 - **OBS is read-only.** The app only reads stats from OBS on this PC; it never switches scenes or starts or stops anything.
-- **Streamer.bot only runs what you ask.** The app reads its list of actions and commands, and runs an action only when you send `/sb`.
+- **Streamer.bot only runs what you ask.** The app reads its list of actions and commands, listens for its test triggers, and runs an action only when you send `/sb`.
 - **Chat history stays on your PC.** The last 5 streams are kept in `user-data`, with deleted messages saved only as deleted. Turn it off under Settings → Chat, or type `/clearhistory` to delete it.
 - **Coming from version 0.1?** Everything carries over: the app reads 0.1's files and logins on first start. From 0.1.2 or earlier, the `nnf-data` folder is renamed to `user-data` too.
 - **Updates are verified.** The app only installs a download that matches GitHub's checksum, and never touches `user-data`.

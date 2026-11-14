@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.1
+
+**New**
+
+- **Event pop-ups.** New subs, gifts, cheers, raids, follows, redemptions and donations rise out of the message box with the same look as their chat card, stay for the time you pick (2 to 30 seconds, 6 by default), then slide back down. Hover one to keep it open, click it to close it. They follow the Events drop-down's platform and type filters. Settings → Chat → Event Pop-ups.
+- **Supporter messages always show.** The message that comes with a resub, cheer, Super Chat or tip is shown in chat, in the pop-up and in the Events drop-down, without opening the event.
+- **Buy Me a Coffee.** Tips, memberships and shop sales (Extras) from your Buy Me a Coffee page show up live in chat and in Recent events, with Buy Me a Coffee's logo. Connect it in Settings → Connections: click **Connect**, create a read-only token on the page that opens, and paste it. It works on its own, next to Streamlabs or StreamElements.
+- **Every month counts.** When a member renews, the card says how many months they've supported you in total, even across memberships they cancelled and started again ("renewed their membership (10 months)"). Tips and renewals made while the app was closed are added to Recent events quietly, without filling chat. Private messages stay private.
+- **Test alerts while offline.** Test triggers fired in Streamer.bot (follow, cheer, sub, gift, raid and redemption on Twitch, plus Kick and YouTube) and test alerts from StreamElements or Streamlabs show up with a **TEST** tag. They're never saved, so a restart clears them, and **Clear → Clear tests** removes them right away.
+
+**Changed**
+
+- **No more clip events.** New clips no longer show up in chat, in pop-ups or in Events, and the app no longer checks Twitch and Kick for them. Clip links people post in chat still get their preview card.
+- **What's new** lists only what changed in the version you just got.
+
+**Fixed**
+
+- Things you did on your own channel, like gifting a sub, were tagged TEST. Only real test alerts get the tag now.
+
 ## 0.3.0
 
 **New**

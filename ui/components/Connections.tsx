@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react'
-import { ALERT_SOURCE_LABEL, PLATFORMS, PLATFORM_LABEL, type ConnectionState, type IntegrationState } from '../../shared/types'
-import { Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
+import { ALERT_SOURCE_LABEL, PLATFORMS, type AlertSource, PLATFORM_LABEL, type ConnectionState, type IntegrationState } from '../../shared/types'
+import { BmcLogo, Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
 import { useStore } from '../lib/store'
 import { ALERTS_READY } from '../../shared/app-config'
 
@@ -48,10 +48,14 @@ function platformService(p: (typeof PLATFORMS)[number], st?: ConnectionState): S
   }
 }
 
-function alertService(source: 'streamelements' | 'streamlabs', st?: IntegrationState): Service {
-  const base = { key: source, label: ALERT_SOURCE_LABEL[source], icon: <span className={`src-tag ${source}`}>{source === 'streamelements' ? 'SE' : 'SL'}</span>, account: st?.status === 'connected' ? st.account : undefined }
-  const login = { label: 'Log in', run: () => window.nnf.alerts.login(source) }
-  const on = [{ label: 'Reconnect', run: () => window.nnf.alerts.reconnect(source) }, { label: 'Log out', run: () => window.nnf.alerts.logout(source) }]
+function alertService(source: AlertSource, st?: IntegrationState): Service {
+  const icon = source === 'buymeacoffee' ? <BmcLogo size={16} /> : <span className={`src-tag ${source}`}>{source === 'streamelements' ? 'SE' : 'SL'}</span>
+  const base = { key: source, label: ALERT_SOURCE_LABEL[source], icon, account: st?.status === 'connected' && source !== 'buymeacoffee' ? st.account : undefined }
+  // Buy Me a Coffee connects with a pasted token, which lives in Settings.
+  const login = source === 'buymeacoffee'
+    ? { label: 'Connect', run: async () => { window.dispatchEvent(new CustomEvent('nnf:open-settings', { detail: { cat: 'connections', target: 'bmc-settings' } })) } }
+    : { label: 'Log in', run: () => window.nnf.alerts.login(source) }
+  const on = [{ label: 'Reconnect', run: () => window.nnf.alerts.reconnect(source) }, { label: source === 'buymeacoffee' ? 'Disconnect' : 'Log out', run: () => window.nnf.alerts.logout(source) }]
   switch (st?.status) {
     case 'connected': return { ...base, tone: 'good', text: 'Connected', tracked: true, pending: false, actions: on }
     case 'connecting': return { ...base, tone: 'warn', text: 'Connecting…', tracked: true, pending: true, actions: [] }
@@ -90,6 +94,9 @@ function useServices(): Service[] {
     })
   }
   if (ALERTS_READY && choice !== 'none') list.push(alertService(choice, integrations[choice]))
+  // Buy Me a Coffee shows up once it's been connected (it runs beside the picked service).
+  const bmc = integrations.buymeacoffee
+  if (bmc && bmc.status !== 'off' && (bmc.status !== 'needs-login' || bmc.detail)) list.push(alertService('buymeacoffee', bmc))
   // OBS only appears once the streamer turned it on in Settings.
   if (obsEnabled && !demo) {
     const tone: Tone = obs.status === 'connected' ? 'good' : obs.status === 'error' ? 'bad' : 'warn'

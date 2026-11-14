@@ -142,9 +142,12 @@ export class Streamlabs implements AlertService {
   private handle(evt: any): void {
     const type = String(evt?.type ?? '')
     const platform = toPlatform(evt?.for) ?? this.ctx.home()
-    for (const m of [].concat(evt?.message ?? [])) {
+    for (const m of ([] as any[]).concat(evt?.message ?? [])) {
       const e = toEvent(type, m, platform, String(evt?.event_id ?? ''))
-      if (e) this.ctx.event(e)
+      if (!e) continue
+      // A test alert from the dashboard: shown until the app restarts, never saved.
+      const test = m?.isTest === true || m?.isTest === 'true' || evt?.isTest === true
+      this.ctx.event(test ? { ...e, id: `${e.id}-test-${Date.now()}`, test: true } : e)
     }
   }
 

@@ -1,4 +1,5 @@
-//! Logins and authorised requests for Twitch, Kick, YouTube, StreamElements and Streamlabs.
+//! Logins and authorised requests for Twitch, Kick, YouTube, StreamElements, Streamlabs and
+//! Buy Me a Coffee (which has no OAuth: the user pastes a personal token, see `auth_set_token`).
 //!
 //! Tokens live only here. The engine asks for a request ("GET this Helix URL as Twitch") and this
 //! module adds the token, renews it shortly before it expires, retries once after a 401, and only
@@ -37,7 +38,7 @@ moderator:manage:warnings user:manage:chat_color user:manage:blocked_users user:
 const KICK_SCOPES: &str = "user:read channel:read channel:write channel:rewards:read channel:rewards:write chat:write moderation:ban moderation:chat_message:manage kicks:read";
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-enum Service { Twitch, Kick, Youtube, StreamElements, Streamlabs }
+enum Service { Twitch, Kick, Youtube, StreamElements, Streamlabs, BuyMeACoffee }
 
 impl Service {
     fn parse(s: &str) -> Result<Self, String> {
@@ -47,6 +48,7 @@ impl Service {
             "youtube" => Self::Youtube,
             "streamelements" => Self::StreamElements,
             "streamlabs" => Self::Streamlabs,
+            "buymeacoffee" => Self::BuyMeACoffee,
             _ => return Err(format!("Unknown service: {s}")),
         })
     }
@@ -57,6 +59,7 @@ impl Service {
             Self::Youtube => "youtube",
             Self::StreamElements => "streamelements",
             Self::Streamlabs => "streamlabs",
+            Self::BuyMeACoffee => "buymeacoffee",
         }
     }
     fn label(self) -> &'static str {
@@ -66,6 +69,7 @@ impl Service {
             Self::Youtube => "YouTube",
             Self::StreamElements => "StreamElements",
             Self::Streamlabs => "Streamlabs",
+            Self::BuyMeACoffee => "Buy Me a Coffee",
         }
     }
     /// The only servers this service's token is ever sent to.
@@ -76,6 +80,7 @@ impl Service {
             Self::Youtube => &["www.googleapis.com", "youtube.googleapis.com"],
             Self::StreamElements => &["api.streamelements.com"],
             Self::Streamlabs => &["streamlabs.com"],
+            Self::BuyMeACoffee => &["developers.buymeacoffee.com"],
         }
     }
     fn token_url(self) -> &'static str {
@@ -85,6 +90,8 @@ impl Service {
             Self::Youtube => "https://oauth2.googleapis.com/token",
             Self::StreamElements => "https://api.streamelements.com/oauth2/token",
             Self::Streamlabs => "https://streamlabs.com/api/v2.0/token",
+            // Never used: a pasted token has nothing to renew it with.
+            Self::BuyMeACoffee => "",
         }
     }
     fn header(self, host: &str, access: &str) -> String {
@@ -154,7 +161,7 @@ fn built_in(s: Service) -> Option<Creds> {
         Service::Kick => (option_env!("NNF_KICK_CLIENT_ID"), option_env!("NNF_KICK_CLIENT_SECRET")),
         Service::StreamElements => (option_env!("NNF_STREAMELEMENTS_CLIENT_ID"), option_env!("NNF_STREAMELEMENTS_CLIENT_SECRET")),
         Service::Streamlabs => (option_env!("NNF_STREAMLABS_CLIENT_ID"), option_env!("NNF_STREAMLABS_CLIENT_SECRET")),
-        Service::Twitch => return None,
+        Service::Twitch | Service::BuyMeACoffee => return None,
     };
     match (id, secret) {
         (Some(id), Some(secret)) if !id.is_empty() && !secret.is_empty() => Some(Creds { id: id.into(), secret: Some(secret.into()) }),
@@ -313,7 +320,7 @@ pub async fn net_fetch(method: String, url: String, headers: Option<HashMap<Stri
 // ---- Logging in ----
 
 fn cancel_flag(s: Service) -> &'static AtomicBool {
-    static FLAGS: [AtomicBool; 5] = [AtomicBool::new(false), AtomicBool::new(false), AtomicBool::new(false), AtomicBool::new(false), AtomicBool::new(false)];
+    static FLAGS: [AtomicBool; 6] = [const { AtomicBool::new(false) }; 6];
     &FLAGS[s as usize]
 }
 
@@ -374,7 +381,7 @@ fn loopback_of(s: Service) -> Loopback {
             scope: "https://www.googleapis.com/auth/youtube.force-ssl", extra: &[("access_type", "offline"), ("prompt", "consent")],
         },
         Service::StreamElements => Loopback { authorize: "https://api.streamelements.com/oauth2/authorize", port: 53683, host: "localhost", path: "/streamelements", scope: "channel:read activities:read tips:read", extra: &[] },
-        _ => Loopback { authorize: "https://streamlabs.com/api/v2.0/authorize", port: 53683, host: "localhost", path: "/streamlabs", scope: "donations.read socket.token", extra: &[] },
+        Service::Twitch | Service::BuyMeACoffee | Service::Streamlabs => Loopback { authorize: "https://streamlabs.com/api/v2.0/authorize", port: 53683, host: "localhost", path: "/streamlabs", scope: "donations.read socket.token", extra: &[] },
     }
 }
 
@@ -467,9 +474,38 @@ async fn loopback_login(app: &AppHandle, s: Service) -> Result<Tokens, String> {
 pub async fn auth_login(app: AppHandle, service: String) -> Result<(), String> {
     let s = Service::parse(&service)?;
     cancel_flag(s).store(false, Ordering::SeqCst);
-    let t = if s == Service::Twitch { twitch_login(&app).await? } else { loopback_login(&app, s).await? };
+    let t = match s {
+        Service::Twitch => twitch_login(&app).await?,
+        Service::BuyMeACoffee => return Err("Buy Me a Coffee connects with a token: paste it in Settings.".into()),
+        _ => loopback_login(&app, s).await?,
+    };
     save_tokens(s, Some(&t));
     log(s.key(), "logged in");
+    changed(&app, s, true);
+    Ok(())
+}
+
+/// Saves a token the user pasted, for services without OAuth (only Buy Me a Coffee). The token is
+/// tried once first, so a typo is caught here instead of showing up later as a silent failure.
+#[tauri::command]
+pub async fn auth_set_token(app: AppHandle, service: String, token: String) -> Result<(), String> {
+    let s = Service::parse(&service)?;
+    if s != Service::BuyMeACoffee {
+        return Err("This service logs in through the browser.".into());
+    }
+    let token: String = token.trim().trim_start_matches("Bearer ").chars().filter(|c| !c.is_whitespace()).collect();
+    if token.len() < 20 {
+        return Err("That doesn't look like a Buy Me a Coffee token. Copy the whole token and try again.".into());
+    }
+    let u = checked_url("https://developers.buymeacoffee.com/api/v1/supporters?page=1")?;
+    let reply = send("GET", &u, &HashMap::new(), None, Some(("Authorization", &s.header("", &token)))).await?;
+    match reply.status {
+        200..=299 | 404 => {} // 404: BMC answers "no supporters yet" this way on brand-new pages.
+        401 | 403 => return Err("Buy Me a Coffee didn't accept that token. Make a new one and paste it again.".into()),
+        code => return Err(format!("Buy Me a Coffee answered with error {code}. Try again in a minute.")),
+    }
+    save_tokens(s, Some(&Tokens { access: token, refresh: None, expires_at: never() }));
+    log(s.key(), "connected with a token");
     changed(&app, s, true);
     Ok(())
 }
@@ -509,7 +545,7 @@ pub struct AuthState { logged_in: bool, configured: bool }
 #[tauri::command]
 pub fn auth_state(service: String) -> Result<AuthState, String> {
     let s = Service::parse(&service)?;
-    Ok(AuthState { logged_in: load_tokens(s).is_some(), configured: creds(s).is_some() })
+    Ok(AuthState { logged_in: load_tokens(s).is_some(), configured: s == Service::BuyMeACoffee || creds(s).is_some() })
 }
 
 /// Which platforms this copy has a built-in login for (shown in Settings).

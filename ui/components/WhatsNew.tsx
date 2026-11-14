@@ -1,53 +1,46 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { updateSettings, useStore } from '../lib/store'
-import { Icon } from './Icons'
+import { BmcLogo, Icon } from './Icons'
 import type { SettingsFocus } from './Settings'
 
 /**
- * What this version adds. Update this list for every release: it shows once, on the first start
- * of a new version (or of a new install), until the user clicks "Cool!".
+ * What changed in THIS version only. Replace the whole list for every release (never append to the
+ * previous one), so the window stays short. It shows once, on the first start of a new version (or
+ * of a new install), until the user clicks "Cool!".
  */
 interface NewThing {
   icon: ReactNode
   title: string
   text: string
+  /** A fix rather than something new; it gets a small "Fixed" label. */
+  fixed?: boolean
   /** Where "Show me" goes: a place in Settings, or the commands list. */
   show?: SettingsFocus | 'commands'
 }
 
 const NEW_THINGS: NewThing[] = [
   {
+    icon: <BmcLogo size={20} />,
+    title: 'Buy Me a Coffee',
+    text: 'Tips, memberships and shop sales from your Buy Me a Coffee page now pop up in chat and in Recent events. When a member renews, you see how many months they have supported you. Connect it in Settings with one token.',
+    show: { cat: 'connections', target: 'bmc-settings' }
+  },
+  {
+    icon: <Icon.events />,
+    title: 'Event pop-ups',
+    text: 'New subs, gifts, cheers, raids and follows rise out of the message box, stay for as long as you like, then slide back down. Hover one to keep it, click it to close it.',
+    show: { cat: 'chat', target: 'popup-settings' }
+  },
+  {
     icon: <Icon.bolt />,
-    title: 'Wobbly window',
-    text: 'Inspired by KDE Plasma on Linux: turn it on and the window bends like jelly while you drag it, then settles when you let go. A slider sets how much it wobbles.',
-    show: { cat: 'appearance', target: 'window-settings' }
+    title: 'Test alerts while offline',
+    text: 'Test triggers from Streamer.bot and test alerts from StreamElements or Streamlabs now show up in Recent events and chat with a TEST tag. They are never saved, so they are gone after a restart, or right away with Clear → Clear tests.'
   },
   {
-    icon: <Icon.palette />,
-    title: 'Two new skins: Kanagawa and Sweet',
-    text: 'Two favourites from the Linux community take the place of Nord and Gruvbox.',
-    show: { cat: 'appearance', target: 'skins-settings' }
-  },
-  {
-    icon: <Icon.gem />,
-    title: 'Gift bombs, Power-ups and badges',
-    text: 'A gift bomb lists every sub and who got it, custom Power-ups show their name, Twitch gifts, Power-ups and Hype Trains are Twitch purple, and event badges have small animated icons.'
-  },
-  {
-    icon: <Icon.pin />,
-    title: 'The window stays where you put it',
-    text: 'Its size, position, monitor and maximized state are kept for the next start. If that monitor is not connected, the window opens on your main monitor instead.'
-  },
-  {
-    icon: <Icon.users />,
-    title: 'Channel stats in the title bar',
-    text: 'Followers and subscribers now sit in the middle of the title bar, and OBS stats moved under the message box, next to the clock.',
-    show: { cat: 'app', target: 'stats-settings' }
-  },
-  {
-    icon: <Icon.palette />,
-    title: 'A cleaner look',
-    text: 'The window edge is as thin as a normal window, and the clock and OBS stats under the message box now look just like the channel stats in the title bar, in every skin.'
+    icon: <Icon.check />,
+    title: 'Your own gifts and redemptions are real again',
+    text: 'Things you do on your own channel, like gifting a sub, were wrongly tagged TEST. Only real test alerts get the tag now.',
+    fixed: true
   }
 ]
 
@@ -79,7 +72,7 @@ export function WhatsNew({ onSettings, onCommands }: { onSettings(f: SettingsFoc
             <li key={t.title}>
               <span className="wn-icon" aria-hidden="true">{t.icon}</span>
               <div className="wn-text">
-                <b>{t.title}</b>
+                <b>{t.title}{t.fixed && <span className="wn-kind">Fixed</span>}</b>
                 <p>{t.text}</p>
               </div>
               {t.show && <button className="btn ghost sm" onClick={() => show(t)}>Show me</button>}

@@ -1,6 +1,7 @@
 import { Socket as WebSocket } from './socket'
-import type { ActionResult, SbAction, SbCommand, StreamerbotState } from '../shared/types'
+import type { ActionResult, SbAction, SbCommand, StreamerbotState, StreamEvent } from '../shared/types'
 import { core } from './core'
+import { SB_TEST_EVENTS, sbTestEvent } from './streamerbot-tests'
 import { log } from './log'
 import { backoff } from './net'
 import { store } from './store'
@@ -34,7 +35,7 @@ export class StreamerbotLink {
   private pending = new Map<string, (msg: any) => void>()
   private state: StreamerbotState = { status: 'off', actions: [], commands: [] }
 
-  constructor(private send: (s: StreamerbotState) => void) {}
+  constructor(private send: (s: StreamerbotState) => void, private onTest: (e: StreamEvent) => void = () => {}) {}
 
   get(): StreamerbotState {
     return this.state
@@ -132,7 +133,10 @@ export class StreamerbotLink {
       }
       // Something changed in Streamer.bot: read the lists again, once things settle.
       const source = text(msg?.event?.source).toLowerCase()
-      if (source === 'application' && CHANGE_EVENTS.includes(text(msg?.event?.type))) this.refreshSoon(run)
+      if (source === 'application' && CHANGE_EVENTS.includes(text(msg?.event?.type))) return this.refreshSoon(run)
+      // A test trigger fired in Streamer.bot: it shows in the Events list until the app restarts.
+      const test = source ? sbTestEvent(source, text(msg?.event?.type), msg?.data) : null
+      if (test) this.onTest(test)
     })
     ws.on('error', () => {})
     ws.on('close', () => {
@@ -164,18 +168,33 @@ export class StreamerbotLink {
     if (run === this.run) this.poll = setInterval(() => void this.refresh(run), REFRESH_MS)
   }
 
-  /** Asks Streamer.bot to say when actions or commands change. */
+  /** Asks Streamer.bot to say when actions or commands change, and when a test trigger fires. */
   private async subscribe(run: number): Promise<void> {
     const list = await this.request('GetEvents')
     if (run !== this.run) return
-    // Use the category's name exactly as this Streamer.bot spells it.
     const events: Record<string, unknown> = list?.events && typeof list.events === 'object' ? list.events : {}
-    const key = Object.keys(events).find((k) => k.toLowerCase() === 'application') ?? 'Application'
-    const offered = Array.isArray(events[key]) ? (events[key] as unknown[]).map(text) : []
-    const wanted = offered.length ? CHANGE_EVENTS.filter((e) => offered.some((o) => o.toLowerCase() === e.toLowerCase())) : CHANGE_EVENTS
-    if (!wanted.length) return
-    const r = await this.request('Subscribe', { events: { [key]: wanted } })
-    if (r?.status !== 'ok') log('streamerbot', `could not subscribe to changes (${text(r?.error) || 'no answer'}); the lists refresh every minute instead`)
+    /** The category's events this Streamer.bot offers, spelled exactly as it spells them. */
+    const pick = (category: string, names: string[], ifUnknown: boolean): [string, string[]] => {
+      const key = Object.keys(events).find((k) => k.toLowerCase() === category.toLowerCase())
+      const offered = key && Array.isArray(events[key]) ? (events[key] as unknown[]).map(text) : []
+      if (!offered.length) return [key ?? category, ifUnknown ? names : []]
+      return [key!, names.map((n) => offered.find((o) => o.toLowerCase() === n.toLowerCase())).filter((o): o is string => !!o)]
+    }
+    const [appKey, app] = pick('Application', CHANGE_EVENTS, true)
+    if (app.length) {
+      const r = await this.request('Subscribe', { events: { [appKey]: app } })
+      if (r?.status !== 'ok') log('streamerbot', `could not subscribe to changes (${text(r?.error) || 'no answer'}); the lists refresh every minute instead`)
+    }
+    if (run !== this.run) return
+    // Test triggers, asked for separately so an older Streamer.bot refusing them can't stop the above.
+    const tests: Record<string, string[]> = {}
+    for (const [category, names] of Object.entries(SB_TEST_EVENTS)) {
+      const [key, wanted] = pick(category, names, false)
+      if (wanted.length) tests[key] = wanted
+    }
+    if (!Object.keys(tests).length) return
+    const r = await this.request('Subscribe', { events: tests })
+    if (r?.status !== 'ok') log('streamerbot', `could not subscribe to test triggers (${text(r?.error) || 'no answer'})`)
   }
 
   private refreshSoon(run: number): void {

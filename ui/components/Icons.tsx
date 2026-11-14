@@ -3,6 +3,7 @@ import type { Platform } from '../../shared/types'
 import obsLogo from '../../assets/obs.webp'
 import sbLogo from '../../assets/streamerbot.webp'
 import appLogo from '../../assets/icon.png'
+import bmcLogo from '../../assets/buymeacoffee.png'
 
 function Svg({ children, size = 18 }: { children: ReactNode; size?: number }): JSX.Element {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{children}</svg>
@@ -22,6 +23,11 @@ export const ObsLogo = ({ size = 18 }: { size?: number }): JSX.Element => (
 /** Streamer.bot's logo. */
 export const StreamerbotLogo = ({ size = 18 }: { size?: number }): JSX.Element => (
   <img className="logo-img" src={sbLogo} width={size} height={size} alt="" draggable={false} />
+)
+
+/** Buy Me a Coffee's official logo (from its brand kit), on its own yellow. */
+export const BmcLogo = ({ size = 18 }: { size?: number }): JSX.Element => (
+  <img className="logo-img bmc-logo" src={bmcLogo} width={size} height={size} alt="" draggable={false} />
 )
 
 /** This app's own icon. */

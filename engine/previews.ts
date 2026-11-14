@@ -1,5 +1,5 @@
 import { previewTarget, type PreviewTarget } from '../shared/parts'
-import type { LinkPreview, Platform, StreamEvent } from '../shared/types'
+import type { LinkPreview } from '../shared/types'
 import { log } from './log'
 import { fetchJson, message } from './net'
 import { fetchKickClip } from './platforms/kick/discovery'
@@ -87,72 +87,6 @@ export class Previews {
         return this.twitchClip(t.id)
       case 'kick-clip':
         return kickClipPreview(await fetchKickClip(t.id))
-    }
-  }
-}
-
-export interface NewClip { id: string; createdAt: number; preview: LinkPreview }
-
-const CLIP_CHECK_MS = 60000
-/** Clips made this long before the app connected still count, to allow for clocks that differ. */
-const CLOCK_SLACK_MS = 2 * 60 * 1000
-
-/**
- * Notices new clips of the streamer's channel, by whoever made them, and reports each one once
- * as a 'clip' event. Neither Twitch nor Kick announces clips, so the list is checked regularly.
- */
-export class ClipWatch {
-  private timer: ReturnType<typeof setInterval> | null = null
-  private since = 0
-  private seen = new Set<string>()
-  private failures = 0
-  private skip = 0
-
-  constructor(
-    private platform: Platform,
-    private list: (since: number) => Promise<NewClip[]>,
-    private event: (e: StreamEvent) => void,
-    private every = CLIP_CHECK_MS
-  ) {}
-
-  start(): void {
-    this.stop()
-    this.since = Date.now()
-    this.failures = 0
-    this.skip = 0
-    this.timer = setInterval(() => void this.check(), this.every)
-  }
-
-  stop(): void {
-    if (this.timer) clearInterval(this.timer)
-    this.timer = null
-  }
-
-  /** Checks now: also used shortly after the streamer makes a clip from the app. */
-  async check(force = false): Promise<void> {
-    if (!this.timer) return
-    // After failures, checks thin out to one every 2, 4, 8 and at most 16 minutes.
-    if (!force && this.skip > 0) {
-      this.skip--
-      return
-    }
-    let clips: NewClip[]
-    try {
-      clips = await this.list(this.since - CLOCK_SLACK_MS)
-      this.failures = 0
-    } catch (err) {
-      this.failures++
-      this.skip = Math.min(16, 2 ** this.failures) - 1
-      if (this.failures === 3) log(this.platform, `clip check keeps failing: ${message(err)}`)
-      return
-    }
-    for (const c of [...clips].sort((a, b) => a.createdAt - b.createdAt)) {
-      if (this.seen.has(c.id) || !(c.createdAt >= this.since - CLOCK_SLACK_MS)) continue
-      this.seen.add(c.id)
-      this.event({
-        id: `${this.platform}-clip-${c.id}`, platform: this.platform, ts: Date.now(), type: 'clip',
-        actor: c.preview.clippedBy, text: c.preview.clippedBy ? 'made a clip' : 'New clip', preview: c.preview, details: {}
-      })
     }
   }
 }

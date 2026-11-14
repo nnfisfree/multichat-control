@@ -6,7 +6,7 @@ import type { SecretState } from '../shared/types'
  * Everything the engine asks of the Rust core, in one place. Logins and tokens live in the core:
  * the engine names a service and the core adds the token, so no token ever reaches this page.
  */
-export type Service = 'twitch' | 'kick' | 'youtube' | 'streamelements' | 'streamlabs'
+export type Service = 'twitch' | 'kick' | 'youtube' | 'streamelements' | 'streamlabs' | 'buymeacoffee'
 
 export interface Reply { status: number; body: string }
 
@@ -19,6 +19,8 @@ export const core = {
     invoke<Reply>('net_fetch', { method, url, headers, body }),
 
   login: (service: Service) => invoke<void>('auth_login', { service }),
+  /** Saves a pasted token (Buy Me a Coffee has no OAuth). The core tries it before keeping it. */
+  setToken: (service: Service, token: string) => invoke<void>('auth_set_token', { service, token }),
   cancelLogin: (service: Service) => invoke<void>('auth_cancel', { service }),
   logout: (service: Service) => invoke<void>('auth_logout', { service }),
   authState: (service: Service) => invoke<{ loggedIn: boolean; configured: boolean }>('auth_state', { service }),

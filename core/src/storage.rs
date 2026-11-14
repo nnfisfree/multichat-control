@@ -12,7 +12,7 @@ use std::sync::OnceLock;
 fn allowed(name: &str) -> bool {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     let re = PATTERN.get_or_init(|| {
-        Regex::new(r"^(settings\.json|events\.json|events-removed\.json|chat-history/stream-\d+\.jsonl|emote-cache/[A-Za-z0-9_-]{1,80}\.json)$").unwrap()
+        Regex::new(r"^(settings\.json|events\.json|events-removed\.json|bmc-state\.json|chat-history/stream-\d+\.jsonl|emote-cache/[A-Za-z0-9_-]{1,80}\.json)$").unwrap()
     });
     re.is_match(name)
 }

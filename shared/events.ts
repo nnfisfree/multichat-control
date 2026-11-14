@@ -4,7 +4,7 @@ import type { ChatEventGroup, ChatMessage, EventType, StreamEvent } from './type
 export const EVENT_BADGE: Record<EventType, string> = {
   redemption: 'CP', sub: 'SUB', gift: 'GIFT', cheer: 'BITS', bits: 'BITS', raid: 'RAID', powerup: 'PWR', follow: 'FLW',
   paid: 'PAID', hypetrain: 'HYPE', poll: 'POLL', prediction: 'PRED', goal: 'GOAL', ad: 'AD', shoutout: 'SO',
-  moderation: 'MOD', stream: 'LIVE', donation: 'TIP', announcement: 'ANN', clip: 'CLIP', other: 'INFO'
+  moderation: 'MOD', stream: 'LIVE', donation: 'TIP', announcement: 'ANN', other: 'INFO'
 }
 
 /** A finished stream says OFF rather than LIVE. */
@@ -13,7 +13,7 @@ export const eventBadge = (e: Pick<StreamEvent, 'type' | 'text'>): string =>
 
 const GROUP: Partial<Record<EventType, ChatEventGroup>> = {
   sub: 'subs', gift: 'gifts', cheer: 'cheers', raid: 'raids', redemption: 'redemptions',
-  powerup: 'powerups', follow: 'follows', paid: 'paid', donation: 'donations', hypetrain: 'hype', clip: 'clips'
+  powerup: 'powerups', follow: 'follows', paid: 'paid', donation: 'donations', hypetrain: 'hype'
 }
 
 export const chatEventGroup = (type: EventType): ChatEventGroup | undefined => GROUP[type]

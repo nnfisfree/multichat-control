@@ -76,12 +76,14 @@ export class Hub {
     this.eventIds = new Set(this.events.map((e) => e.id))
   }
 
-  /** Removes events from the list for good, such as test redemptions. */
+  /** Removes events from the list for good, such as test alerts. */
   removeEvents(ids: string[]): void {
     const gone = new Set(ids.filter((id) => typeof id === 'string'))
     if (!gone.size) return
+    // Test alerts are never saved, so they need no entry in the saved list of removed events.
+    const tests = new Set(this.events.filter((e) => e.test).map((e) => e.id))
     for (const id of gone) {
-      this.removed.add(id)
+      if (!tests.has(id)) this.removed.add(id)
       this.eventIds.delete(id)
     }
     this.events = this.events.filter((e) => !gone.has(e.id))
@@ -174,8 +176,8 @@ export class Hub {
 
   private addMessage(m: ChatMessage): void {
     this.markSpam(m)
-    // A held message isn't in chat yet, and notices aren't chat: neither goes into the history.
-    if (!m.held && m.kind !== 'system') {
+    // A held message isn't in chat yet, notices aren't chat, and test alerts are gone after a restart: none go into the history.
+    if (!m.held && m.kind !== 'system' && !m.event?.test) {
       this.noteChatter(m)
       this.recorder?.add(m)
     }
@@ -216,10 +218,11 @@ export class Hub {
    */
   private twin(e: StreamEvent): boolean {
     const actor = e.actor?.toLowerCase()
-    if (!actor) return false
+    // Buy Me a Coffee money never passes through another service, so it has no twins; tests are each their own.
+    if (!actor || e.source === 'buymeacoffee' || e.test) return false
     for (let i = this.events.length - 1, n = 0; i >= 0 && n < 800; i--, n++) {
       const o = this.events[i]
-      if ((o.source ?? '') === (e.source ?? '') || o.platform !== e.platform || sameKind(o.type) !== sameKind(e.type)) continue
+      if ((o.source ?? '') === (e.source ?? '') || o.source === 'buymeacoffee' || o.test || o.platform !== e.platform || sameKind(o.type) !== sameKind(e.type)) continue
       if (o.actor?.toLowerCase() === actor && Math.abs(o.ts - e.ts) < TWIN_MS) return true
     }
     return false
@@ -240,7 +243,12 @@ export class Hub {
     if (card) this.addMessage(card)
   }
 
-  /** How StreamElements and Streamlabs report in. */
+  /** A test alert fired from Streamer.bot. */
+  testEvent(e: StreamEvent): void {
+    this.addEvent({ ...e, test: true })
+  }
+
+  /** How StreamElements, Streamlabs and Buy Me a Coffee report in. */
   alertContext(source: AlertSource): AlertContext {
     return {
       event: (e) => this.addEvent(e),

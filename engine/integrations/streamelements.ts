@@ -17,6 +17,11 @@ const TYPES = [
 
 const lower = (v: unknown): string => String(v ?? '').toLowerCase()
 
+/** StreamElements' test (emulated) alerts. Its docs don't name the flag, so each known spelling is checked. */
+const isTest = (a: any): boolean =>
+  [a?.isMock, a?.isTest, a?.mock, a?.data?.isMock, a?.data?.isTest, a?.data?.mock].some((v) => v === true || v === 'true') ||
+  a?.activityGroup === 'test' || a?.origin === 'test'
+
 /** Turns one StreamElements activity into an event. Unknown kinds are skipped. */
 function toEvent(a: any, fallback: Platform): StreamEvent | null {
   const d = a?.data ?? {}
@@ -184,7 +189,10 @@ export class StreamElements implements AlertService {
         if (bomb && Math.abs((Date.parse(a.createdAt) || now) - bomb) < 120000) continue
       }
       const e = toEvent(a, this.platform)
-      if (e) this.ctx.event(history ? { ...e, history: true } : e)
+      if (!e) continue
+      if (history) this.ctx.event({ ...e, history: true })
+      // An emulated alert from the dashboard: shown until the app restarts, never saved.
+      else this.ctx.event(isTest(a) ? { ...e, id: `${e.id}-test-${Date.now()}`, ts: Date.now(), test: true } : e)
     }
   }
 

@@ -5,7 +5,7 @@ import { loadEmoteCache, saveEmoteCache } from '../../emotes/cache'
 import { loadTwitchExtras, toLookup } from '../../emotes/third-party'
 import { log } from '../../log'
 import { api, HttpError, message } from '../../net'
-import { ClipWatch, twitchClipPreview, type NewClip } from '../../previews'
+import { twitchClipPreview } from '../../previews'
 import { Pronouns } from '../../pronouns'
 import { store } from '../../store'
 import type { Connector, ConnectorContext } from '../connector'
@@ -54,7 +54,6 @@ export class TwitchConnector implements Connector {
   private checkTimer: ReturnType<typeof setInterval> | null = null
   private pinTimer: ReturnType<typeof setInterval> | null = null
   private pinState = ''
-  private clips: ClipWatch
   /** Set when the login lacks the permissions for held messages and suspicious users. */
   private relogin: string | undefined
   /** Suspicious-user warnings waiting a moment for their chat message to arrive. */
@@ -62,7 +61,6 @@ export class TwitchConnector implements Connector {
 
   constructor(private ctx: ConnectorContext) {
     this.pronouns = new Pronouns((login, label) => ctx.pronoun(login, label))
-    this.clips = new ClipWatch('twitch', (since) => this.newClips(since), (e) => ctx.event(e))
   }
 
   channelLogin(): string | undefined {
@@ -74,16 +72,6 @@ export class TwitchConnector implements Connector {
     if (!this.loggedIn) return null
     const r = await this.helix('GET', '/clips', { id: slug })
     return twitchClipPreview(r?.data?.[0])
-  }
-
-  /** Clips of this channel made since a time, by anyone. */
-  private async newClips(since: number): Promise<NewClip[]> {
-    if (!this.userId) return []
-    const r = await this.helix('GET', '/clips', { broadcaster_id: this.userId, started_at: new Date(since).toISOString(), first: '20' })
-    return (r?.data ?? []).flatMap((c: any) => {
-      const preview = twitchClipPreview(c)
-      return preview ? [{ id: String(c.id), createdAt: Date.parse(c.created_at), preview }] : []
-    })
   }
 
   /** The core found the login gone (revoked or expired): stop and ask for a new one. */
@@ -143,8 +131,6 @@ export class TwitchConnector implements Connector {
     if (this.pinTimer) clearInterval(this.pinTimer)
     this.pinTimer = setInterval(() => void this.refreshPin(), 20000)
     void this.refreshPin()
-    // Twitch sends no notice for new clips either.
-    this.clips.start()
     // Ready before the picker is first opened.
     void this.refreshList()
     void this.loadHistory()
@@ -377,7 +363,6 @@ export class TwitchConnector implements Connector {
     this.checkTimer = null
     if (this.pinTimer) clearInterval(this.pinTimer)
     this.pinTimer = null
-    this.clips.stop()
     for (const w of this.suspicious.values()) clearTimeout(w.timer)
     this.suspicious.clear()
     this.sub?.stop()
@@ -662,8 +647,6 @@ export class TwitchConnector implements Connector {
     const r = await runTwitchAction(this.helix, this.userId, actionId, args)
     if (r.raid !== undefined) this.setRaid(r.raid)
     if (actionId === 'reward.create') await this.loadManageable()
-    // Twitch needs a few seconds to finish a new clip, so look for it soon rather than in a minute.
-    if (actionId === 'clip' && r.ok) for (const wait of [15000, 35000]) setTimeout(() => void this.clips.check(true), wait)
     return r
   }
 }

@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import {
-  ALERT_SOURCES, PLATFORMS, type AlertSource, type Bootstrap, type HubBatch, type NnfApi, type ObsState, type StreamerbotState,
+  ALERT_SOURCES, PLATFORMS, type Bootstrap, type PickedAlertSource, type HubBatch, type NnfApi, type ObsState, type StreamerbotState,
   type PanelBounds, type Platform, type Settings, type UpdateState
 } from '../shared/types'
 import { ChatLog } from './chat-log'
@@ -10,6 +10,7 @@ import { core, onAuthChanged } from './core'
 import { DEMO_STREAMERBOT, DemoConnector, demoHistory, demoPreview, startDemoObs } from './demo'
 import { loadEvents, loadRemoved, saveEvents, saveRemoved } from './event-log'
 import { Hub } from './hub'
+import { BuyMeACoffee } from './integrations/buymeacoffee'
 import { StreamElements } from './integrations/streamelements'
 import { Streamlabs } from './integrations/streamlabs'
 import { log } from './log'
@@ -80,6 +81,10 @@ export async function startEngine(): Promise<void> {
     streamelements: new StreamElements(hub.alertContext('streamelements')),
     streamlabs: new Streamlabs(hub.alertContext('streamlabs'))
   }
+  // Buy Me a Coffee runs beside the picked service whenever a token is saved. It needs nobody's
+  // approval, so ALERTS_READY doesn't hold it back.
+  const bmc = new BuyMeACoffee(hub.alertContext('buymeacoffee'), demo)
+  void bmc.start().catch(() => {})
   const startAlerts = async (): Promise<void> => {
     for (const s of ALERT_SOURCES) {
       if (ALERTS_READY && s === store.settings.alertService && !demo) await alerts[s].start().catch(() => {})
@@ -92,10 +97,14 @@ export async function startEngine(): Promise<void> {
 
   // A login the core found gone (revoked or expired) stops that connection.
   await onAuthChanged(({ service, loggedIn }) => {
+    if (service === 'buymeacoffee') {
+      if (!loggedIn) bmc.stop()
+      return
+    }
     if (loggedIn) return
     const c = connectors.get(service as Platform) as { loginEnded?: () => Promise<void> } | undefined
     if (c?.loginEnded) void c.loginEnded()
-    else if (service === store.settings.alertService) alerts[service as AlertSource].stop()
+    else if (service === store.settings.alertService) alerts[service as PickedAlertSource].stop()
   })
 
   // OBS: real stats, or invented ones in demo mode.
@@ -106,7 +115,7 @@ export async function startEngine(): Promise<void> {
   // Streamer.bot: its actions and commands, kept in step with what's set up there.
   let sbState: StreamerbotState = { status: 'off', actions: [], commands: [] }
   const sendSb = (s: StreamerbotState): void => { sbState = s; tell(sbListeners, s) }
-  const sb = new StreamerbotLink(sendSb)
+  const sb = new StreamerbotLink(sendSb, (e) => hub.testEvent(e))
   const startSb = (): void => {
     if (!demo) return sb.start()
     sendSb(store.settings.sbEnabled ? DEMO_STREAMERBOT : { status: 'off', actions: [], commands: [] })
@@ -139,6 +148,7 @@ export async function startEngine(): Promise<void> {
     }
     step('chat history', () => chatLog.flush())
     for (const s of ALERT_SOURCES) step(s, () => alerts[s].stop())
+    step('buymeacoffee', () => bmc.stop())
     step('obs', () => obs.stop())
     step('streamerbot', () => sb.stop())
     await Promise.race([hub.stopAll().catch(() => {}), new Promise((r) => setTimeout(r, 1500))])
@@ -236,11 +246,23 @@ export async function startEngine(): Promise<void> {
     },
     alerts: {
       login: async (source) => {
+        if (source === 'buymeacoffee') throw new Error('Paste your Buy Me a Coffee token to connect.')
         if (!ALERT_SOURCES.includes(source) || demo || !ALERTS_READY) throw new Error('Not available yet.')
         await alerts[source].login()
       },
-      logout: async (source) => { if (ALERT_SOURCES.includes(source)) alerts[source].logout() },
-      reconnect: async (source) => { if (ALERT_SOURCES.includes(source) && !demo) await alerts[source].start() }
+      logout: async (source) => {
+        if (source === 'buymeacoffee') bmc.logout()
+        else if (ALERT_SOURCES.includes(source)) alerts[source].logout()
+      },
+      reconnect: async (source) => {
+        if (source === 'buymeacoffee') await bmc.start()
+        else if (ALERT_SOURCES.includes(source) && !demo) await alerts[source].start()
+      },
+      connect: async (source, token) => {
+        if (source !== 'buymeacoffee') throw new Error('This service logs in through the browser.')
+        if (demo) throw new Error('Not available in demo mode.')
+        await bmc.connect(String(token ?? ''))
+      }
     },
     openExternal: async (url) => { await core.openUrl(url) },
     showPanel: (b: PanelBounds) => invoke('panel_show', { bounds: b, channel: twitch?.channelLogin() ?? null }),

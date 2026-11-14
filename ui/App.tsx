@@ -6,6 +6,7 @@ import { Composer, type Pop } from './components/Composer'
 import { ContextMenu } from './components/ContextMenu'
 import { EmotePicker } from './components/EmotePicker'
 import { EventsDrawer } from './components/EventsDrawer'
+import { EventPopups } from './components/EventPopups'
 import { UsersDrawer } from './components/UsersDrawer'
 import { UserCardPanel } from './components/UserCard'
 import { ClosePrompt } from './components/ClosePrompt'
@@ -46,6 +47,13 @@ function Main(): JSX.Element {
   const history = useStore((s) => s.history)
   const all = useMemo(() => (history.length ? [...history, ...messages] : messages), [history, messages])
   const shown = useFiltered(all, tab, settings.chatEvents)
+
+  // Menus that live outside App (the Connections menu) open a Settings section this way.
+  useEffect(() => {
+    const open = (e: Event): void => setSettingsOpen((e as CustomEvent<SettingsFocus>).detail ?? true)
+    window.addEventListener('nnf:open-settings', open)
+    return () => window.removeEventListener('nnf:open-settings', open)
+  }, [])
 
   const openEvents = useCallback((open: boolean) => {
     setEvents(open)
@@ -128,6 +136,7 @@ function Main(): JSX.Element {
           <ChatList key={tab} messages={shown} showPlatform={tab === 'all'} showTime={settings.showTimestamps} onMenu={onMenu} />
           <EventsDrawer open={events} onClose={() => openEvents(false)} />
           <UsersDrawer open={users} onClose={() => openUsers(false)} onUser={onUser} onCard={(platform, u, x, y) => setCard({ platform, user: u, x, y })} />
+          <EventPopups />
           {toast && <div className={toast.ok ? 'toast good' : 'toast bad'} role="status">{toast.message ?? (toast.ok ? 'Done.' : 'Failed.')}</div>}
         </main>
         <Composer tab={tab} pop={pop} setPop={(p) => { setPop(p); if (p) { openEvents(false); openUsers(false) } }} replyTo={replyTo} clearReply={() => setReplyTo(null)} insert={insert} onSettings={() => setSettingsOpen(true)} onObsSettings={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} onOpenUser={(u) => setCard({ platform: 'twitch', user: u, x: window.innerWidth / 2 - 210, y: 120 })} />
