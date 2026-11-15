@@ -15,7 +15,7 @@ export const statusText = (s?: ConnectionState): string => (s ? `${STATUS_TEXT[s
 
 function dotClass(s?: ConnectionState): string {
   if (!s) return 'off'
-  // Waiting for a live stream still means logged in and ready, so it counts as connected.
+  // waiting for a stream to go live still means logged in and ready, so count it as connected
   if (s.status === 'connected' || s.status === 'waiting') return 'good'
   if (s.status === 'error') return 'bad'
   if (s.status === 'reconnecting' || s.status === 'connecting' || s.status === 'authorizing') return 'warn'

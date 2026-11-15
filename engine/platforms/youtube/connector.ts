@@ -7,9 +7,9 @@ import { normalize } from './normalize'
 import { GRPC_ENDED, GRPC_UNAUTHENTICATED, openStream } from './stream'
 
 const API = 'https://www.googleapis.com/youtube/v3'
-/** Checking for a broadcast costs quota, so offline checks stay slow. */
+// Looking for a live broadcast costs quota, so keep offline checks slow.
 const OFFLINE_CHECK_MS = 90000
-/** Older items are history replayed on connect, not new chat. */
+// anything older than this is history being replayed on connect, not new chat
 const REPLAY_GRACE_MS = 30000
 
 export class YouTubeConnector implements Connector {
@@ -23,13 +23,13 @@ export class YouTubeConnector implements Connector {
 
   constructor(private ctx: ConnectorContext) {}
 
-  /** A request as the user's YouTube account; the core adds and renews the token. */
+  /** Authenticated Data API call. Rust adds and refreshes the token. */
   private async api(method: string, path: string, query: Record<string, string>, body?: unknown): Promise<any> {
     if (!this.loggedIn) throw new Error('Not logged in to YouTube.')
     return api('youtube', method, `${API}${path}?${new URLSearchParams(query)}`, body)
   }
 
-  /** The core found the login gone (revoked or expired): stop and ask for a new one. */
+  /** Rust found the token revoked or expired: stop and ask for a new login. */
   async loginEnded(): Promise<void> {
     if (!this.loggedIn) return
     this.loggedIn = false
@@ -46,13 +46,13 @@ export class YouTubeConnector implements Connector {
     const me = await this.api('GET', '/channels', { part: 'snippet', mine: 'true' })
     const mine = me.items?.[0]?.snippet
     this.channelName = mine?.title ?? 'YouTube'
-    // Viewers tag a channel by its @handle (customUrl), or sometimes by its name.
+    // viewers tag a channel by its @handle (customUrl), sometimes by its plain name
     this.mentions = [String(mine?.customUrl ?? '').replace(/^@/, ''), mine?.title ?? ''].filter(Boolean)
     void this.loop(++this.run)
     void this.loadPastBroadcasts()
   }
 
-  /** YouTube keeps no event history outside a live chat, but it does list past broadcasts. */
+  /** No event history outside a live chat, but past broadcasts are listed. */
   private async loadPastBroadcasts(): Promise<void> {
     const r = await this.api('GET', '/liveBroadcasts', { part: 'snippet', broadcastStatus: 'completed', broadcastType: 'all', maxResults: '20' }).catch(() => null)
     for (const b of r?.items ?? []) {
@@ -64,7 +64,7 @@ export class YouTubeConnector implements Connector {
     }
   }
 
-  /** Channel picture and age for the user card (1 quota unit). YouTube shares nothing about follows. */
+  /** Avatar and account age (1 quota unit). YouTube doesn't expose follows. */
   async profile(user: UserEntry): Promise<UserProfile> {
     const r = await this.api('GET', '/channels', { part: 'snippet', id: user.id }).catch(() => null)
     const s = r?.items?.[0]?.snippet
@@ -79,10 +79,9 @@ export class YouTubeConnector implements Connector {
   private broadcastId = ''
   private viewerCache: { at: number; info: UsersInfo } | null = null
 
-  /** YouTube lists no viewers, only how many are watching. Checked at most once a minute (1 quota unit). */
   /**
-   * Subscribers. YouTube rounds the count to three significant figures. Members can't be counted:
-   * Google only opens that list to creators it approves.
+   * YouTube rounds subscriber counts to 3 significant figures. Members can't be counted at all,
+   * Google only opens that endpoint to creators it approves.
    */
   async stats(): Promise<ChannelStats> {
     const s = (await this.api('GET', '/channels', { part: 'statistics', mine: 'true' })).items?.[0]?.statistics
@@ -90,6 +89,7 @@ export class YouTubeConnector implements Connector {
     return Number.isFinite(n) && s?.subscriberCount !== undefined ? { subscribers: n, rounded: true } : {}
   }
 
+  /** No viewer list, only a count. Cached for a minute (1 quota unit per call). */
   async users(): Promise<UsersInfo> {
     if (!this.liveChatId || !this.broadcastId) return { live: false }
     if (this.viewerCache && Date.now() - this.viewerCache.at < 60000) return this.viewerCache.info
@@ -107,7 +107,7 @@ export class YouTubeConnector implements Connector {
     this.liveChatId = ''
   }
 
-  /** Waits for a broadcast, follows its chat until it ends, then waits again. */
+  /** Waits for a broadcast, follows its chat until it ends, repeat. */
   private async loop(run: number): Promise<void> {
     while (run === this.run) {
       try {
@@ -163,7 +163,7 @@ export class YouTubeConnector implements Connector {
           },
           onEnd: (err) => {
             if (err?.code === GRPC_ENDED) resolve('ended')
-            // The core already tried renewing the login; if it's gone, the app is told separately.
+            // Rust already tried a refresh. If the login is really gone we hear about it separately.
             else if (err?.code === GRPC_UNAUTHENTICATED) resolve(this.loggedIn ? 'retry' : 'ended')
             else {
               if (err) failures++
@@ -179,7 +179,7 @@ export class YouTubeConnector implements Connector {
     }
   }
 
-  /** REST fallback for networks that block gRPC. Costs more quota, so it uses YouTube's own interval. */
+  /** REST fallback for networks that block gRPC. Costs more quota, so we respect YouTube's polling interval. */
   private async poll(liveChatId: string, run: number, pageToken: string | undefined, since: number): Promise<void> {
     while (run === this.run) {
       const r = await this.api('GET', '/liveChat/messages', { liveChatId, part: 'id,snippet,authorDetails', ...(pageToken ? { pageToken } : {}) })
@@ -214,7 +214,7 @@ export class YouTubeConnector implements Connector {
   }
 
   async send(text: string): Promise<void> {
-    // YouTube's limit is 200 characters, and failing clearly beats silently cutting a message.
+    // 200 char limit. Failing loudly beats silently cutting the message.
     if ([...text].length > 200) throw new Error('YouTube messages are limited to 200 characters.')
     await this.api('POST', '/liveChat/messages', { part: 'snippet' }, {
       snippet: { liveChatId: this.chatId(), type: 'textMessageEvent', textMessageDetails: { messageText: text } }

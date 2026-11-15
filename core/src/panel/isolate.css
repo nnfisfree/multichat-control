@@ -7,7 +7,7 @@ html.nnf-rewards .ReactModalPortal { position: relative; z-index: 2147483647; }
 html.nnf-rewards, html.nnf-rewards body { background: #120d5c !important; overflow: hidden !important; }
 html.nnf-rewards .nnf-root, html.nnf-rewards .nnf-fill { background: transparent !important; border-radius: 0 !important; }
 html.nnf-rewards .nnf-root .reward-center__content { background: linear-gradient(135deg, #090b3f, #120d5c 45%, #1e1180 75%, #163a9c) !important; border-radius: 0 !important; }
-/* Anything that makes a wrapper the reference box for "fixed" would pull the popover out of view. */
+/* anything that makes a wrapper the containing block for position: fixed would pull the popover out of view */
 html.nnf-rewards .nnf-flat { transform: none !important; translate: none !important; rotate: none !important; scale: none !important; perspective: none !important;
   will-change: auto !important; backdrop-filter: none !important; container-type: normal !important; content-visibility: visible !important;
   overflow: visible !important; contain: none !important; filter: none !important; }

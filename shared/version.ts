@@ -1,4 +1,4 @@
-/** Compares versions like 0.1.2 or v0.2.0-beta.1. Returns >0 when a is newer than b. */
+/** Compares versions like 0.1.2 or v0.2.0-beta.1. > 0 means a is newer. */
 export function compareVersions(a: string, b: string): number {
   const parse = (v: string): { nums: number[]; pre: string } => {
     const [main, pre = ''] = v.trim().replace(/^v/i, '').split('-', 2)
@@ -10,7 +10,7 @@ export function compareVersions(a: string, b: string): number {
     const d = (x.nums[i] ?? 0) - (y.nums[i] ?? 0)
     if (d) return d
   }
-  // A full release is newer than any pre-release of the same version.
+  // a full release beats any pre-release of the same version
   if (x.pre === y.pre) return 0
   if (!x.pre) return 1
   if (!y.pre) return -1

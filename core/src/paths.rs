@@ -1,15 +1,15 @@
-//! Where the app keeps its data: `user-data` beside the exe, so the app stays portable.
+//! Data lives in `user-data` next to the exe, so the app stays portable.
 
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
 const DATA_FOLDER: &str = "user-data";
-/// The folder's name up to version 0.1.2 of the Electron app.
+/// Folder name used by the Electron app up to 0.1.2.
 const OLD_FOLDER: &str = "nnf-data";
 
 static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
-/// The folder the exe is in. Development builds use the project folder instead of core/target.
+/// Folder the exe lives in. Dev builds use the project folder instead of core/target.
 pub fn exe_dir() -> PathBuf {
     if cfg!(debug_assertions) {
         return PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
@@ -30,15 +30,15 @@ fn writable(dir: &PathBuf) -> bool {
     ok
 }
 
-/// The data folder. Development builds use a hidden `.user-data` in the project.
-/// A read-only location (such as a locked USB drive) falls back to the user's AppData.
+/// The data folder. Dev builds use a hidden `.user-data` in the project. If the exe sits somewhere
+/// read-only (e.g. a locked USB stick) we fall back to AppData.
 pub fn data_dir() -> &'static PathBuf {
     DATA_DIR.get_or_init(|| {
         let hidden = if cfg!(debug_assertions) { "." } else { "" };
         let base = exe_dir();
         let dir = base.join(format!("{hidden}{DATA_FOLDER}"));
         let old = base.join(format!("{hidden}{OLD_FOLDER}"));
-        // People updating from Electron 0.1.2 or older keep everything under the new name.
+        // people upgrading from Electron 0.1.2 or older keep everything, just renamed
         if !dir.exists() && old.exists() {
             let _ = std::fs::rename(&old, &dir);
         }
@@ -54,7 +54,7 @@ pub fn data_dir() -> &'static PathBuf {
     })
 }
 
-/// WebView2's own data (its cache and the Twitch panel's sign-in), kept inside the data folder.
+/// WebView2's own data (cache, the Twitch panel's sign-in), kept inside the data folder.
 pub fn webview_dir() -> PathBuf {
     data_dir().join("webview")
 }

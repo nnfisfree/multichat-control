@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type JSX, type ReactNo
 import { ALERT_SOURCE_LABEL, PLATFORMS, type AlertSource, PLATFORM_LABEL, type ConnectionState, type IntegrationState } from '../../shared/types'
 import { BmcLogo, Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
 import { useStore } from '../lib/store'
+import { login as startLogin } from '../lib/login'
 import { ALERTS_READY } from '../../shared/app-config'
 
 type Tone = 'good' | 'wait' | 'warn' | 'bad' | 'off'
@@ -13,7 +14,7 @@ interface Service {
   tone: Tone
   text: string
   account?: string
-  /** In use, so it counts toward "x of y connected". */
+  /** Counts toward "x of y connected". */
   tracked: boolean
   pending: boolean
   actions: { label: string; run(): Promise<unknown> }[]
@@ -24,15 +25,15 @@ const live = (s?: string): boolean => s === 'connected' || s === 'waiting' || s 
 
 function platformService(p: (typeof PLATFORMS)[number], st?: ConnectionState): Service {
   const base = { key: p, label: PLATFORM_LABEL[p], icon: <PlatformIcon platform={p} size={16} />, account: st?.account }
-  const login = { label: 'Log in', run: () => window.nnf.login(p) }
+  const login = { label: 'Log in', run: () => startLogin(p) }
   const actions = live(st?.status)
     ? [{ label: 'Reconnect', run: () => window.nnf.reconnect(p) }, { label: 'Log out', run: () => window.nnf.logout(p) }]
     : [login]
   switch (st?.status) {
     case 'connected':
-      // Connected, but a newer feature needs a fresh login: say which, and offer it.
+      // connected, but a newer feature needs a fresh login: say which and offer it
       return st.relogin
-        ? { ...base, tone: 'wait', text: 'Connected · log in again', tracked: true, pending: false, actions: [{ label: 'Log in again', run: () => window.nnf.login(p) }, ...actions], hint: st.relogin }
+        ? { ...base, tone: 'wait', text: 'Connected · log in again', tracked: true, pending: false, actions: [{ label: 'Log in again', run: () => startLogin(p) }, ...actions], hint: st.relogin }
         : { ...base, tone: 'good', text: 'Connected', tracked: true, pending: false, actions }
     case 'waiting': return { ...base, tone: 'good', text: p === 'youtube' ? 'Waiting for a live stream' : (st.detail ?? 'Waiting'), tracked: true, pending: false, actions }
     case 'connecting': return { ...base, tone: 'warn', text: 'Connecting…', tracked: true, pending: true, actions: [] }
@@ -40,7 +41,7 @@ function platformService(p: (typeof PLATFORMS)[number], st?: ConnectionState): S
     case 'reconnecting': return { ...base, tone: 'warn', text: 'Reconnecting…', tracked: true, pending: true, actions }
     case 'error': return { ...base, tone: 'bad', text: st.detail ? `Error: ${st.detail}` : 'Error', tracked: true, pending: false, actions: [{ label: 'Reconnect', run: () => window.nnf.reconnect(p) }] }
     case 'needs-login':
-      // A login that expired is still in use, so it counts as a problem rather than "off".
+      // an expired login is still in use, so it's a problem, not "off"
       return st.detail
         ? { ...base, tone: 'bad', text: 'Login expired', tracked: true, pending: false, actions: [login] }
         : { ...base, tone: 'off', text: 'Not logged in', tracked: false, pending: false, actions: [login] }
@@ -51,7 +52,7 @@ function platformService(p: (typeof PLATFORMS)[number], st?: ConnectionState): S
 function alertService(source: AlertSource, st?: IntegrationState): Service {
   const icon = source === 'buymeacoffee' ? <BmcLogo size={16} /> : <span className={`src-tag ${source}`}>{source === 'streamelements' ? 'SE' : 'SL'}</span>
   const base = { key: source, label: ALERT_SOURCE_LABEL[source], icon, account: st?.status === 'connected' && source !== 'buymeacoffee' ? st.account : undefined }
-  // Buy Me a Coffee connects with a pasted token, which lives in Settings.
+  // BMC connects with a pasted token, and that UI lives in Settings
   const login = source === 'buymeacoffee'
     ? { label: 'Connect', run: async () => { window.dispatchEvent(new CustomEvent('nnf:open-settings', { detail: { cat: 'connections', target: 'bmc-settings' } })) } }
     : { label: 'Log in', run: () => window.nnf.alerts.login(source) }
@@ -71,7 +72,7 @@ function alertService(source: AlertSource, st?: IntegrationState): Service {
   }
 }
 
-/** Everything the app connects to, in menu order. */
+/** Everything we connect to, in menu order. */
 function useServices(): Service[] {
   const statuses = useStore((s) => s.statuses)
   const integrations = useStore((s) => s.integrations)
@@ -83,8 +84,8 @@ function useServices(): Service[] {
   const sb = useStore((s) => s.streamerbot)
   const sbEnabled = useStore((s) => s.settings?.sbEnabled ?? false)
   const list = PLATFORMS.map((p) => platformService(p, statuses[p]))
-  // The rewards panel only matters once Twitch itself is logged in. Not everyone uses it, so
-  // it only counts toward the total once it's signed in.
+  // The rewards panel only matters once Twitch is logged in. Not everyone uses it, so it only
+  // counts toward the total once it's signed in.
   if (!demo && live(statuses.twitch?.status) && panelSignedIn !== null) {
     list.splice(1, 0, {
       key: 'panel', label: 'Twitch Rewards panel', icon: <Icon.gem />, pending: false, actions: [],
@@ -94,10 +95,10 @@ function useServices(): Service[] {
     })
   }
   if (ALERTS_READY && choice !== 'none') list.push(alertService(choice, integrations[choice]))
-  // Buy Me a Coffee shows up once it's been connected (it runs beside the picked service).
+  // BMC only shows up once it's been connected (it runs next to the picked alert service)
   const bmc = integrations.buymeacoffee
   if (bmc && bmc.status !== 'off' && (bmc.status !== 'needs-login' || bmc.detail)) list.push(alertService('buymeacoffee', bmc))
-  // OBS only appears once the streamer turned it on in Settings.
+  // OBS only shows once it's turned on in Settings
   if (obsEnabled && !demo) {
     const tone: Tone = obs.status === 'connected' ? 'good' : obs.status === 'error' ? 'bad' : 'warn'
     const text = obs.status === 'connected' ? (obs.stats?.stream.active ? 'Connected · live' : 'Connected') : obs.status === 'error' ? (obs.detail ?? 'Error') : 'Waiting for OBS…'
@@ -107,7 +108,7 @@ function useServices(): Service[] {
       actions: [{ label: 'Reconnect', run: () => window.nnf.obs.reconnect() }]
     })
   }
-  // Streamer.bot, once turned on in Settings.
+  // same for Streamer.bot
   if (sbEnabled) {
     const count = sb.actions.filter((a) => a.enabled).length
     const tone: Tone = sb.status === 'connected' ? 'good' : sb.status === 'error' ? 'bad' : 'warn'
@@ -126,7 +127,7 @@ const counts = (list: Service[]): { tracked: number; up: number; pending: number
   return { tracked: tracked.length, up: tracked.filter((s) => s.tone === 'good' || s.tone === 'wait').length, pending: tracked.filter((s) => s.pending).length }
 }
 
-/** A thin bar that fills as services connect, then says how it went and fades away. */
+/** Thin progress bar while services connect, then a summary that fades out. */
 export function ConnectBar({ fallback }: { fallback?: ReactNode }): JSX.Element | null {
   const { tracked, up, pending } = counts(useServices())
   const [phase, setPhase] = useState<'hidden' | 'progress' | 'done'>(pending ? 'progress' : 'hidden')
@@ -143,8 +144,8 @@ export function ConnectBar({ fallback }: { fallback?: ReactNode }): JSX.Element 
   const label = phase === 'progress' ? `Connecting… ${settled} of ${tracked}` : allUp ? 'All connected' : `${up} of ${tracked} connected`
   const pct = Math.round((phase === 'done' ? 1 : settled / tracked) * 100)
   const text = <>{allUp && <span className="connect-check" aria-hidden="true">✓</span>}{label}</>
-  // The text is drawn twice: once over the empty track, once in a contrasting colour over the fill,
-  // clipped to the fill, so it stays readable as the bar passes under it.
+  // The label is drawn twice, once over the empty track and once in a contrasting colour clipped to
+  // the fill, so it stays readable as the fill passes underneath.
   return (
     <div className={`connect-bar ${phase}${phase === 'done' ? (allUp ? ' good' : ' warn') : ''}`} role="status" aria-live="polite" style={{ '--pct': `${pct}%` } as CSSProperties}>
       <span className="connect-fill" />
@@ -186,7 +187,7 @@ function Row({ s }: { s: Service }): JSX.Element {
   )
 }
 
-/** A status pill that opens the list of connections, each with its own actions. */
+/** Status pill that opens the connections list, each with its own actions. */
 export function ConnectionsMenu(): JSX.Element {
   const list = useServices()
   const { tracked, up, pending } = counts(list)

@@ -3,7 +3,7 @@ import { core } from '../core'
 
 const file = (key: string): string => `emote-cache/${key.replace(/[^\w-]/g, '_')}.json`
 
-/** Lists saved last session open instantly, while a fresh copy loads in the background. */
+/** Last session's list, so the picker opens instantly while a fresh copy loads. */
 export async function loadEmoteCache(key: string): Promise<Emote[] | null> {
   try {
     const text = await core.readFile(file(key))
@@ -15,6 +15,6 @@ export async function loadEmoteCache(key: string): Promise<Emote[] | null> {
 }
 
 export function saveEmoteCache(key: string, list: Emote[]): void {
-  // Only a speed-up: the live list still works without it.
+  // just a speed-up, the live list works without it
   void core.writeFile(file(key), JSON.stringify(list)).catch(() => {})
 }

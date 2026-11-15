@@ -2,9 +2,9 @@ import { useEffect, useState, type JSX } from 'react'
 import { PlatformIcon } from './Icons'
 import { useStore } from '../lib/store'
 
-/** After the countdown, the bar waits this long for Twitch to say the raid went before leaving. */
+// after the countdown, wait this long for Twitch to confirm the raid before hiding the bar
 const GRACE_MS = 20_000
-/** Twitch unlocks its Raid Now button this long after a raid starts. */
+// Twitch unlocks its Raid Now button this long after a raid starts
 const RAID_NOW_AFTER_MS = 10_000
 
 const clock = (ms: number): string => {
@@ -20,9 +20,9 @@ const EyeIcon = (): JSX.Element => (
 )
 
 /**
- * An outgoing Twitch raid during Twitch's 90-second countdown, above the pinned message: who is
- * being raided, what they play and for how many viewers, with the time left, Raid Now (unlocked
- * after Twitch's first 10 seconds) and Cancel.
+ * Our outgoing raid during Twitch's 90s countdown, above the pinned message: who we're raiding,
+ * what they're playing and for how many viewers, time left, Raid Now (unlocks after Twitch's first
+ * 10 seconds) and Cancel.
  */
 export function RaidBar(): JSX.Element | null {
   const raid = useStore((s) => s.raid)

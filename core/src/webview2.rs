@@ -1,10 +1,10 @@
-//! The app draws its window with Microsoft Edge WebView2, which is part of Windows 10 and 11.
-//! On the rare PC without it, the app says so plainly and offers Microsoft's free installer,
-//! instead of failing to start without a word.
+//! The window is drawn by Edge WebView2, which ships with Windows 10 and 11. On the odd machine
+//! without it we say so plainly and offer Microsoft's installer, instead of failing to start
+//! without a word.
 
-/// Microsoft's direct download of the WebView2 installer (the "Evergreen Bootstrapper").
+/// Microsoft's direct link to the WebView2 Evergreen Bootstrapper.
 const INSTALLER: &str = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
-/// WebView2's product id in the registry, as Microsoft documents for this check.
+/// WebView2's client id in the registry, per Microsoft's docs for this check.
 const CLIENT: &str = r"Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
 
 #[cfg(windows)]
@@ -17,7 +17,7 @@ mod win {
         s.encode_utf16().chain(std::iter::once(0)).collect()
     }
 
-    /// The installed version under one registry key, if any.
+    /// Installed version under one registry key, if any.
     pub fn version(root: HKEY, key: &str) -> Option<String> {
         let (key, value) = (wide(key), wide("pv"));
         let mut buf = [0u16; 64];
@@ -52,7 +52,7 @@ mod win {
 
 const TITLE: &str = "Multichat Control";
 
-/// True when WebView2 is installed. Development builds can pretend it isn't, to test the message.
+/// Dev builds can pretend it's missing, to test the message.
 #[cfg(windows)]
 fn installed() -> bool {
     if cfg!(debug_assertions) && std::env::var_os("NNF_PRETEND_NO_WEBVIEW2").is_some() {
@@ -63,7 +63,7 @@ fn installed() -> bool {
     })
 }
 
-/// Checks for WebView2 before anything else starts. Returns false when the app can't run.
+/// Runs before anything else. false means the app can't run.
 pub fn ensure() -> bool {
     #[cfg(windows)]
     if !installed() {
@@ -79,7 +79,7 @@ After installing it, start the app again.";
     true
 }
 
-/// The window couldn't start for another reason: say so instead of closing silently.
+/// Window failed to start for some other reason: say so instead of closing silently.
 pub fn failed(error: &str) {
     crate::storage::log("app", &format!("could not start: {error}"));
     #[cfg(windows)]

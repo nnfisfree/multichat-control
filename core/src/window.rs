@@ -1,7 +1,7 @@
-//! The main window's behaviour: see-through opacity, the close button, the tray icon, exiting.
+//! Main window behaviour: opacity, the close button, the tray icon, quitting.
 //!
-//! Closing is decided by the engine (it knows the "When closing the window" setting and can ask
-//! the question in the app's own style). The core only reports the request and carries it out.
+//! What closing does is decided by the engine (it knows the "When closing the window" setting and
+//! can ask in the app's own style). Rust just reports the request and carries out the answer.
 
 use crate::placement;
 use crate::storage::log;
@@ -17,7 +17,7 @@ fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window("main")
 }
 
-/// Brings the window back from the tray or the taskbar.
+/// Brings the window back from the tray or taskbar.
 pub fn show(app: &AppHandle) {
     let handle = app.clone();
     let _ = app.run_on_main_thread(move || {
@@ -30,11 +30,11 @@ pub fn show(app: &AppHandle) {
     });
 }
 
-/// Shows or hides the window, and checks Windows really did it. Tauri only acts when its own
-/// record of the window changes, and that record can drift from what is on screen (a hidden
-/// window shown by Windows itself, for one): then hide() or show() silently does nothing, which
-/// left the X button dead when it was set to the tray. Flipping the record and back makes Tauri
-/// act again. Must run on the main thread, where hide() and show() take effect at once.
+/// Shows/hides the window and checks that Windows actually did it. Tauri only acts when its own
+/// idea of the window's visibility changes, and that can drift from what's really on screen (e.g.
+/// Windows itself showing a hidden window). When it drifts, hide()/show() silently do nothing, which
+/// left the X button dead with "close to tray" on. Flipping the state and back forces Tauri to act.
+/// Must run on the main thread, where hide()/show() take effect immediately.
 fn set_shown(w: &WebviewWindow, visible: bool) {
     let flip = |v: bool| if v { w.show() } else { w.hide() };
     let _ = flip(visible);
@@ -45,7 +45,7 @@ fn set_shown(w: &WebviewWindow, visible: bool) {
     }
 }
 
-/// Sends close requests (X button, Alt+F4, the taskbar) to the engine instead of closing.
+/// Routes close requests (X button, Alt+F4, taskbar) to the engine instead of closing.
 pub fn watch_close(window: &WebviewWindow) {
     let app = window.app_handle().clone();
     let win = window.clone();
@@ -54,28 +54,27 @@ pub fn watch_close(window: &WebviewWindow) {
             api.prevent_close();
             let _ = app.emit("app:close-requested", ());
         }
-        // Maximizing, restoring and similar changes rewrite the window's style and drop
-        // see-through, so it is put back after each of them.
+        // Maximize/restore and friends rewrite the window style and drop the layered (opacity)
+        // flag, so put it back after each one.
         WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
             apply_opacity(&win);
             placement::changed(&win);
         }
         WindowEvent::Focused(_) => apply_opacity(&win),
-        // The window's place is kept for the next start.
+        // remember the placement for next start
         WindowEvent::Moved(_) => placement::changed(&win),
         _ => {}
     });
 }
 
-/// The chosen opacity, 0 to 255. Kept here so it can be put back whenever Windows loses it.
+/// Chosen opacity, 0-255. Kept here so we can reapply it whenever Windows drops it.
 static ALPHA: AtomicU8 = AtomicU8::new(255);
 
-/// The chosen opacity, 0 to 255.
 pub fn alpha() -> u8 {
     ALPHA.load(Ordering::Relaxed)
 }
 
-/// See-through window, from 5% (never fully invisible) to 100%.
+/// Window opacity, from 5% (never fully invisible) to 100%.
 #[tauri::command]
 pub fn window_opacity(app: AppHandle, value: f64) {
     let alpha = (value.clamp(MIN_OPACITY, 1.0) * 255.0).round() as u8;
@@ -85,11 +84,11 @@ pub fn window_opacity(app: AppHandle, value: f64) {
     }
 }
 
-/// Set while the wobbly window effect draws the window: the real window is then almost fully
-/// see-through (but still takes clicks) under the effect's picture.
+/// Set while the wobbly effect is drawing the window: the real window is then almost fully
+/// transparent (but still takes clicks) underneath the effect's snapshot.
 static VEILED: AtomicBool = AtomicBool::new(false);
 
-/// Sets the window's see-through level, adding the layered style if Windows dropped it.
+/// Applies the opacity, re-adding WS_EX_LAYERED if Windows dropped it.
 fn apply_opacity(w: &WebviewWindow) {
     #[cfg(windows)]
     if let Ok(hwnd) = w.hwnd() {
@@ -99,7 +98,7 @@ fn apply_opacity(w: &WebviewWindow) {
     let _ = w;
 }
 
-/// Hides the window under the wobbly effect's picture, or brings it back. It stays clickable.
+/// Hides the window under the wobbly effect's snapshot, or brings it back. Stays clickable.
 #[cfg(windows)]
 pub fn veil(hwnd: isize, on: bool) {
     VEILED.store(on, Ordering::Relaxed);
@@ -108,14 +107,14 @@ pub fn veil(hwnd: isize, on: bool) {
 
 #[cfg(windows)]
 fn apply_alpha(hwnd: isize) {
-    // 1, not 0: Windows sends no clicks to a fully see-through window.
+    // 1, not 0: Windows doesn't send clicks to a fully transparent window
     let alpha = if VEILED.load(Ordering::Relaxed) { 1 } else { ALPHA.load(Ordering::Relaxed) };
     use windows_sys::Win32::UI::WindowsAndMessaging::{GetLayeredWindowAttributes, GetWindowLongPtrW, SetLayeredWindowAttributes, SetWindowLongPtrW, GWL_EXSTYLE, LWA_ALPHA, WS_EX_LAYERED};
     let h = hwnd as windows_sys::Win32::Foundation::HWND;
     unsafe {
         let style = GetWindowLongPtrW(h, GWL_EXSTYLE);
         let layered = style & WS_EX_LAYERED as isize != 0;
-        // Fully opaque and never made see-through: nothing to do.
+        // fully opaque and never layered, nothing to do
         if alpha == 255 && !layered {
             return;
         }
@@ -159,7 +158,7 @@ fn ensure_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Hides the window to the tray; chat stays connected in the background.
+/// Hides to the tray; chat stays connected in the background.
 #[tauri::command]
 pub fn window_to_tray(app: AppHandle) -> Result<(), String> {
     ensure_tray(&app).map_err(|e| e.to_string())?;
@@ -172,14 +171,14 @@ pub fn window_to_tray(app: AppHandle) -> Result<(), String> {
     .map_err(|e| e.to_string())
 }
 
-/// Asks the engine to save what's waiting and exit. If it can't answer, the app exits anyway.
+/// Asks the engine to flush and exit. If it doesn't answer, we exit anyway.
 pub fn request_quit(app: &AppHandle) {
     guard_quit(app);
     let _ = app.emit("app:quit", ());
 }
 
-/// However closing was started, the app is gone within a few seconds: if saving hangs or the
-/// engine never answers, the process ends here.
+/// However quitting started, the process is gone within a few seconds. If saving hangs or the
+/// engine never answers, we end it here.
 fn guard_quit(app: &AppHandle) {
     static STARTED: AtomicBool = AtomicBool::new(false);
     if STARTED.swap(true, Ordering::SeqCst) {
@@ -196,21 +195,21 @@ fn guard_quit(app: &AppHandle) {
     });
 }
 
-/// The engine is about to save and exit: from here the app always closes.
+/// Engine is about to flush and exit; from here on the app always closes.
 #[tauri::command]
 pub fn app_quitting(app: AppHandle) {
     guard_quit(&app);
 }
 
-/// The title bar's X, sent the same way as Alt+F4 so both always behave the same.
+/// Title bar X, sent the same way as Alt+F4 so they always behave the same.
 #[tauri::command]
 pub fn window_close(app: AppHandle) {
     log("app", "close button");
     let _ = app.emit("app:close-requested", ());
 }
 
-/// Called by the engine once everything is saved. Exiting happens off the page's call, so the
-/// page answering can never hold it up.
+/// Called by the engine once everything is saved. The actual exit happens off the page's call, so
+/// the page waiting for an answer can never hold it up.
 #[tauri::command]
 pub fn app_exit(app: AppHandle) {
     log("app", "exit");

@@ -2,6 +2,7 @@ import { useRef, useState, type JSX, type ReactNode } from 'react'
 import fourthwall from '../../assets/fourthwall.png'
 import logo from '../../assets/logo.webp'
 import { PlatformIcon } from './Icons'
+import { SupportPill } from './SupportPill'
 
 const DONATE_URL = 'https://streamelements.com/nonamefound/tip'
 const SUBSCRIBE_URL = 'https://www.twitch.tv/subs/nonamefound'
@@ -35,7 +36,7 @@ const FEATURES: [string, string, string][] = [
   ['🎮', 'Made by a Streamer, for Streamers', 'Built from real streaming needs, not corporate decisions.']
 ]
 
-// The words are the author's own and are kept exactly as written.
+// Author's own words, keep them exactly as written.
 const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
   {
     id: 'story',
@@ -93,6 +94,7 @@ const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
         <p><b>Every little bit of support means the world to me. ❤️</b></p>
         <p>Thank you for being part of this journey!</p>
         <p className="about-sign">— <b>NoNameFound</b> 🎮🐧</p>
+        <SupportPill big />
         <SupportButtons />
       </>
     )
@@ -116,7 +118,7 @@ const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
   }
 ]
 
-/** About this App, in chapters, so the dedication has a page of its own. */
+/** Split into chapters so the dedication gets a page of its own. */
 export function About(): JSX.Element {
   const [chapter, setChapter] = useState(CHAPTERS[0].id)
   const page = useRef<HTMLDivElement>(null)

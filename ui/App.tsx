@@ -10,6 +10,7 @@ import { EventPopups } from './components/EventPopups'
 import { UsersDrawer } from './components/UsersDrawer'
 import { UserCardPanel } from './components/UserCard'
 import { ClosePrompt } from './components/ClosePrompt'
+import { YoutubeNotice } from './components/YoutubeNotice'
 import { WhatsNew } from './components/WhatsNew'
 import { ObsTip } from './components/ObsTip'
 import { PinnedBar } from './components/PinnedBar'
@@ -48,7 +49,7 @@ function Main(): JSX.Element {
   const all = useMemo(() => (history.length ? [...history, ...messages] : messages), [history, messages])
   const shown = useFiltered(all, tab, settings.chatEvents)
 
-  // Menus that live outside App (the Connections menu) open a Settings section this way.
+  // lets things outside App (the Connections menu) jump to a Settings section
   useEffect(() => {
     const open = (e: Event): void => setSettingsOpen((e as CustomEvent<SettingsFocus>).detail ?? true)
     window.addEventListener('nnf:open-settings', open)
@@ -64,7 +65,7 @@ function Main(): JSX.Element {
     setUsers(open)
     if (open) { setPop(null); setEvents(false); setEventsOpen(false) }
   }, [])
-  // A name in the users list gets the same moderation menu as a chat message.
+  // names in the Users list get the same mod menu as chat messages
   const onUser = useCallback((e: MouseEvent, platform: Platform, u: UserEntry, broadcaster: boolean) => {
     e.preventDefault()
     e.stopPropagation()
@@ -88,8 +89,8 @@ function Main(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [events, users, menu, card, pop, openEvents, openUsers])
 
-  // A click outside the open popup or user card closes it. Clicks inside any popup, and on the
-  // button that opens one (which toggles it itself), don't count.
+  // Click outside closes the open popup / user card. Clicks inside any popup don't count, and
+  // neither does the button that opened it (it toggles itself).
   useEffect(() => {
     if (!pop && !card) return
     const outside = (e: globalThis.MouseEvent): void => {
@@ -108,12 +109,12 @@ function Main(): JSX.Element {
     return () => clearTimeout(t)
   }, [toast])
 
-  // The card opens where the click was.
+  // open the card where the click happened
   const openCard = useCallback((m: ChatMessage, x: number, y: number) => {
     setMenu(null)
     setCard({ platform: m.platform, x, y, user: { id: m.author.id, name: m.author.name, login: m.author.login, color: m.author.color } })
   }, [])
-  // Clicking a name opens the user card; right-clicking a message opens the moderation menu.
+  // left-click on a name = user card, right-click on a message = mod menu
   const onMenu = useCallback((e: MouseEvent, m: ChatMessage) => {
     e.preventDefault()
     e.stopPropagation()
@@ -133,10 +134,13 @@ function Main(): JSX.Element {
           {(tab === 'all' || tab === 'twitch') && <RaidBar />}
           <HypeBanner tab={tab} />
           {(tab === 'all' || tab === 'twitch') && <PinnedBar />}
-          <ChatList key={tab} messages={shown} showPlatform={tab === 'all'} showTime={settings.showTimestamps} onMenu={onMenu} />
+          {/* inside the chat area, so pop-ups always stay below the raid / Hype Train / pinned bars */}
+          <div className="chat-area">
+            <ChatList key={tab} messages={shown} showPlatform={tab === 'all'} showTime={settings.showTimestamps} onMenu={onMenu} />
+            <EventPopups covered={events || users || !!pop || !!settingsOpen} />
+          </div>
           <EventsDrawer open={events} onClose={() => openEvents(false)} />
           <UsersDrawer open={users} onClose={() => openUsers(false)} onUser={onUser} onCard={(platform, u, x, y) => setCard({ platform, user: u, x, y })} />
-          <EventPopups />
           {toast && <div className={toast.ok ? 'toast good' : 'toast bad'} role="status">{toast.message ?? (toast.ok ? 'Done.' : 'Failed.')}</div>}
         </main>
         <Composer tab={tab} pop={pop} setPop={(p) => { setPop(p); if (p) { openEvents(false); openUsers(false) } }} replyTo={replyTo} clearReply={() => setReplyTo(null)} insert={insert} onSettings={() => setSettingsOpen(true)} onObsSettings={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} onOpenUser={(u) => setCard({ platform: 'twitch', user: u, x: window.innerWidth / 2 - 210, y: 120 })} />
@@ -150,6 +154,7 @@ function Main(): JSX.Element {
       {!settingsOpen && !boot.demo && <WhatsNew onSettings={(f) => setSettingsOpen(f)} onCommands={() => setPop('commands')} />}
       {!settingsOpen && !boot.demo && <ObsTip onSetup={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} />}
       <ClosePrompt />
+      <YoutubeNotice />
     </div>
   )
 }

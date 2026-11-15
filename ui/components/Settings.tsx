@@ -3,6 +3,7 @@ import { ALERTS_READY, KICK_REDIRECT_URI } from '../../shared/app-config'
 import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform } from '../../shared/types'
 import { BmcLogo, Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
+import { login as startLogin } from '../lib/login'
 import { About } from './About'
 import { statusText } from './Tabs'
 import { SKINS, skinById } from '../styles/skins'
@@ -53,7 +54,7 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
   }
   const login = (): void => {
     if (st?.status === 'needs-setup') setErr(`This copy of the app has no ${PLATFORM_LABEL[platform]} login built in yet.`)
-    else act(() => window.nnf.login(platform))()
+    else act(() => startLogin(platform))()
   }
 
   return (
@@ -103,9 +104,9 @@ const ALERT_STATUS: Record<IntegrationState['status'], string> = {
   connecting: 'Connecting…', connected: 'Connected', reconnecting: 'Reconnecting…', error: 'Needs attention'
 }
 
-/** Streamers use one alert service, so they pick it and log in. That's all. */
+/** Streamers only use one alert service, so: pick one, log in, done. */
 function AlertsPicker(): JSX.Element {
-  // Until both services approve the app, both are shown as coming soon and nothing is picked.
+  // until both services approve us, both show as "soon" and nothing can be picked
   const choice = useStore((s) => (ALERTS_READY ? s.settings!.alertService : 'none'))
   const st = useStore((s) => (choice === 'none' ? undefined : s.integrations[choice]))
   const [err, setErr] = useState('')
@@ -155,8 +156,8 @@ const BMC_STATUS: Partial<Record<IntegrationState['status'], string>> = {
 }
 
 /**
- * Buy Me a Coffee has no "Log in" button for apps, so this is the next best thing: one click
- * opens the token page, the streamer pastes the token once, and the app checks it.
+ * BMC has no login button for apps, so this is the next best thing: one click opens the token page,
+ * the streamer pastes the token once, and we test it.
  */
 function BmcRow(): JSX.Element {
   const st = useStore((s) => s.integrations.buymeacoffee)
@@ -221,14 +222,14 @@ function BmcRow(): JSX.Element {
   )
 }
 
-/** Connects to OBS's WebSocket server to show stream health under the message box. */
+/** OBS WebSocket connection, for the stream stats under the message box. */
 function ObsSettings(): JSX.Element {
   const s = useStore((x) => x.settings!)
   const saved = useStore((x) => x.secrets.obsPassword)
   const obs = useStore((x) => x.obs)
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
-  /** Set right after saving, so the result of that attempt shows under the field. */
+  // set right after saving, so the result of that attempt shows under the field
   const [checking, setChecking] = useState<number | null>(null)
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -237,7 +238,7 @@ function ObsSettings(): JSX.Element {
     if (obs.status === 'connected') { setResult({ ok: true, text: 'Connected to OBS. Your stats are under the message box.' }); setChecking(null) }
     else if (obs.status === 'error') { setResult({ ok: false, text: obs.detail ?? 'OBS refused the connection.' }); setChecking(null) }
   }, [obs.status, obs.detail, checking])
-  // OBS that never answers is most often closed, or its WebSocket server is off.
+  // if OBS never answers it's usually closed, or its WebSocket server is off
   useEffect(() => {
     if (checking === null) return
     const t = setTimeout(() => {
@@ -302,14 +303,14 @@ function ObsSettings(): JSX.Element {
   )
 }
 
-/** Connects to Streamer.bot's WebSocket server to list and run its actions. */
+/** Streamer.bot WebSocket connection, to list and run its actions. */
 function StreamerbotSettings(): JSX.Element {
   const s = useStore((x) => x.settings!)
   const saved = useStore((x) => x.secrets.sbPassword)
   const sb = useStore((x) => x.streamerbot)
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
-  /** Set right after a change, so the result of that attempt shows under the field. */
+  // set right after a change, so the result of that attempt shows under the field
   const [checking, setChecking] = useState<number | null>(null)
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
   const count = sb.actions.filter((a) => a.enabled).length
@@ -319,7 +320,7 @@ function StreamerbotSettings(): JSX.Element {
     if (sb.status === 'connected') { setResult({ ok: true, text: `Connected to Streamer.bot. ${count} action${count === 1 ? '' : 's'} in the / commands list.` }); setChecking(null) }
     else if (sb.status === 'error') { setResult({ ok: false, text: sb.detail ?? 'Streamer.bot refused the connection.' }); setChecking(null) }
   }, [sb.status, sb.detail, checking, count])
-  // Streamer.bot that never answers is most often closed, or its WebSocket server is stopped.
+  // same thing for SB: usually closed, or its WebSocket server is stopped
   useEffect(() => {
     if (checking === null) return
     const t = setTimeout(() => {
@@ -418,7 +419,7 @@ function UpdatesRow(): JSX.Element {
 
 const BUNDLED_FONTS = ['Segoe UI', 'Inter', 'Rajdhani', 'Orbitron']
 
-/** Lists installed fonts where the system allows it; the bundled fonts always work. */
+/** Installed fonts where the OS lets us list them. The bundled fonts always work. */
 function useFonts(): string[] {
   const [fonts, setFonts] = useState(BUNDLED_FONTS)
   useEffect(() => {
@@ -455,7 +456,7 @@ function Section({ title, desc, children, id }: { title: string; desc?: string; 
   )
 }
 
-/** Skins: a small picture of each, and one click to switch. The window edge never changes. */
+/** A small preview of each skin, one click to switch. The window border never changes. */
 function SkinPicker(): JSX.Element {
   const current = skinById(useStore((s) => s.settings!.theme)).id
   return (
@@ -482,7 +483,7 @@ function SkinPicker(): JSX.Element {
 }
 
 export type Category = 'connections' | 'appearance' | 'chat' | 'app' | 'about'
-/** Where Settings opens: a page, and optionally the id of a section to scroll to. */
+/** Which page to open Settings on, and optionally a section id to scroll to. */
 export interface SettingsFocus { cat: Category; target?: string }
 const CATEGORIES: { id: Category; label: string; desc: string; icon: () => JSX.Element }[] = [
   { id: 'connections', label: 'Connections', desc: 'Your platforms, alerts, OBS and Streamer.bot', icon: Icon.plug },
@@ -508,7 +509,7 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
     box.style.setProperty('--light-x', `${e.clientX - r.left}px`)
     box.style.setProperty('--light-y', `${e.clientY - r.top}px`)
   }
-  // Opened for one thing (the OBS capsule, "What's new"): go straight to its page and section.
+  // opened for something specific (the OBS pill, What's New): jump straight to that page/section
   useEffect(() => {
     if (!focus) return
     setCat(focus.cat)

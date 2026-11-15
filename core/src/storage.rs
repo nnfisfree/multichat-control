@@ -1,5 +1,5 @@
-//! The app's files in the data folder. The engine may only touch the files listed here, by name,
-//! so nothing in the page can read or write anywhere else on the PC.
+//! The app's files in the data folder. The engine can only touch the files allowed below, by name,
+//! so nothing in the webview can read or write anywhere else on the machine.
 
 use crate::paths::data_dir;
 use regex::Regex;
@@ -8,7 +8,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-/// The files the engine may use, as patterns relative to the data folder.
+/// Files the engine may use, as patterns relative to the data folder.
 fn allowed(name: &str) -> bool {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     let re = PATTERN.get_or_init(|| {
@@ -24,7 +24,7 @@ fn path_of(name: &str) -> Result<PathBuf, String> {
     Ok(data_dir().join(name))
 }
 
-/// Writes through a temporary file, so a crash mid-write never leaves a half-written file.
+/// Writes to a temp file and renames, so a crash mid-write never leaves a half-written file.
 pub fn write_atomic(path: &PathBuf, text: &str) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -68,7 +68,7 @@ pub fn file_remove(name: String) -> Result<(), String> {
     }
 }
 
-/// Lists one of the app's folders: the saved chat of past streams, or the emote cache.
+/// Lists one of our folders: saved chat history or the emote cache.
 #[tauri::command]
 pub fn folder_list(folder: String) -> Result<Vec<String>, String> {
     if folder != "chat-history" && folder != "emote-cache" {
@@ -85,7 +85,7 @@ pub fn folder_list(folder: String) -> Result<Vec<String>, String> {
     Ok(names)
 }
 
-/// Deletes the saved chat of past streams, all of it.
+/// Deletes all saved chat history.
 #[tauri::command]
 pub fn history_clear() -> Result<(), String> {
     let dir = data_dir().join("chat-history");
@@ -95,17 +95,17 @@ pub fn history_clear() -> Result<(), String> {
     Ok(())
 }
 
-// ---- The log ----
+// ---- log ----
 
 const MAX_LOG_BYTES: u64 = 1_000_000;
 
-/// Long tokens never belong in a log, so anything that looks like one is blanked out.
+/// Anything that looks like a long token gets blanked out before it hits the log.
 fn redact(text: &str) -> String {
     static LONG: OnceLock<Regex> = OnceLock::new();
     LONG.get_or_init(|| Regex::new(r"[A-Za-z0-9_\-.]{28,}").unwrap()).replace_all(text, "[hidden]").into_owned()
 }
 
-/// A small private log in the data folder: statuses and error messages only, never tokens or chat.
+/// Small private log in the data folder. Statuses and errors only, never tokens or chat.
 pub fn log(scope: &str, text: &str) {
     let dir = data_dir().join("logs");
     let _ = fs::create_dir_all(&dir);
@@ -119,11 +119,11 @@ pub fn log(scope: &str, text: &str) {
     }
 }
 
-/// UTC time as 2026-11-10T00:15:24Z, without pulling in a date library.
+/// UTC like 2026-11-10T00:15:24Z, without pulling in a date crate.
 fn time_stamp() -> String {
     let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
     let (days, rem) = (secs / 86_400, secs % 86_400);
-    // Civil date from days since 1970-01-01 (Howard Hinnant's algorithm).
+    // civil date from days since 1970-01-01 (Howard Hinnant's algorithm)
     let z = days as i64 + 719_468;
     let era = z.div_euclid(146_097);
     let doe = z - era * 146_097;
@@ -136,7 +136,7 @@ fn time_stamp() -> String {
     format!("{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z", rem / 3600, rem % 3600 / 60, rem % 60)
 }
 
-/// The engine's log lines come here, so everything ends up in one file.
+/// Engine log lines land here too, so everything ends up in one file.
 #[tauri::command]
 pub fn log_line(scope: String, text: String) {
     let scope: String = scope.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-').take(24).collect();

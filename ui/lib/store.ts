@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
-import { chatEventGroup } from '../../shared/events'
+import { chatEventGroup, standaloneSource } from '../../shared/events'
 import { PLATFORMS } from '../../shared/types'
 import { isReloginNotice, reloginDone } from '../../shared/relogin'
 import type { AlertSource, HistorySession, ObsState, StreamerbotState, PinnedMessage, PlatformUsers, RaidInfo, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
 
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
-/** Hard ceiling even while paused, so a forgotten pause can't grow without limit. */
+// hard cap even while paused, in case someone pauses and forgets
 const MAX_HELD = 20000
 
 export interface State {
@@ -24,12 +24,12 @@ export interface State {
   update: UpdateState | null
   integrations: Partial<Record<AlertSource, IntegrationState>>
   panelSignedIn: boolean | null
-  /** Chat from past streams, oldest first, with a divider before each stream. */
+  /** Past streams' chat, oldest first, with a divider before each stream. */
   history: ChatMessage[]
   historySessions: HistorySession[]
-  /** How many of the saved streams are shown, counted from the newest. */
+  /** How many saved streams are loaded, counting back from the newest. */
   historyShown: number
-  /** Who is in chat on each platform, refreshed every minute and while the list is open. */
+  /** Refreshed every minute, and more often while the Users drawer is open. */
   users: Partial<Record<Platform, PlatformUsers>>
   obs: ObsState
   streamerbot: StreamerbotState
@@ -40,7 +40,7 @@ export interface State {
 let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false, obsPassword: false, sbPassword: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0, users: {}, obs: { status: 'off' }, streamerbot: { status: 'off', actions: [], commands: [] }, pinned: null, raid: null }
 const listeners = new Set<() => void>()
 let eventsOpen = false
-/** While the user reads back through chat, old rows stay so their scroll position holds. */
+// while the user is scrolled up reading, keep old rows so their scroll position doesn't jump
 let holdHistory = false
 
 function set(next: Partial<State>): void {
@@ -48,7 +48,7 @@ function set(next: Partial<State>): void {
   listeners.forEach((l) => l())
 }
 
-/** Items in the startup snapshot can also arrive in the first live batch. */
+// stuff in the startup snapshot can show up again in the first live batch
 let snapshotIds = new Set<string>()
 
 function apply(b: HubBatch): void {
@@ -83,14 +83,14 @@ function apply(b: HubBatch): void {
   set({ messages, events, statuses, pronouns, hype, actionsVersion, integrations, pinned, raid, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.filter((e) => !e.history).length })
 }
 
-/** How long a retired "log in again" notice takes to fade out; matches .relogin-done in theme.css. */
+// must match the .relogin-done transition in theme.css
 const RELOGIN_FADE_MS = 600
 let reloginTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
- * Once a platform connects with a login that has every permission, its "log in again" notices
- * fade (ChatRow sees the same status) and are then removed. The timer doesn't depend on the row
- * being on screen, so notices scrolled out of view go too.
+ * Once a platform connects with every scope it needs, its "log in again" notices fade out (ChatRow
+ * checks the same status) and then get removed. The timer runs here rather than in the row, so
+ * notices that are scrolled out of view go away too.
  */
 function retireRelogin(platforms: Platform[]): void {
   if (!platforms.length || reloginTimer) return
@@ -120,11 +120,11 @@ async function init(): Promise<void> {
     pinned: boot.pinned,
     raid: boot.raid
   })
-  // The latest past stream shows above this one; older ones load on request.
+  // only the latest past stream up front, older ones load on request
   const sessions = await window.nnf.history.sessions().catch((): HistorySession[] => [])
   set({ historySessions: sessions })
   if (sessions.length) await loadOlderHistory()
-  // The viewer count beside the users button stays fresh even while the list is closed.
+  // keep the viewer count next to the Users button fresh even with the drawer closed
   setTimeout(() => void refreshUsers(), 8000)
   setInterval(() => void refreshUsers(), 60000)
 }
@@ -134,7 +134,7 @@ const divider = (id: string, ts: number, text: string): ChatMessage => ({
   id: `divider-${id}`, platform: 'twitch', ts, kind: 'system', divider: text, author: { id: '', name: '', badges: [] }, parts: []
 })
 
-/** Shows the stream before the ones already shown. The first call shows the latest stream. */
+/** Loads one more past stream above the ones already shown. */
 export async function loadOlderHistory(): Promise<void> {
   const sessions = state.historySessions
   const next = sessions[sessions.length - 1 - state.historyShown]
@@ -143,13 +143,12 @@ export async function loadOlderHistory(): Promise<void> {
   const msgs = (await window.nnf.history.load(next.id)).filter((m) => !live.has(m.id))
   const count = `${next.count.toLocaleString()} message${next.count === 1 ? '' : 's'}`
   const rows = [divider(next.id, next.start, `Stream of ${when(next.start)} · ${count}`), ...msgs]
-  // The first stream shown also gets a line marking where this session starts.
+  // first time: also add a divider marking where this session starts
   const now = state.historyShown === 0 ? [divider('now', Date.now(), 'This session')] : []
   set({ history: [...rows, ...state.history, ...now], historyShown: state.historyShown + 1 })
 }
 
 let usersBusy = false
-/** Reloads who is in chat on every connected platform. */
 export async function refreshUsers(): Promise<void> {
   if (usersBusy) return
   usersBusy = true
@@ -164,13 +163,13 @@ export async function refreshUsers(): Promise<void> {
   }
 }
 
-/** Clears chat here and deletes the saved history of past streams. Viewers' chat isn't touched. */
+/** Clears chat in the app and deletes saved history. Doesn't touch the actual platform chat. */
 export async function clearHistory(): Promise<void> {
   await window.nnf.history.clear()
   set({ history: [], historySessions: [], historyShown: 0, messages: [] })
 }
 
-/** Removes events for good, here and in the saved list. */
+/** Removes events for good, in the UI and in the saved list. */
 export async function removeEvents(ids: string[]): Promise<void> {
   if (!ids.length) return
   await window.nnf.removeEvents(ids)
@@ -192,6 +191,9 @@ export async function updateSettings(patch: Partial<Settings>): Promise<void> {
   set({ settings: await window.nnf.saveSettings(patch) })
 }
 
+/** Current state, for code outside React components. */
+export const getState = (): State => state
+
 export const setSecrets = (secrets: SecretState): void => set({ secrets })
 
 export function useStore<T>(pick: (s: State) => T): T {
@@ -210,9 +212,9 @@ export function useInit(): void {
 export function useFiltered(items: ChatMessage[], tab: Platform | 'all', on: Record<ChatEventGroup, boolean>): ChatMessage[] {
   return useMemo(() => items.filter((m) => {
     if (m.divider) return true
-    if (tab !== 'all' && m.platform !== tab) return false
+    if (tab !== 'all' && m.platform !== tab && !(m.event && standaloneSource(m.event))) return false
     const group = m.event && chatEventGroup(m.event.type)
-    // Groups added after a settings file was saved start on.
+    // groups added after the settings file was saved default to on
     return !group || (on[group] ?? true)
   }), [items, tab, on])
 }

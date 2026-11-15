@@ -1,7 +1,7 @@
-//! Kick's channel details, when Cloudflare refuses plain requests.
+//! Kick channel details for when Cloudflare blocks plain requests.
 //!
-//! A hidden window opens kick.com/<channel> and makes the same calls from the real page. The page
-//! hands the result back by navigating to a private address the core intercepts (and blocks), so
+//! A hidden webview opens kick.com/<channel> and makes the same calls from inside the real page.
+//! The page hands the result back by navigating to a private URL that we intercept (and block), so
 //! the remote site never gets any way to call into the app.
 
 use std::sync::Mutex;
@@ -22,7 +22,7 @@ pub async fn kick_via_page(app: AppHandle, slug: String) -> Result<serde_json::V
     }
     let (tx, rx) = tokio::sync::oneshot::channel::<String>();
     let tx = Mutex::new(Some(tx));
-    // Only what the app needs is sent back, which keeps the hand-over small.
+    // only send back what we need, keeps the hand-off small
     let script = format!(
         r#"(async () => {{
   if (location.hostname !== 'kick.com' || window.__nnfKick) return;
@@ -50,7 +50,7 @@ pub async fn kick_via_page(app: AppHandle, slug: String) -> Result<serde_json::V
                 }
                 return false;
             }
-            // Cloudflare's check may hop between kick.com addresses; nothing else is allowed.
+            // Cloudflare's challenge can bounce between kick.com hosts; nothing else is allowed
             u.scheme() == "https" && u.host_str().is_some_and(|h| h == "kick.com" || h.ends_with(".kick.com") || h.ends_with("cloudflare.com"))
         })
         .on_page_load(move |w, payload| {
@@ -68,10 +68,10 @@ pub async fn kick_via_page(app: AppHandle, slug: String) -> Result<serde_json::V
 }
 
 const JSON_LABEL: &str = "kick-json";
-/// One hidden JSON window at a time; a second request waits for the first.
+/// One hidden JSON window at a time, a second request waits for the first.
 static JSON_TURN: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-/// The only kick.com addresses read this way: one clip, or a channel's clips from the last day.
+/// The only kick.com paths read this way: a single clip, or a channel's clips from the last day.
 fn allowed_json_path(path: &str) -> bool {
     let name = |s: &str| !s.is_empty() && s.len() <= 64 && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
     if let Some(id) = path.strip_prefix("/api/v2/clips/") {
@@ -80,10 +80,10 @@ fn allowed_json_path(path: &str) -> bool {
     path.strip_prefix("/api/v2/channels/").and_then(|rest| rest.strip_suffix("/clips?sort=date&time=day")).is_some_and(name)
 }
 
-/// Clip details for link cards and new-clip checks, when Cloudflare refuses plain requests.
+/// Clip details (link cards and new-clip checks) when Cloudflare blocks plain requests.
 ///
-/// Lighter than kick_via_page: the hidden window opens the JSON address itself rather than the
-/// channel page, so no live player loads. It reads the text once Cloudflare's check lets it in.
+/// Lighter than kick_via_page: the hidden window opens the JSON URL itself instead of the channel
+/// page, so no live player loads. Reads the text once Cloudflare's check lets it through.
 #[tauri::command]
 pub async fn kick_json_via_page(app: AppHandle, path: String) -> Result<serde_json::Value, String> {
     if !allowed_json_path(&path) {
@@ -95,7 +95,7 @@ pub async fn kick_json_via_page(app: AppHandle, path: String) -> Result<serde_js
     }
     let (tx, rx) = tokio::sync::oneshot::channel::<String>();
     let tx = Mutex::new(Some(tx));
-    // Cloudflare's check page isn't JSON, so the script waits for the next page load after it.
+    // the challenge page isn't JSON, so wait for the page load after it
     let script = format!(
         r#"(() => {{
   if (location.hostname !== 'kick.com' || window.__nnfJson) return;

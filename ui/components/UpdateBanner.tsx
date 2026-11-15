@@ -1,7 +1,7 @@
 import { useState, type JSX } from 'react'
 import { useStore } from '../lib/store'
 
-/** Shown under the title bar when a new version exists, and while it downloads. */
+/** Under the title bar when there's an update, and while it downloads. */
 export function UpdateBanner(): JSX.Element | null {
   const u = useStore((s) => s.update)
   const [dismissed, setDismissed] = useState('')

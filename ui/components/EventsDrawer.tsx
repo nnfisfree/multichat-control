@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { ALERT_SOURCE_LABEL, EVENT_TYPE_LABEL, PLATFORMS, PLATFORM_LABEL, type EventType, type StreamEvent } from '../../shared/types'
 import { Icon, PlatformIcon } from './Icons'
 import { removeEvents, updateSettings, useStore } from '../lib/store'
-import { EventBadge, SourceTag, TestTag } from './EventCard'
+import { EventBadge, EventIcon, SourceTag, TestTag } from './EventCard'
+import { isMembership, standaloneSource, subMonths } from '../../shared/events'
 import { PreviewCard } from './LinkPreview'
 
 const ALL_TYPES = Object.keys(EVENT_TYPE_LABEL) as EventType[]
 
-/** Today's events show the time; older ones add the date. */
+// today's events show just the time, older ones the date too
 function when(ts: number): string {
   const d = new Date(ts)
   const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -17,6 +18,7 @@ function when(ts: number): string {
 function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onToggle(): void }): JSX.Element {
   const [note, setNote] = useState('')
   const details = Object.entries(e.details).filter(([, v]) => v)
+  const months = subMonths(e)
   const run = async (actionId: string, args: Record<string, string>): Promise<void> => {
     const r = await window.nnf.runAction(e.platform, actionId, args)
     setNote(r.message ?? (r.ok ? 'Done.' : 'Failed.'))
@@ -24,25 +26,30 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
   return (
     <li className={`event ${e.type}${open ? ' open' : ''}${e.history ? ' history' : ''}`}>
       <button className="event-head" aria-expanded={open} onClick={onToggle}>
-        <span className={`pf ${e.platform}`}><PlatformIcon platform={e.platform} size={16} /></span>
+        <EventIcon e={e} size={16} />
         <span className="event-text">{e.actor && <b>{e.actor} </b>}{e.text}{e.subject && <b> {e.subject}</b>}</span>
         <SourceTag e={e} />
         <TestTag e={e} />
         {e.amount && <span className="amount">{e.amount}</span>}
+        {/* resubs always say how long: total months, plus the streak if the viewer shares it */}
+        {months && <span className="sub-months" title={`${isMembership(e) ? 'Member' : 'Subscribed'} for ${months} months in total${e.streak ? `, ${e.streak} in a row` : ''}`}><b>{months}</b> months{e.streak ? <> · <b>{e.streak}</b> in a row</> : null}</span>}
         <EventBadge e={e} />
         <time className="event-time">{when(e.ts)}</time>
         <span className={open ? 'chev open' : 'chev'}><Icon.chevron /></span>
       </button>
-      {/* The supporter's own words always show, without opening the event. */}
+      {/* the supporter's message always shows, no need to expand the event */}
       {e.message && <p className="event-msg event-quote">{e.message}</p>}
       {open && (
         <div className="event-body">
           {e.preview && <PreviewCard p={e.preview} />}
           <dl>
             <dt>Time</dt><dd>{new Date(e.ts).toLocaleString()}</dd>
-            {e.type !== 'donation' && <><dt>Platform</dt><dd>{PLATFORM_LABEL[e.platform]}</dd></>}
+            {!standaloneSource(e) && <><dt>Platform</dt><dd>{PLATFORM_LABEL[e.platform]}</dd></>}
             {e.source && <><dt>From</dt><dd>{ALERT_SOURCE_LABEL[e.source]}</dd></>}
-            <dt>Type</dt><dd>{EVENT_TYPE_LABEL[e.type]}</dd>
+            <dt>Type</dt><dd>{months ? (isMembership(e) ? 'Membership' : 'Resub') : EVENT_TYPE_LABEL[e.type]}</dd>
+            {months && <><dt>{isMembership(e) ? 'Member for' : 'Subscribed for'}</dt><dd>{months} months in total{months >= 12 ? ` (${Math.floor(months / 12)} year${months >= 24 ? 's' : ''}${months % 12 ? ` ${months % 12} month${months % 12 === 1 ? '' : 's'}` : ''})` : ''}</dd></>}
+            {e.streak ? <><dt>Streak</dt><dd>{e.streak} months in a row</dd></> : null}
+            {months && !e.source && !isMembership(e) && e.amount && !/months?$/.test(e.amount) && <><dt>Tier</dt><dd>{e.amount}</dd></>}
             {details.map(([k, v]) => [<dt key={`k${k}`}>{k}</dt>, <dd key={`v${k}`}>{v}</dd>])}
           </dl>
           <div className="event-actions">
@@ -60,7 +67,7 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
   )
 }
 
-/** Clears test alerts, or everything after a second click. Removed events never come back. */
+/** Clears test alerts, or everything on a second click. Removed events stay gone. */
 function ClearMenu({ testIds, allIds }: { testIds: string[]; allIds: string[] }): JSX.Element {
   const [open, setOpen] = useState(false)
   const [confirmAll, setConfirmAll] = useState(false)
@@ -96,7 +103,7 @@ function ClearMenu({ testIds, allIds }: { testIds: string[]; allIds: string[] })
   )
 }
 
-/** A checklist of event types. Choices are saved, so they survive a restart. */
+/** Event type checklist. Saved, so it survives a restart. */
 function TypesMenu({ hidden, onChange }: { hidden: EventType[]; onChange(hidden: EventType[]): void }): JSX.Element {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -139,7 +146,7 @@ export function EventsDrawer({ open, onClose }: { open: boolean; onClose(): void
 
   const oldest = !!filter.oldestFirst
   const shown = useMemo(() => events
-    .filter((e) => (e.type === 'donation' || filter.platforms[e.platform]) && !filter.hiddenTypes.includes(e.type))
+    .filter((e) => (!!standaloneSource(e) || filter.platforms[e.platform]) && !filter.hiddenTypes.includes(e.type))
     .sort((a, b) => (oldest ? a.ts - b.ts : b.ts - a.ts))
     .slice(0, 500), [events, filter, oldest])
 

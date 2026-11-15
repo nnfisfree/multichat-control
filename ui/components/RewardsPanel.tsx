@@ -4,7 +4,7 @@ import { Icon } from './Icons'
 import { useStore } from '../lib/store'
 import { skinById } from '../styles/skins'
 
-/** The skin's colours, for Twitch's panel to use. */
+/** Skin colours handed to Twitch's panel. */
 function skinColors(id: string | undefined): PanelColors {
   const vars = skinById(id).vars
   const v = (name: string): string => vars[name] ?? ''
@@ -14,7 +14,7 @@ function skinColors(id: string | undefined): PanelColors {
   }
 }
 
-/** Reserves the flyout's space. The real Twitch page is a native view placed over the host box. */
+/** Just reserves the space. The actual Twitch page is a native webview positioned over this box. */
 export function RewardsPanel({ onClose }: { onClose(): void }): JSX.Element {
   const host = useRef<HTMLDivElement>(null)
   const [error, setError] = useState('')
@@ -36,7 +36,7 @@ export function RewardsPanel({ onClose }: { onClose(): void }): JSX.Element {
       window.removeEventListener('resize', place)
       void window.nnf.hidePanel()
     }
-    // A skin change sends the new colours.
+    // re-send colours on skin change
   }, [skin])
 
   return (

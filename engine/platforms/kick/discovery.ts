@@ -10,9 +10,8 @@ export interface KickChannel {
   channelId: number
   userId?: number
   emotes: { id: string; name: string; group: string }[]
-  /** Followers, from the channel page. */
   followers?: number
-  /** Past streams, newest first, when Kick lists them. */
+  /** Newest first, when Kick lists them. */
   past: { id: string; start: number; seconds: number; title: string }[]
 }
 
@@ -46,26 +45,26 @@ const followersOf = (channel: any): number | undefined => {
   return Number.isFinite(n) && n >= 0 ? n : undefined
 }
 
-/** The follower count from the public channel page; undefined when Kick refuses the request. */
+/** From the public channel page. undefined when Kick (Cloudflare) refuses. */
 export async function fetchFollowers(slug: string): Promise<number | undefined> {
   if (!/^[a-z0-9_-]+$/i.test(slug)) return undefined
   return fetchJson(`https://kick.com/api/v2/channels/${slug}`, { headers: HEADERS }).then(followersOf, () => undefined)
 }
 
-/** When Cloudflare last refused a plain clip request. For a while after, the hidden page is used directly. */
+// Last time Cloudflare blocked a plain clip request. For a while after that we go straight to the hidden page.
 let refusedAt = 0
 const REFUSED_FOR_MS = 30 * 60 * 1000
 
 /**
- * Clip data from kick.com: a plain request first, and when Cloudflare refuses it, the core reads
- * the same address in a hidden window (only clip addresses are allowed there).
+ * Clip JSON from kick.com. Tries a plain request first; if Cloudflare blocks it, Rust loads the same
+ * URL in a hidden webview (only clip URLs are allowed there).
  */
 async function kickJson(path: string): Promise<any> {
   if (Date.now() - refusedAt > REFUSED_FOR_MS) {
     try {
       return await fetchJson(`https://kick.com${path}`, { headers: HEADERS })
     } catch (err) {
-      // A missing clip is an answer, not a refusal.
+      // 404 means the clip doesn't exist, that's a real answer
       if (err instanceof HttpError && err.status === 404) return null
       refusedAt = Date.now()
     }
@@ -73,15 +72,15 @@ async function kickJson(path: string): Promise<any> {
   return invoke<any>('kick_json_via_page', { path })
 }
 
-/** One clip, from the data Kick's website uses. Null when there is no such clip. */
+/** null when the clip doesn't exist. */
 export async function fetchKickClip(id: string): Promise<any | null> {
   if (!/^clip_[a-z0-9]+$/i.test(id)) return null
   return (await kickJson(`/api/v2/clips/${id}`))?.clip ?? null
 }
 
 /**
- * Fallback for when Cloudflare refuses plain requests: the core opens kick.com in a hidden window
- * and makes the same calls from the real page.
+ * Cloudflare fallback: Rust opens kick.com in a hidden window and we make the same calls from inside
+ * the real page.
  */
 async function viaPage(slug: string): Promise<KickChannel> {
   const { channel, emotes, videos } = await invoke<{ channel: any; emotes: any; videos: any }>('kick_via_page', { slug })
@@ -102,7 +101,7 @@ export async function fetchChannel(slug: string): Promise<KickChannel> {
   }
 }
 
-/** Asks Kick which server to use and for a guest token. Both change, so neither is hardcoded. */
+/** Socket server and guest token. Both rotate, so neither is hardcoded. */
 export async function fetchRealtime(): Promise<KickRealtime> {
   const clientId = crypto.randomUUID()
   const post = (path: string, body: unknown): Promise<any> => fetchJson(`${WEB}${path}`, {

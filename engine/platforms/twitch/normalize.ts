@@ -4,7 +4,7 @@ import type { Badge, ChatMessage, HypeTrain, MessagePart, StreamEvent } from '..
 import { log } from '../../log'
 
 export type BadgeMap = ReadonlyMap<string, Badge>
-/** Cheermote prefix (lowercase) to its tiers, lowest first. */
+/** Cheermote prefix (lowercase) -> tiers, lowest first. */
 export type CheerMap = ReadonlyMap<string, { minBits: number; url: string }[]>
 
 const NO_CHEERS: CheerMap = new Map()
@@ -22,7 +22,7 @@ export function fragmentsToParts(fragments: any[] | undefined, text: string, thi
   if (!fragments?.length) return parseText(text, third)
   return fragments.flatMap((f): MessagePart[] => {
     if (f.type === 'emote' && f.emote) return [{ type: 'emote', name: f.text, url: emoteUrl(f.emote.id, f.emote.format) }]
-    // Twitch requires the GIF URL to be used exactly as given.
+    // Twitch's terms say the GIF URL has to be used exactly as given
     if (f.type === 'gif' && f.gif?.url) return [{ type: 'gif', url: f.gif.url, alt: String(f.text ?? 'GIF').replace(/^\[|\]$/g, '') }]
     if (f.type === 'cheermote' && f.cheermote) {
       const url = cheermoteUrl(cheers, f.cheermote.prefix, f.cheermote.bits)
@@ -54,12 +54,20 @@ export function chatMessage(e: any, badges: BadgeMap, third: EmoteLookup, cheers
   const action = /^\u0001ACTION /.test(e.message.text)
   const bits: number | undefined = e.cheer?.bits
   const highlighted = e.message_type === 'channel_points_highlighted'
+  const parts = fragmentsToParts(e.message.fragments, e.message.text, third, cheers)
+  // Gigantify an Emote enlarges the message's last emote
+  if (e.message_type === 'power_ups_gigantified_emote') {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i]
+      if (p.type === 'emote' && !p.overlay) { parts[i] = { ...p, giant: true }; break }
+    }
+  }
   return {
     id: e.message_id,
     platform: 'twitch',
     ts: Date.now(),
     author: author(e, badges),
-    parts: fragmentsToParts(e.message.fragments, e.message.text, third, cheers),
+    parts,
     kind: bits ? 'cheer' : highlighted ? 'highlight' : action ? 'action' : 'chat',
     label: bits ? `${bits} BITS` : highlighted ? 'HIGHLIGHTED MESSAGE' : undefined,
     effect: e.message_type === 'power_ups_gigantified_emote' ? 'giant' : e.message_type === 'power_ups_message_effect' ? 'message-effect' : undefined,
@@ -74,12 +82,12 @@ const event = (id: string, partial: Omit<StreamEvent, 'id' | 'platform' | 'ts' |
 
 const TIER: Record<string, string> = { '1000': 'Tier 1', '2000': 'Tier 2', '3000': 'Tier 3', prime: 'Prime' }
 
-/** Turns a chat notification into a highlighted chat line and/or an event. */
+/** channel.chat.notification -> a highlighted chat line, an event, or both. */
 export function notification(e: any, badges: BadgeMap, third: EmoteLookup): { message?: ChatMessage; event?: StreamEvent } {
   const who = e.chatter_is_anonymous ? 'Anonymous' : e.chatter_user_name
   const said = e.message?.text || undefined
   const id = e.message_id
-  // In a shared chat, other channels' subs, gifts and raids are theirs, not events of this channel.
+  // Shared chat: the other channels' subs/gifts/raids are theirs, not ours.
   if (e.source_broadcaster_user_id && e.source_broadcaster_user_id !== e.broadcaster_user_id) return {}
   switch (e.notice_type) {
     case 'announcement':
@@ -90,9 +98,9 @@ export function notification(e: any, badges: BadgeMap, third: EmoteLookup): { me
     case 'sub':
       return { event: event(id, { type: 'sub', actor: who, text: `subscribed to the channel${e.sub?.duration_months > 1 ? ` (${e.sub.duration_months} months)` : ''}`, message: said, amount: TIER[e.sub?.is_prime ? 'prime' : e.sub?.sub_tier] }) }
     case 'resub':
-      return { event: event(id, { type: 'sub', actor: who, text: `resubscribed to the channel (${e.resub?.cumulative_months ?? '?'} months)`, message: said, amount: TIER[e.resub?.is_prime ? 'prime' : e.resub?.sub_tier], details: { Streak: String(e.resub?.streak_months ?? 'hidden') } }) }
+      return { event: event(id, { type: 'sub', actor: who, text: `resubscribed to the channel (${e.resub?.cumulative_months ?? '?'} months)`, message: said, amount: TIER[e.resub?.is_prime ? 'prime' : e.resub?.sub_tier], months: Number(e.resub?.cumulative_months) || undefined, streak: Number(e.resub?.streak_months) || undefined, details: {} }) }
     case 'sub_gift':
-      // A gift bomb sends its summary notice first, then one of these per recipient: each gets its own line.
+      // A gift bomb sends the summary notice first, then one of these per recipient. Each gets its own line.
       return { event: event(id, { type: 'gift', actor: who, text: `gifted a ${TIER[e.sub_gift?.sub_tier] ? `${TIER[e.sub_gift.sub_tier]} ` : ''}sub to`, subject: e.sub_gift?.recipient_user_name, details: { Recipient: e.sub_gift?.recipient_user_name ?? '', Tier: TIER[e.sub_gift?.sub_tier] ?? '', Months: String(e.sub_gift?.duration_months ?? 1) } }) }
     case 'community_sub_gift':
       return { event: event(id, { type: 'gift', big: e.community_sub_gift?.total >= 5, actor: who, text: `gifted ${e.community_sub_gift?.total} subs to the community`, amount: `${TIER[e.community_sub_gift?.sub_tier] ?? ''} x${e.community_sub_gift?.total}`.trim(), details: { Tier: TIER[e.community_sub_gift?.sub_tier] ?? '', 'Total gifted': String(e.community_sub_gift?.cumulative_total ?? 'hidden') } }) }
@@ -127,7 +135,7 @@ const POWER_UP: Record<string, string> = { message_effect: 'Message Effects', gi
 
 const minutes = (seconds: number): string => (seconds >= 60 ? `${Math.round(seconds / 60)}m` : `${seconds}s`)
 
-/** Reads a Hype Train update. Twitch's docs vary on `top_contributions`, so one or many are accepted. */
+/** Twitch's docs aren't consistent about `top_contributions`, so accept one or many. */
 export function hypeTrain(e: any): HypeTrain {
   const type = e.type === 'golden_kappa' || e.type === 'treasure' ? e.type : 'regular'
   return {
@@ -137,7 +145,7 @@ export function hypeTrain(e: any): HypeTrain {
   }
 }
 
-/** Normalizes one EventSub notification. `manageable` holds reward IDs this app may fulfil. */
+/** One EventSub notification -> StreamEvent. `manageable` = reward ids this app is allowed to fulfil. */
 export function eventFromSub(type: string, id: string, e: any, manageable: ReadonlySet<string>): StreamEvent | null {
   const mk = (partial: Parameters<typeof event>[1]): StreamEvent => event(id, partial)
   switch (type) {
@@ -160,11 +168,14 @@ export function eventFromSub(type: string, id: string, e: any, manageable: Reado
       const reward = e.reward?.type ?? e.type
       return mk({
         type: 'redemption', actor: e.user_name, text: 'redeemed', subject: AUTOMATIC[reward] ?? reward, amount: e.reward?.channel_points != null ? String(e.reward.channel_points) : undefined,
-        message: e.message?.text || e.user_input || undefined, details: { Reward: AUTOMATIC[reward] ?? reward }
+        // these two send a chat message that already shows in chat, so the card only goes to Events
+        noChat: reward === 'send_highlighted_message' || reward === 'single_message_bypass_sub_mode' || undefined,
+        message: e.message?.text || e.user_input || (e.reward?.emote?.name ? `Unlocked ${e.reward.emote.name}` : undefined),
+        details: { Reward: AUTOMATIC[reward] ?? reward, ...(e.reward?.emote?.name ? { Emote: e.reward.emote.name } : {}) }
       })
     }
     case 'channel.custom_power_up_redemption.add': {
-      // Twitch's docs don't pin down where the name lives, so every likely spot is read.
+      // the docs don't say where the name lives, so try every likely spot
       const p = e.custom_power_up ?? e.power_up ?? e.reward ?? {}
       const name = p.title ?? p.name ?? e.title ?? e.custom_power_up_title ?? e.power_up_title
       const bits = p.bits ?? p.cost ?? e.bits
@@ -174,7 +185,7 @@ export function eventFromSub(type: string, id: string, e: any, manageable: Reado
     case 'channel.bits.use': {
       if (e.type === 'power_up') {
         const name = POWER_UP[e.power_up?.type] ?? e.power_up?.type ?? 'a Power-up'
-        // These two change a chat message, which already shows in chat.
+        // these two modify a chat message, which already shows up in chat
         const onMessage = e.power_up?.type === 'message_effect' || e.power_up?.type === 'gigantify_an_emote'
         return mk({ type: 'powerup', noChat: onMessage, actor: e.user_name, text: 'used', subject: name, amount: `${e.bits} bits`, message: e.message?.text || undefined })
       }

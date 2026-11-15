@@ -2,9 +2,9 @@ import { DEFAULT_SETTINGS, type Settings } from '../shared/types'
 import { core } from './core'
 
 /**
- * The settings, kept in user-data/settings.json exactly as the Electron version kept them, so
- * people updating keep everything. They are read once at start (loadStore), then kept in memory
- * and written back on each change. Logins are not here: they live in the Rust core.
+ * Settings, in user-data/settings.json. Same shape the Electron build used, so upgrading keeps
+ * everything. Read once on start (loadStore), then kept in memory and written back on every change.
+ * Logins aren't in here, Rust keeps those.
  */
 export const store = {
   settings: { ...DEFAULT_SETTINGS } as Settings,
@@ -20,11 +20,14 @@ export async function loadStore(): Promise<void> {
     const text = await core.readFile('settings.json')
     if (!text) return
     const saved = JSON.parse(text)
-    // Settings from before obsSetUp existed: OBS counts as set up if it was ever turned on
-    // (it used to be off by default) or given its own port.
+    // Migration for files from before obsSetUp existed: count OBS as set up if it was ever enabled
+    // (it used to default to off) or given a custom port.
     if (!('obsSetUp' in saved)) saved.obsSetUp = saved.obsEnabled === true || (typeof saved.obsPort === 'number' && saved.obsPort !== DEFAULT_SETTINGS.obsPort)
+    // Sweet became the default in 0.3.2. A settings file from before skins existed has no theme,
+    // and that person has been looking at POS Club all along, so keep it for them.
+    if (!('theme' in saved)) saved.theme = 'pos'
     store.settings = { ...DEFAULT_SETTINGS, ...saved }
   } catch {
-    // A damaged file starts from the defaults; it is replaced on the next change.
+    // corrupt file: fall back to defaults, it gets overwritten on the next change
   }
 }

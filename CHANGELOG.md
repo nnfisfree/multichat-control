@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.2
+
+**New**
+
+- **Three light skins: Butterfly, Catppuccin Latte and Everforest Light.** Dark text on a pale window, for bright rooms and daytime streams. Menus, cards and pop-ups switch to light fills to match.
+- **Sweet is the default skin for new installs.** Anyone upgrading keeps the skin they have, POS Club included.
+- **Calmer event pop-ups.** One at a time at the top of chat, below the raid bar, Hype Train and pinned message. Repeats of the same event join one card ("Sam and 5 others" ×6, with every name on hover). Cheers of 1,000 Bits or more and other big events stay 1.5 times as long. Pop-ups wait, timer paused, while Events, Users, Settings or a menu is open over chat.
+- **Resub months at a glance.** Resubs and memberships show their months on the pop-up (SUB ×14), and Recent events shows the months and streak on the row, with years and months in the details.
+- **TIP badges with the service's logo.** Donations and Super Chats show TIP next to the logo of what the money came through: StreamElements, Streamlabs, Buy Me a Coffee, or the platform. YouTube and Buy Me a Coffee memberships get a MEM badge.
+- **Channel points badge** is now an animated coin instead of a die.
+- **YouTube login, explained first.** Before Google's sign-in page opens, a short note explains Google's "Google hasn't verified this app" warning: why it appears, what the app really does with the permission (live chat only), that the login stays encrypted on your PC, and exactly where to click. Tick "Don't show this again" to skip it next time.
+- **Twitch's built-in Power-ups look like they do on Twitch.** **Message Effects** draw an animated RGB outline around the message. **Gigantify an Emote** pops the emote in big. **On-Screen Celebration** cards get a confetti shimmer. **Highlight My Message** and **Send a Message in Sub-Only Mode** show the message once, without an extra "redeemed" card in chat (the redemption stays in Events). Emote-unlock rewards say which emote was unlocked.
+- **Support the project.** A small, optional Buy Me a Coffee button under the message box and on the Support page.
+
+**Changed**
+
+- **Clearer source code comments.** Comments across the whole codebase were rewritten to be shorter and easier to follow for anyone who wants to contribute.
+
+**Fixed**
+
+- Tips from StreamElements, Streamlabs and Buy Me a Coffee only showed under All and one platform tab. They show on every tab now, with their own logo instead of a platform's.
+- Buy Me a Coffee messages showed HTML from Buy Me a Coffee, like "<br>" followed by the supporter's name. They now read as plain text, including tips already in Recent events and chat history.
+- Event pop-ups could sit on top of the raid bar or Hype Train banner, or run their timer behind an open panel.
+
 ## 0.3.1
 
 **New**

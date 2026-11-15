@@ -22,7 +22,7 @@ export function ActionDeck({ scope, onClose, onRewards }: Props): JSX.Element {
   const load = useCallback(() => {
     window.nnf.actions(platform).then(setActions, () => setActions([]))
   }, [platform])
-  // Reloads when the platform reports a change, and every 30 seconds for platforms that can't.
+  // reload when the platform says something changed, plus every 30s for the ones that can't tell us
   useEffect(load, [load, version])
   useEffect(() => {
     const t = setInterval(load, 30000)

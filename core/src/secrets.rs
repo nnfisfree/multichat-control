@@ -1,10 +1,10 @@
-//! Saved logins and keys, in `secrets.json`, encrypted with Windows' own protection (DPAPI), so
-//! only this Windows user on this PC can read them. They never leave the Rust side: the engine
-//! only learns whether a secret exists, never its value.
+//! Saved logins and keys in `secrets.json`, encrypted with DPAPI so only this Windows user on this
+//! machine can read them. They never leave Rust: the engine only learns whether a secret exists,
+//! never its value.
 //!
-//! Logins saved by the Electron version (0.1.x) are read too, so nobody has to log in again:
-//! Electron encrypts with AES-256-GCM using a key that is itself protected by DPAPI and kept in
-//! `session/Local State`. Each one is converted to the new format the first time it is read.
+//! Logins saved by the old Electron build (0.1.x) get picked up too, so nobody has to log in again.
+//! Electron used AES-256-GCM with a key that's itself DPAPI-protected and stored in
+//! `session/Local State`. Each one is converted to our format the first time it's read.
 
 use crate::paths::data_dir;
 use crate::storage::{log, write_atomic};
@@ -14,7 +14,7 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
-/// Marks values written by this version.
+/// Prefix on values written by this version.
 const PREFIX: &str = "dpapi:";
 
 static LOCK: Mutex<()> = Mutex::new(());
@@ -67,7 +67,7 @@ mod dpapi {
     pub fn unprotect(_: &[u8]) -> Option<Vec<u8>> { None }
 }
 
-/// The AES key Electron used, from `session/Local State`, unlocked with DPAPI.
+/// Electron's AES key from `session/Local State`, unlocked with DPAPI.
 fn electron_key() -> Option<Vec<u8>> {
     let text = std::fs::read_to_string(data_dir().join("session").join("Local State")).ok()?;
     let json: serde_json::Value = serde_json::from_str(&text).ok()?;
@@ -76,7 +76,7 @@ fn electron_key() -> Option<Vec<u8>> {
     dpapi::unprotect(blob)
 }
 
-/// Decrypts one value saved by Electron: "v10", a 12-byte nonce, then the AES-GCM ciphertext.
+/// One Electron-encrypted value: "v10", a 12-byte nonce, then the AES-GCM ciphertext.
 fn electron_decrypt(raw: &[u8], key: &[u8]) -> Option<String> {
     use aes_gcm::aead::{Aead, KeyInit};
     use aes_gcm::{Aes256Gcm, Nonce};
@@ -98,7 +98,7 @@ fn decrypt(stored: &str) -> Option<String> {
     String::from_utf8(dpapi::unprotect(&b)?).ok()
 }
 
-/// Converts every login the Electron version saved, once. Runs at start.
+/// One-time conversion of everything the Electron build saved. Runs on startup.
 pub fn migrate_electron() {
     let _guard = LOCK.lock().unwrap();
     let mut map = load();
@@ -115,7 +115,7 @@ pub fn migrate_electron() {
                 map.insert(k, v);
                 moved += 1;
             }
-            // Unreadable (another PC or Windows user): dropped, so that login simply asks again.
+            // can't decrypt (different machine or Windows user): drop it, that login just asks again
             None => {
                 map.remove(&k);
             }
@@ -145,7 +145,7 @@ pub fn set(key: &str, value: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
-/// What the interface may know: only whether each user-entered secret is saved.
+/// All the UI gets to know: whether each user-entered secret is saved.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SecretState {
@@ -166,7 +166,7 @@ pub fn secret_state() -> SecretState {
     }
 }
 
-/// Saves a secret the user typed in Settings. Only these can be set from the page.
+/// Saves a secret typed in Settings. Only these names can be set from the webview.
 #[tauri::command]
 pub fn secret_save(key: String, value: Option<String>) -> Result<SecretState, String> {
     let name = match key.as_str() {

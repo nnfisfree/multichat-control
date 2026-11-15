@@ -1,15 +1,15 @@
-// Used by release.mjs for the zip that copies of 0.1.x (Electron) update from.
+// Used by release.mjs for the zip that 0.1.x (Electron) installs update from.
 
 /**
- * A tiny but valid asar archive (Electron's own format) holding one text file. It must be a real
- * archive: Electron treats every file named app.asar as one, and the 0.1.x updater checks for it
- * with Electron's file functions, which report a plain file of that name as missing.
+ * Tiny but valid asar archive (Electron's format) with one text file in it. It has to be a real
+ * archive: Electron treats any file called app.asar as one, and the 0.1.x updater checks for it
+ * through Electron's fs patches, which report a plain file with that name as missing.
  */
 export function placeholderAsar() {
   const body = Buffer.from('Placeholder that lets version 0.1.x update itself. The app deletes it when it starts.\n')
   const index = Buffer.from(JSON.stringify({ files: { 'README.txt': { size: body.length, offset: '0' } } }))
   const padded = Math.ceil(index.length / 4) * 4
-  // Chromium "pickles": the index, then a small header giving the index's size.
+  // Chromium pickle: the index, then a small header with the index size
   const header = Buffer.alloc(8 + padded)
   header.writeUInt32LE(4 + padded, 0)
   header.writeUInt32LE(index.length, 4)

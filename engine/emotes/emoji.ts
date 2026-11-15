@@ -7,7 +7,7 @@ const SETS: Record<string, string> = {
   Objects: '🔥 ⭐ ✨ 🎉 🎊 🏆 🎮 🕹️ 🎧 🎵 🎶 💯 💥 💎 👑 🚀 ⚡ 🍕 🍺 ☕'
 }
 
-/** YouTube's API exposes no custom emoji, so its picker offers standard emoji. */
+/** YouTube's API doesn't expose custom emoji, so its picker gets standard emoji instead. */
 export function emojiSet(platform: Platform): Emote[] {
   return Object.entries(SETS).flatMap(([group, list]) => list.split(' ').map((name) => ({
     id: name, name, url: '', provider: 'emoji' as const, platform, group

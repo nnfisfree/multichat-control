@@ -3,23 +3,23 @@ import { listen } from '@tauri-apps/api/event'
 import type { SecretState } from '../shared/types'
 
 /**
- * Everything the engine asks of the Rust core, in one place. Logins and tokens live in the core:
- * the engine names a service and the core adds the token, so no token ever reaches this page.
+ * Every call the engine makes into Rust, in one place. Tokens never reach the webview: the engine
+ * just names a service and Rust attaches the token.
  */
 export type Service = 'twitch' | 'kick' | 'youtube' | 'streamelements' | 'streamlabs' | 'buymeacoffee'
 
 export interface Reply { status: number; body: string }
 
 export const core = {
-  /** A request made as one of the user's accounts. */
+  /** Authenticated request as one of the user's accounts. */
   api: (service: Service, method: string, url: string, headers?: Record<string, string>, body?: string) =>
     invoke<Reply>('api_request', { service, method, url, headers, body }),
-  /** A plain request with no account, for servers that don't accept requests from web pages. */
+  /** Unauthenticated request for servers that reject CORS / browser origins. */
   fetch: (method: string, url: string, headers?: Record<string, string>, body?: string) =>
     invoke<Reply>('net_fetch', { method, url, headers, body }),
 
   login: (service: Service) => invoke<void>('auth_login', { service }),
-  /** Saves a pasted token (Buy Me a Coffee has no OAuth). The core tries it before keeping it. */
+  /** Pasted token (BMC has no OAuth). Rust tests it before saving. */
   setToken: (service: Service, token: string) => invoke<void>('auth_set_token', { service, token }),
   cancelLogin: (service: Service) => invoke<void>('auth_cancel', { service }),
   logout: (service: Service) => invoke<void>('auth_logout', { service }),
@@ -38,17 +38,17 @@ export const core = {
   removeFile: (name: string) => invoke<void>('file_remove', { name }),
   listFolder: (folder: 'chat-history' | 'emote-cache') => invoke<string[]>('folder_list', { folder }),
   clearHistory: () => invoke<void>('history_clear'),
-  /** The hidden Twitch page that Raid Now presses Twitch's own button on: open while a raid counts down. */
+  /** Hidden Twitch page that "Raid Now" clicks Twitch's own button on. Open while a raid counts down. */
   raidPage: (open: boolean, channel?: string) => invoke<void>('raid_page', { openPage: open, channel: channel ?? null }),
   raidNow: (channel?: string) => invoke<{ ok: boolean; message?: string }>('raid_now', { channel: channel ?? null }),
   openUrl: (url: string) => invoke<void>('plugin:opener|open_url', { url }),
   log: (scope: string, text: string) => invoke<void>('log_line', { scope, text }).catch(() => {})
 }
 
-/** The Twitch login code to show while the device login waits for the user. */
+/** Twitch device-flow code to show while we wait for the user. */
 export const onDeviceCode = (cb: (d: { service: Service; code: string; url: string }) => void) =>
   listen<{ service: Service; code: string; url: string }>('auth:device', (e) => cb(e.payload))
 
-/** A login appeared or disappeared, including when the core finds one has expired. */
+/** Fires on login/logout, and when Rust finds a token has expired. */
 export const onAuthChanged = (cb: (d: { service: Service; loggedIn: boolean }) => void) =>
   listen<{ service: Service; loggedIn: boolean }>('auth:changed', (e) => cb(e.payload))

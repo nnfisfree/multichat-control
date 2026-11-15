@@ -15,12 +15,12 @@ import { store } from './store'
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
 const FLUSH_MS = 60
-/** The same sub or raid reported by Twitch and by an alert service lands within this window. */
+// Twitch and SE/SL can both report the same sub or raid. Anything within 2 minutes counts as a duplicate.
 const TWIN_MS = 120000
 
 const sameKind = (t: string): string => (t === 'bits' ? 'cheer' : t)
 
-/** Saves chat for past streams, and finds one user's saved messages for the user card. */
+/** Chat history persistence (ChatLog implements this). */
 interface Recorder {
   add(m: ChatMessage): void
   deleted(id: string): void
@@ -29,7 +29,7 @@ interface Recorder {
   sessions?(): { id: string }[]
 }
 
-/** Merges connectors into one stream and batches updates so busy chats don't flood the UI. */
+/** Fan-in for every connector. Updates go out in batches so a busy chat doesn't re-render React on every message. */
 export class Hub {
   private connectors = new Map<Platform, Connector>()
   private statuses = new Map<Platform, ConnectionState>()
@@ -44,7 +44,7 @@ export class Hub {
   private timer: ReturnType<typeof setTimeout> | null = null
   private sendBatch: ((batch: HubBatch) => void) | null = null
   private eventIds = new Set<string>()
-  /** Everyone who chatted this stream, per platform, with their role. */
+  // Who has talked this stream, per platform. The Users drawer falls back to this when there's no chatter list.
   private seen = new Map<Platform, Map<string, { entry: UserEntry; role: keyof UserGroups }>>()
   private recorder: Recorder | null = null
   private removed = new Set<string>()
@@ -56,19 +56,18 @@ export class Hub {
     this.connectors.set(connector.platform, connector)
   }
 
-  /** Where batches go: the interface. */
   attach(send: (batch: HubBatch) => void): void {
     this.sendBatch = send
   }
 
-  /** Events from earlier sessions. They load before the window, so the first snapshot has them. */
+  /** Loaded before the window opens, so the first snapshot already has them. */
   restoreEvents(events: StreamEvent[], persist: (events: StreamEvent[]) => void): void {
     this.persist = persist
     this.events = [...events].sort((a, b) => a.ts - b.ts).slice(-MAX_EVENTS)
     this.eventIds = new Set(this.events.map((e) => e.id))
   }
 
-  /** Events the user removed earlier. They stay out even when history reloads them. */
+  /** IDs the user deleted. Kept around so a history reload doesn't bring them back. */
   restoreRemoved(ids: string[], persist: (ids: string[]) => void): void {
     this.removed = new Set(ids)
     this.persistRemoved = persist
@@ -76,11 +75,10 @@ export class Hub {
     this.eventIds = new Set(this.events.map((e) => e.id))
   }
 
-  /** Removes events from the list for good, such as test alerts. */
   removeEvents(ids: string[]): void {
     const gone = new Set(ids.filter((id) => typeof id === 'string'))
     if (!gone.size) return
-    // Test alerts are never saved, so they need no entry in the saved list of removed events.
+    // test alerts are never persisted, so there's nothing to remember about removing them
     const tests = new Set(this.events.filter((e) => e.test).map((e) => e.id))
     for (const id of gone) {
       if (!tests.has(id)) this.removed.add(id)
@@ -99,12 +97,11 @@ export class Hub {
     }, 3000)
   }
 
-  /** Saves chat for the history of past streams. */
   record(recorder: Recorder): void {
     this.recorder = recorder
   }
 
-  /** Empties the chat kept in memory, as part of clearing the history. */
+  /** Part of "clear history". */
   clearMessages(): void {
     this.messages = []
   }
@@ -117,17 +114,17 @@ export class Hub {
     const role: keyof UserGroups = a.isBroadcaster ? 'broadcaster' : a.isMod ? 'moderators' : a.isVip ? 'vips' : a.isMember ? 'members' : 'users'
     list.delete(a.id)
     list.set(a.id, { entry: { id: a.id, name: a.name, login: a.login, color: a.color }, role })
-    // The oldest chatters drop off first, so a huge stream can't grow this without limit.
+    // cap it, oldest chatter goes first
     if (list.size > 5000) list.delete(list.keys().next().value!)
   }
 
-  /** Everything known about one user: their profile and their history in this channel. */
+  /** User card: profile plus this channel's history (current stream + saved log). */
   async userCard(platform: Platform, user: UserEntry): Promise<UserCard> {
     const c = this.connectors.get(platform)
     const profile: UserProfile = c?.profile ? await c.profile(user).catch((): UserProfile => ({})) : {}
     const live = this.messages.filter((m) => m.platform === platform && m.author.id === user.id && m.kind !== 'event' && m.kind !== 'system' && !m.divider && !m.held)
     const saved = this.recorder?.messagesBy?.(platform, user.id)
-    // Messages from this stream are also in the saved file, so each message counts once.
+    // this stream's messages are in the log file too, dedupe by id
     const seen = new Set<string>()
     const all = [...(saved?.messages ?? []), ...live].filter((m) => !seen.has(m.id) && seen.add(m.id)).sort((a, b) => b.ts - a.ts)
     const ofStreams = Math.max(1, this.recorder?.sessions?.().length ?? 0)
@@ -148,13 +145,12 @@ export class Hub {
     }
   }
 
-  /** The channel's followers and subscribers on one platform. */
   async stats(platform: Platform): Promise<ChannelStats | null> {
     const c = this.connectors.get(platform)
     return c?.stats ? c.stats().catch(() => null) : null
   }
 
-  /** Who is in chat on one platform: the platform's own list where it has one, else who chatted. */
+  /** The platform's own chatter list when it has one, otherwise whoever has talked. */
   async users(platform: Platform): Promise<PlatformUsers> {
     const seen = this.seen.get(platform) ?? new Map<string, { entry: UserEntry; role: keyof UserGroups }>()
     const groups: UserGroups = { broadcaster: [], moderators: [], vips: [], members: [], users: [] }
@@ -163,7 +159,7 @@ export class Hub {
     const offline: UsersInfo = { live: false }
     const info: UsersInfo = c?.users ? await c.users().catch(() => offline) : offline
     if (info.groups) {
-      // Names from the platform's list get the colours they use in chat.
+      // reuse the colour we saw them chat with
       for (const g of Object.values(info.groups) as UserEntry[][]) for (const u of g) u.color ??= seen.get(u.id)?.entry.color
     }
     const sort = (g: UserGroups): UserGroups => {
@@ -176,7 +172,7 @@ export class Hub {
 
   private addMessage(m: ChatMessage): void {
     this.markSpam(m)
-    // A held message isn't in chat yet, notices aren't chat, and test alerts are gone after a restart: none go into the history.
+    // AutoMod-held messages, system notices and test alerts don't belong in the log
     if (!m.held && m.kind !== 'system' && !m.event?.test) {
       this.noteChatter(m)
       this.recorder?.add(m)
@@ -188,8 +184,8 @@ export class Hub {
   }
 
   /**
-   * Marks "buy followers" spam for moderators. The streamer, moderators and VIPs are never
-   * marked, and a message Twitch already flagged keeps Twitch's warning.
+   * Flags "buy followers" spam for mods. Broadcaster, mods and VIPs are exempt, and if Twitch
+   * already flagged the message its warning wins.
    */
   private markSpam(m: ChatMessage): void {
     if (!store.settings.spamWarnings || m.flag || m.history || (m.kind !== 'chat' && m.kind !== 'action')) return
@@ -199,7 +195,7 @@ export class Hub {
     if (notes) m.flag = { kind: 'spam', label: 'Looks like spam', notes }
   }
 
-  /** Replaces a message in chat with a changed copy, so the interface redraws it. */
+  /** Swaps in an updated copy. Has to be a new object or React won't notice. */
   private patchMessage(id: string, change: (m: ChatMessage) => Partial<ChatMessage>): boolean {
     for (let i = this.messages.length - 1; i >= 0; i--) {
       if (this.messages[i].id !== id) continue
@@ -213,12 +209,12 @@ export class Hub {
   }
 
   /**
-   * True when another source already reported this event: Twitch and StreamElements both see
-   * the same sub, for example. Only events from different sources can be twins.
+   * Twitch and StreamElements both see the same sub, for example. Only events from different
+   * sources can be twins.
    */
   private twin(e: StreamEvent): boolean {
     const actor = e.actor?.toLowerCase()
-    // Buy Me a Coffee money never passes through another service, so it has no twins; tests are each their own.
+    // BMC money doesn't go through anyone else, and every test alert is its own thing
     if (!actor || e.source === 'buymeacoffee' || e.test) return false
     for (let i = this.events.length - 1, n = 0; i >= 0 && n < 800; i--, n++) {
       const o = this.events[i]
@@ -229,10 +225,10 @@ export class Hub {
   }
 
   private addEvent(e: StreamEvent): void {
-    // History can overlap saved and live events, so each event is shown once.
+    // history can overlap with what's already loaded
     if (this.eventIds.has(e.id) || this.removed.has(e.id) || this.twin(e)) return
     this.eventIds.add(e.id)
-    // A new stream starts a fresh list of who chatted.
+    // new stream, start the chatter list over
     if (e.type === 'stream' && !e.history && /went live/i.test(e.text)) this.seen.delete(e.platform)
     this.events.push(e)
     if (this.events.length > MAX_EVENTS) for (const old of this.events.splice(0, this.events.length - MAX_EVENTS)) this.eventIds.delete(old.id)
@@ -243,12 +239,12 @@ export class Hub {
     if (card) this.addMessage(card)
   }
 
-  /** A test alert fired from Streamer.bot. */
+  /** Test alert from Streamer.bot. */
   testEvent(e: StreamEvent): void {
     this.addEvent({ ...e, test: true })
   }
 
-  /** How StreamElements, Streamlabs and Buy Me a Coffee report in. */
+  /** Callbacks handed to the SE / SL / BMC integrations. */
   alertContext(source: AlertSource): AlertContext {
     return {
       event: (e) => this.addEvent(e),
@@ -314,7 +310,7 @@ export class Hub {
         const before = this.statuses.get(platform)
         if (before?.status !== state.status || before?.detail !== state.detail) log(platform, `${state.status}${state.detail ? `: ${state.detail}` : ''}`)
         this.statuses.set(platform, state)
-        // A login with the missing permissions retires the "log in again" notices; the interface fades its copies.
+        // logged in again with the right scopes: drop the "log in again" notices (the UI fades its own copies)
         if (reloginDone(state)) this.messages = this.messages.filter((m) => !(m.platform === platform && isReloginNotice(m)))
         this.pending.statuses.push(state)
         this.schedule()
@@ -332,9 +328,9 @@ export class Hub {
   }
 
   /**
-   * Everything so far, for the interface's start. The engine runs in the same page, so these are
-   * copies: handing over the hub's own lists would let later messages land in the interface twice,
-   * once through the shared list and once through the next batch.
+   * Initial state for the UI. These have to be copies: the engine shares the page with React, and
+   * handing over our own arrays would make later messages show up twice (once through the shared
+   * array, once in the next batch).
    */
   snapshot() {
     return {
@@ -357,7 +353,7 @@ export class Hub {
 
   async startAll(): Promise<void> {
     await Promise.all([...this.connectors.values()].map((c) => c.start().catch((err) => {
-      // A login that ended during start already says so; that clearer message is kept.
+      // needs-login already explains it better, don't overwrite it
       if (this.statuses.get(c.platform)?.status === 'needs-login') return
       this.context(c.platform).status({ status: 'error', detail: message(err) })
     })))
@@ -373,7 +369,7 @@ export class Hub {
     await Promise.allSettled([...this.connectors.values()].map((c) => c.stop()))
   }
 
-  /** Sends to each target independently, so one failing platform never blocks the others. */
+  /** One send per platform, so one failing doesn't block the others. */
   async send(targets: Platform[], text: string, replyTo?: { platform: Platform; messageId: string }): Promise<SendResult[]> {
     return Promise.all(targets.map(async (platform): Promise<SendResult> => {
       try {
@@ -387,7 +383,6 @@ export class Hub {
     }))
   }
 
-  /** Runs a Twitch chat command. */
   async twitchCommand(text: string): Promise<CommandOutcome> {
     const c = this.connectors.get('twitch')
     if (!c?.command) return { ok: false, message: 'Log in to Twitch to use Twitch commands.' }
@@ -401,8 +396,8 @@ export class Hub {
 
   async moderate(platform: Platform, req: ModerationRequest): Promise<ActionResult> {
     try {
-      // Kick only times out in whole minutes, so a short timeout (used to clear someone's
-      // messages) deletes their recent messages one by one instead.
+      // Kick timeouts are whole minutes only. A short timeout really means "clear their messages",
+      // so delete those one by one instead.
       if (platform === 'kick' && req.kind === 'timeout' && req.seconds < 60) {
         const theirs = this.messages.filter((m) => m.platform === 'kick' && m.author.id === req.userId && m.kind !== 'event' && !m.deleted).slice(-50)
         const c = this.get(platform)
@@ -416,7 +411,7 @@ export class Hub {
     }
   }
 
-  /** Allow or Deny on a message Twitch's AutoMod held. */
+  /** Allow/Deny on an AutoMod-held message. */
   async automod(messageId: string, allow: boolean): Promise<ActionResult> {
     const c = this.connectors.get('twitch')
     if (!c?.automod) return { ok: false, message: 'Log in to Twitch to review held messages.' }

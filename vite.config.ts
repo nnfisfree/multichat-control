@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// The interface lives in ui/ and is built into dist/, which the Tauri core loads.
+// UI lives in ui/ and builds into dist/, which Tauri loads.
 export default defineConfig({
   root: 'ui',
   plugins: [react()],

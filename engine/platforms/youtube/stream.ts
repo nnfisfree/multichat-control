@@ -6,13 +6,13 @@ export interface StreamHandlers {
   onEnd(error?: { code?: number; message: string }): void
 }
 
-/** gRPC status codes the connector acts on. */
+// gRPC status codes we actually care about
 export const GRPC_UNAUTHENTICATED = 16
 export const GRPC_ENDED = 9
 
 /**
- * Opens YouTube's server-streaming chat call in the core (a web page can't speak gRPC). The core
- * adds the token, so none is passed here. Returns a function that cancels the stream.
+ * Runs YouTube's server-streaming chat call through Rust, since a web page can't speak gRPC. Rust
+ * adds the token too. Returns a cancel function.
  */
 export function openStream(liveChatId: string, pageToken: string | undefined, h: StreamHandlers): () => void {
   let id = 0
@@ -25,7 +25,7 @@ export function openStream(liveChatId: string, pageToken: string | undefined, h:
     h.onEnd(err)
   }
   void (async () => {
-    // Listeners first, so nothing the stream sends right away is missed.
+    // attach listeners before starting so we don't miss the first items
     const queue: { kind: 'items' | 'end'; payload: any }[] = []
     stops.push(await listen<any>('youtube:items', (e) => (id ? e.payload.id === id && h.onItems(e.payload.items ?? [], e.payload.next ?? undefined) : queue.push({ kind: 'items', payload: e.payload }))))
     stops.push(await listen<any>('youtube:end', (e) => {

@@ -17,18 +17,18 @@ import { heldMessage, heldRowId, heldStatus, suspiciousFlag, suspiciousMessage }
 import { chatMessage, eventFromSub, hypeTrain, notification, type CheerMap } from './normalize'
 
 const HELIX = 'https://api.twitch.tv/helix'
-/** The permissions for held messages (AutoMod) and suspicious-user warnings. */
+// Scopes for AutoMod holds and suspicious-user warnings. Older logins won't have them.
 const MOD_SCOPES = ['moderator:manage:automod', 'moderator:read:suspicious_users']
-/** How long a suspicious-user warning waits for its chat message before showing the message itself. */
+// How long a suspicious-user warning waits for the matching chat message before showing it on its own.
 const SUSPICIOUS_WAIT_MS = 3000
-/** Twitch asks apps to check their login hourly. */
+// Twitch wants apps to validate tokens hourly; a bit under an hour to be safe.
 const CHECK_MS = 55 * 60 * 1000
 
 export interface Helix {
   (method: string, path: string, query?: Record<string, string | undefined>, body?: unknown): Promise<any>
 }
 
-/** Twitch's login check. The core adds the token and renews it when needed. */
+// Token validation. Rust injects the token and refreshes it if needed.
 const validate = (): Promise<{ login: string; user_id: string; scopes: string[]; expires_in: number }> =>
   api('twitch', 'GET', 'https://id.twitch.tv/oauth2/validate')
 
@@ -54,10 +54,13 @@ export class TwitchConnector implements Connector {
   private checkTimer: ReturnType<typeof setInterval> | null = null
   private pinTimer: ReturnType<typeof setInterval> | null = null
   private pinState = ''
-  /** Set when the login lacks the permissions for held messages and suspicious users. */
+  /** Set when the token is missing the mod scopes above. */
   private relogin: string | undefined
-  /** Suspicious-user warnings waiting a moment for their chat message to arrive. */
+  // suspicious-user warnings waiting for their chat message to show up
   private suspicious = new Map<string, { flag: MessageFlag; timer: ReturnType<typeof setTimeout> }>()
+  /** Message Effects waiting for their other half, by user + text (see pairEffect). */
+  private effects = new Map<string, { messageId?: string; effectId?: string; at: number }>()
+  private effectIds = new Set<string>()
 
   constructor(private ctx: ConnectorContext) {
     this.pronouns = new Pronouns((login, label) => ctx.pronoun(login, label))
@@ -67,14 +70,14 @@ export class TwitchConnector implements Connector {
     return this.login_ || undefined
   }
 
-  /** The card for a clip link, from any channel. Needs the Twitch login. */
+  /** Clip card for a clip link (any channel). Needs a Twitch login. */
   async clipPreview(slug: string): Promise<LinkPreview | null> {
     if (!this.loggedIn) return null
     const r = await this.helix('GET', '/clips', { id: slug })
     return twitchClipPreview(r?.data?.[0])
   }
 
-  /** The core found the login gone (revoked or expired): stop and ask for a new one. */
+  /** Rust found the token revoked or expired: stop and ask for a new login. */
   async loginEnded(): Promise<void> {
     if (!this.loggedIn) return
     this.loggedIn = false
@@ -82,7 +85,7 @@ export class TwitchConnector implements Connector {
     this.ctx.status({ status: 'needs-login', detail: 'Twitch ended this login. Please log in again.' })
   }
 
-  /** Hourly login check, as Twitch requires. A failed check renews the login in the core. */
+  /** The hourly validate Twitch requires. If it fails, Rust refreshes the token. */
   private async check(): Promise<void> {
     if (!this.loggedIn) return
     await validate().catch((err) => log('twitch', `login check failed: ${message(err)}`))
@@ -102,7 +105,7 @@ export class TwitchConnector implements Connector {
     this.ctx.status({ status: 'connecting' })
     const who = await validate()
     this.userId = who.user_id
-    // A fresh login may carry the permissions the full chatter list needs.
+    // a fresh login might have the scopes the full chatter list needs
     this.chattersBlocked = false
     this.usersCache = null
     this.login_ = who.login
@@ -112,7 +115,7 @@ export class TwitchConnector implements Connector {
     this.avatar = smallAvatar(users.data?.[0]?.profile_image_url)
     this.emoteCache = await loadEmoteCache(`twitch-${who.user_id}`)
     await Promise.all([this.loadBadges(), this.loadThirdParty(), this.loadManageable(), this.loadCheers()])
-    // Logins from before held messages and suspicious users need to log in again for them.
+    // logins from before AutoMod support don't have these scopes
     const missing = MOD_SCOPES.filter((s) => !who.scopes?.includes(s))
     this.relogin = missing.length ? 'Log in to Twitch again to see messages AutoMod holds for review and warnings about suspicious users.' : undefined
     if (this.relogin) {
@@ -127,19 +130,19 @@ export class TwitchConnector implements Connector {
     this.sub.start()
     if (this.checkTimer) clearInterval(this.checkTimer)
     this.checkTimer = setInterval(() => void this.check(), CHECK_MS)
-    // Twitch sends no notice when a message is pinned, so the pin is checked every 20 seconds.
+    // There's no EventSub topic for pinned messages, so poll every 20s.
     if (this.pinTimer) clearInterval(this.pinTimer)
     this.pinTimer = setInterval(() => void this.refreshPin(), 20000)
     void this.refreshPin()
-    // Ready before the picker is first opened.
+    // warm the emote list before the picker is first opened
     void this.refreshList()
     void this.loadHistory()
   }
 
   /**
-   * Fills the Events list with everything Twitch keeps a date for: follows, past streams, polls,
-   * predictions and the Hype Train record. Twitch keeps no dated history of subs, gifts, Bits,
-   * raids or redemptions; those are saved as they happen and appear here on later starts.
+   * Backfills the Events list with whatever Twitch keeps dates for: follows, past streams, polls,
+   * predictions and the Hype Train record. There's no dated history for subs, gifts, Bits, raids or
+   * redemptions, so those only show up once we've seen them live (they're saved from then on).
    */
   private async loadHistory(): Promise<void> {
     const b = this.userId
@@ -162,7 +165,7 @@ export class TwitchConnector implements Connector {
       const start = Date.parse(v.created_at)
       add({ id: `stream-${v.stream_id ?? v.id}-on`, ts: start, type: 'stream', text: 'Stream went live', subject: v.title || undefined })
       const secs = durationSeconds(v.duration)
-      // A VOD of the stream still running has no end yet.
+      // the VOD of a stream that's still running has no end yet
       if (secs && start + secs * 1000 < Date.now() - 5 * 60000) {
         add({ id: `stream-${v.stream_id ?? v.id}-off`, ts: start + secs * 1000, type: 'stream', text: 'Stream went offline', details: { Length: v.duration, Views: String(v.view_count ?? '') } })
       }
@@ -193,10 +196,10 @@ export class TwitchConnector implements Connector {
   private usersCache: { at: number; info: UsersInfo } | null = null
   private roles: { at: number; mods: Set<string>; vips: Set<string> } | null = null
 
-  /** Each user's chosen chat colour, kept for 30 minutes. Empty means they never picked one. */
+  // chat colour per user, cached 30 min. Empty string = they never picked one.
   private colors = new Map<string, { color: string; at: number }>()
 
-  /** Looks up the name colours people picked on Twitch, 100 users per request. */
+  /** Fetches users' chosen name colours (Helix takes 100 ids per call). */
   private async paintNames(ids: string[]): Promise<void> {
     const stale = ids.filter((id) => (Date.now() - (this.colors.get(id)?.at ?? 0)) > 30 * 60000)
     for (let i = 0; i < stale.length; i += 100) {
@@ -207,7 +210,7 @@ export class TwitchConnector implements Connector {
     }
   }
 
-  /** Account age, follow, sub and ban state, for the user card. */
+  /** Account age, follow/sub/ban state for the user card. */
   async profile(user: UserEntry): Promise<UserProfile> {
     const b = this.userId
     const id = user.id
@@ -228,7 +231,7 @@ export class TwitchConnector implements Connector {
       createdAt: Date.parse(u?.created_at) || undefined,
       about: u?.description || undefined,
       url: u?.login ? `https://www.twitch.tv/${u.login}` : undefined,
-      // undefined means Twitch didn't say (for example a missing permission); null means "no".
+      // undefined = Twitch didn't say (e.g. missing scope), null = no
       followedAt: follow === undefined ? undefined : f ? Date.parse(f.followed_at) : null,
       sub: sub === undefined ? undefined : s ? { tier: tier[s.tier] ?? s.tier, gift: !!s.is_gift } : null,
       banned: ban === undefined ? undefined : x ? { until: x.expires_at ? Date.parse(x.expires_at) : undefined } : null,
@@ -240,7 +243,6 @@ export class TwitchConnector implements Connector {
     }
   }
 
-  /** Reads the pinned message and tells the app when it changes. */
   private async refreshPin(): Promise<void> {
     if (!this.userId) return
     const r = await this.helix('GET', '/chat/pins', { broadcaster_id: this.userId, moderator_id: this.userId }).catch(() => null)
@@ -254,30 +256,30 @@ export class TwitchConnector implements Connector {
     this.ctx.pinned?.(pinned)
   }
 
-  /** Whether our own raid is counting down. */
+  // true while our own outgoing raid is counting down
   private raiding = false
   private raidEnd: ReturnType<typeof setTimeout> | undefined
 
   /**
-   * Shows or ends the raid bar. While a raid counts down, Twitch's own chat page stays open out of
-   * sight, so Raid Now can press Twitch's button there (Twitch's API can't send a raid early).
+   * Shows or clears the raid bar. During the countdown Twitch's own chat page is kept open off-screen
+   * so "Raid Now" can click Twitch's button there. The API has no way to send a raid early.
    */
   private setRaid(r: RaidInfo | null): void {
     this.raiding = !!r
     this.ctx.raid?.(r)
     void core.raidPage(!!r, this.channelLogin()).catch(() => {})
-    // If Twitch's notice of the raid going out never arrives, it still ends after the countdown.
+    // fallback in case the "raid went out" notification never arrives
     clearTimeout(this.raidEnd)
     if (r) this.raidEnd = setTimeout(() => this.setRaid(null), Math.max(0, r.endsAt - Date.now()) + 30_000)
   }
 
-  /** Twitch's typed chat commands, run through the API. */
+  /** Slash commands typed in chat, done through Helix. */
   async command(text: string): Promise<CommandOutcome | null> {
     if (!this.userId) return { ok: false, message: 'Log in to Twitch to use Twitch commands.' }
     if (/^\/raidnow$/i.test(text.trim())) {
       if (!this.raiding) return { ok: false, message: 'No raid is counting down. Start one with /raid channel.' }
       const r = await core.raidNow(this.channelLogin())
-      // The bar stays until Twitch reports the raid, and goes then.
+      // the bar stays up until Twitch reports the raid
       return { ok: r.ok, message: r.message }
     }
     const send = async (message: string): Promise<string | undefined> => {
@@ -292,7 +294,7 @@ export class TwitchConnector implements Connector {
     return result
   }
 
-  /** Every page of a Helix list, up to a limit. */
+  /** Pages through a Helix list up to `limit` items. */
   private async all(path: string, query: Record<string, string>, limit: number): Promise<any[]> {
     const out: any[] = []
     let after: string | undefined
@@ -304,11 +306,7 @@ export class TwitchConnector implements Connector {
     return out
   }
 
-  /**
-   * Twitch's own list of who is in chat (signed-in users only), grouped by role. Without the
-   * newer permissions, it reports that a new login is needed instead of failing.
-   */
-  /** Followers and subscribers. Channels that can't have subs (not Affiliate) just have no sub count. */
+  /** Followers and subs. Non-affiliates can't have subs, so they just get no sub count. */
   async stats(): Promise<ChannelStats> {
     const b = this.userId
     if (!b) return {}
@@ -320,6 +318,10 @@ export class TwitchConnector implements Connector {
     return { followers: total(follows), subscribers: total(subs) }
   }
 
+  /**
+   * Twitch's own chatter list (logged-in users only), grouped by role. Without the newer scopes it
+   * returns needsRelogin instead of throwing.
+   */
   async users(): Promise<UsersInfo> {
     if (!this.userId) return { live: false }
     if (this.usersCache && Date.now() - this.usersCache.at < 30000) return this.usersCache.info
@@ -349,7 +351,7 @@ export class TwitchConnector implements Connector {
       return info
     } catch (err) {
       if (err instanceof HttpError && (err.status === 401 || err.status === 403)) {
-        // Asking again would only renew the login for nothing until the user logs in again.
+        // asking again would just refresh the token for nothing until they log in again
         this.chattersBlocked = true
         return { ...base, needsRelogin: true }
       }
@@ -372,7 +374,7 @@ export class TwitchConnector implements Connector {
   async login(): Promise<void> {
     const run = ++this.loginRun
     this.ctx.status({ status: 'authorizing' })
-    // A login already waiting (the user asked for a new code) is cancelled first.
+    // cancel a device-code login that's already waiting (user asked for a new code)
     await core.cancelLogin('twitch').catch(() => {})
     const unlisten = await onDeviceCode(({ service, code, url }) => {
       if (service !== 'twitch' || run !== this.loginRun) return
@@ -454,7 +456,7 @@ export class TwitchConnector implements Connector {
       ['channel.bits.use', '1', b],
       ['channel.raid', '1', { from_broadcaster_user_id: this.userId }],
       ['channel.ban', '1', b], ['channel.unban', '1', b],
-      // Only shoutouts given in this channel. Shoutouts other channels give this one aren't events here.
+      // only shoutouts given from this channel; ones other channels give us aren't our events
       ['channel.shoutout.create', '1', mod],
       ['channel.hype_train.begin', '2', b], ['channel.hype_train.progress', '2', b], ['channel.hype_train.end', '2', b],
       ['channel.poll.begin', '1', b], ['channel.poll.end', '1', b],
@@ -462,18 +464,43 @@ export class TwitchConnector implements Connector {
       ['channel.goal.begin', '1', b], ['channel.goal.end', '1', b],
       ['channel.ad_break.begin', '1', b],
       ['stream.online', '1', b], ['stream.offline', '1', b],
-      // Held messages and suspicious users, for the moderator (here, the streamer).
+      // AutoMod holds and suspicious users. We're the moderator here (as the broadcaster).
       ['automod.message.hold', '2', mod], ['automod.message.update', '2', mod],
       ['channel.suspicious_user.message', '1', mod],
       ['channel.channel_points_custom_reward.add', '1', b], ['channel.channel_points_custom_reward.update', '1', b], ['channel.channel_points_custom_reward.remove', '1', b]
     ]
     const results = await Promise.allSettled(subs.map(([type, version, condition]) =>
       this.helix('POST', '/eventsub/subscriptions', undefined, { type, version, condition, transport: { method: 'websocket', session_id: sessionId } })))
-    // Some types need Affiliate status; only the chat subscription is essential.
+    // Some topics need affiliate. Only chat is essential, the rest can fail quietly.
     results.forEach((r, i) => {
       if (r.status === 'rejected') log('twitch', `${subs[i][0]}: ${message(r.reason)}`)
     })
     if (results[0].status === 'rejected') throw results[0].reason
+  }
+
+  /**
+   * A Message Effect arrives twice: the chat message only says an effect was used, and the Bits
+   * event says which one. They can come in either order, so whichever is first waits here (30 s)
+   * for the other, matched on who sent it and the text. Returns the effect id when the message
+   * arrives second; when the Bits event is second, the message already in chat gets patched.
+   */
+  private pairEffect(user: string, text: string, half: { messageId?: string; effectId?: string }): string | undefined {
+    const now = Date.now()
+    for (const [k, v] of this.effects) if (now - v.at > 30_000) this.effects.delete(k)
+    if (half.effectId && !this.effectIds.has(half.effectId)) {
+      // Twitch doesn't document the ids, so note each new one: it's how new effects get their own look
+      this.effectIds.add(half.effectId)
+      log('twitch', `message effect: ${half.effectId}`)
+    }
+    const key = `${user}|${text.trim()}`
+    const both = { ...this.effects.get(key), ...half, at: now }
+    if (!both.messageId || !both.effectId) {
+      this.effects.set(key, both)
+      return undefined
+    }
+    this.effects.delete(key)
+    if (half.effectId) this.ctx.patch(both.messageId, () => ({ effectId: both.effectId }))
+    return both.effectId
   }
 
   private onEvent(type: string, id: string, e: any): void {
@@ -481,7 +508,8 @@ export class TwitchConnector implements Connector {
       case 'channel.chat.message': {
         if (store.settings.showPronouns) this.pronouns.request(e.chatter_user_login)
         const m = chatMessage(e, this.badges, this.third, this.cheers)
-        // Its suspicious-user warning may have come first.
+        // its suspicious-user warning may have arrived first
+        if (m.effect === 'message-effect') m.effectId = this.pairEffect(e.chatter_user_id, e.message.text, { messageId: m.id })
         const waiting = this.suspicious.get(m.id)
         if (waiting) {
           clearTimeout(waiting.timer)
@@ -490,6 +518,11 @@ export class TwitchConnector implements Connector {
         }
         return this.ctx.message(m)
       }
+      case 'channel.bits.use':
+        if (e.type === 'power_up' && e.power_up?.type === 'message_effect' && e.power_up.message_effect_id) {
+          this.pairEffect(e.user_id, e.message?.text ?? '', { effectId: String(e.power_up.message_effect_id) })
+        }
+        break
       case 'automod.message.hold':
         return this.ctx.message(heldMessage(e, this.third, this.cheers))
       case 'automod.message.update': {
@@ -519,7 +552,7 @@ export class TwitchConnector implements Connector {
         return this.ctx.event({ id, platform: 'twitch', ts: Date.now(), type: 'hypetrain', big: true, text: `Hype Train reached level ${train.level}!`, amount: `Level ${train.level}`, details: {} })
       }
       case 'channel.raid':
-        // Our own raid went out: the countdown bar is done.
+        // our own raid went out, countdown done
         if (e.from_broadcaster_user_id === this.userId) this.setRaid(null)
         break
       case 'channel.hype_train.end':
@@ -542,8 +575,8 @@ export class TwitchConnector implements Connector {
   }
 
   /**
-   * Twitch's warning about a suspicious user's message. It goes on the chat message with the
-   * same id; when that message doesn't come (restricted users), the warning shows it itself.
+   * Suspicious-user warning for a chat message with the same id. Restricted users' messages only go
+   * to mods, so if the chat message never arrives the warning shows it itself.
    */
   private onSuspicious(e: any): void {
     const flag = suspiciousFlag(e)
@@ -557,14 +590,14 @@ export class TwitchConnector implements Connector {
     this.suspicious.set(id, { flag, timer })
   }
 
-  /** Allow or Deny on a held message. The row updates at once; Twitch's own notice follows. */
+  /** Allow/Deny on a held message. The row updates right away; Twitch's notice follows. */
   async automod(rowId: string, allow: boolean): Promise<ActionResult> {
     const msgId = rowId.replace(/^held:/, '')
     try {
       await this.helix('POST', '/moderation/automod/message', undefined, { user_id: this.userId, msg_id: msgId, action: allow ? 'ALLOW' : 'DENY' })
     } catch (err) {
       if (err instanceof HttpError && err.status === 400) {
-        // Already handled by someone else, or too old: Twitch says which in its message.
+        // already handled by another mod, or too old. Twitch's error message says which.
         return { ok: false, message: `Twitch couldn't ${allow ? 'allow' : 'deny'} it: ${message(err)}` }
       }
       if (err instanceof HttpError && (err.status === 401 || err.status === 403)) {
@@ -609,7 +642,7 @@ export class TwitchConnector implements Connector {
     return this.refreshList()
   }
 
-  /** One shared download, however many callers ask at the same moment. */
+  /** Dedupes concurrent refreshes into one download. */
   private refreshList(): Promise<Emote[]> {
     this.emoteLoad ??= this.fetchEmotes().then((list) => {
       this.emoteCache = list
@@ -633,7 +666,7 @@ export class TwitchConnector implements Connector {
       fetchOwners(this.helix, userEmotes.map((e) => e.owner_id))
     ])
     const native = buildEmoteList({ id: this.userId, avatar: this.avatar }, channel?.data ?? [], userEmotes, global?.data ?? [], owners)
-    // A failed refresh must not replace a good saved list with nothing.
+    // don't let a failed refresh wipe a good cached list
     if (!native.length && this.emoteCache) return this.emoteCache
     return [...native, ...this.thirdList]
   }
@@ -651,7 +684,7 @@ export class TwitchConnector implements Connector {
   }
 }
 
-/** Twitch writes VOD lengths like "3h2m10s". */
+// VOD durations come back like "3h2m10s".
 function durationSeconds(d: string | undefined): number {
   const m = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(d ?? '')
   return m ? Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0) : 0

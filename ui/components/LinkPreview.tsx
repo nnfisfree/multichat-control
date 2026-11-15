@@ -2,9 +2,9 @@ import { useEffect, useState, type JSX } from 'react'
 import { PLATFORM_LABEL, type LinkPreview } from '../../shared/types'
 import { PlatformIcon } from './Icons'
 
-/** Answers already in, so rows scrolled back into view show their card at once. */
+// cache, so rows scrolled back into view get their card instantly
 const known = new Map<string, { p: LinkPreview | null; at: number }>()
-/** A link that had no card is asked about again after this long (it may need a login first). */
+// links without a card get retried after this (might just need a login first)
 const RETRY_MS = 5 * 60 * 1000
 
 function cached(url: string): LinkPreview | null | undefined {
@@ -26,7 +26,7 @@ const views = (n: number): string =>
 
 const KIND: Record<LinkPreview['kind'], string> = { video: 'Video', short: 'Short', clip: 'Clip' }
 
-/** The card itself: picture with length, then title, channel and who clipped it. Opens the link on click. */
+/** Thumbnail with duration, then title, channel and who clipped it. Click opens the link. */
 export function PreviewCard({ p }: { p: LinkPreview }): JSX.Element {
   const facts = [
     `${PLATFORM_LABEL[p.platform]} ${KIND[p.kind].toLowerCase()}`,
@@ -51,8 +51,8 @@ export function PreviewCard({ p }: { p: LinkPreview }): JSX.Element {
 }
 
 /**
- * The card under a message with a video or clip link. While the details load, an empty card of
- * the same size holds the space, so chat doesn't jump; a link with no details shows nothing.
+ * Card under a message with a video/clip link. While it loads, an empty card of the same size
+ * holds the space so chat doesn't jump. Links with nothing to show render nothing.
  */
 export function LinkPreviewFor({ url }: { url: string }): JSX.Element | null {
   const [p, setP] = useState<LinkPreview | null | undefined>(() => cached(url))

@@ -2,7 +2,7 @@ import { PLATFORMS, PLATFORM_LABEL, type Emote, type MessagePart, type Platform 
 
 const URL_RE = /\bhttps?:\/\/[^\s<>"']+/gi
 
-/** Accepts only real web links, so chat cannot smuggle other URL schemes into a click. */
+/** Only real http(s) links, so chat can't sneak other URL schemes into a click. */
 export function safeUrl(raw: string): string | null {
   try {
     const u = new URL(raw)
@@ -28,7 +28,7 @@ export function linkify(text: string): MessagePart[] {
   return out
 }
 
-/** A link that gets a preview card: a YouTube video, short or clip, or a Twitch or Kick clip. */
+/** Links that get a preview card: YouTube videos/shorts/clips, Twitch and Kick clips. */
 export type PreviewTarget =
   | { kind: 'youtube'; id: string; short?: boolean }
   | { kind: 'youtube-clip'; id: string }
@@ -39,7 +39,7 @@ const YT_ID = /^[\w-]{11}$/
 const TWITCH_SLUG = /^[\w-]{3,100}$/
 const KICK_CLIP = /^clip_[A-Z0-9]{10,40}$/i
 
-/** Recognises the links that get a preview card, in the shapes the platforms share them. */
+/** Recognises preview links in all the shapes the platforms share them in. */
 export function previewTarget(raw: string): PreviewTarget | null {
   let u: URL
   try {
@@ -63,19 +63,19 @@ export function previewTarget(raw: string): PreviewTarget | null {
     return id && TWITCH_SLUG.test(id) ? { kind: 'twitch-clip', id } : null
   }
   if (host === 'twitch.tv') {
-    // twitch.tv/<channel>/clip/<slug>, and the mobile site's twitch.tv/clip/<slug>.
+    // twitch.tv/<channel>/clip/<slug>, plus mobile's twitch.tv/clip/<slug>
     const at = seg.indexOf('clip')
     return at >= 0 && at <= 1 && TWITCH_SLUG.test(seg[at + 1] ?? '') ? { kind: 'twitch-clip', id: seg[at + 1] } : null
   }
   if (host === 'kick.com') {
-    // kick.com/<channel>/clips/<id>, and kick.com/<channel>?clip=<id>.
+    // kick.com/<channel>/clips/<id> and kick.com/<channel>?clip=<id>
     const id = seg[1] === 'clips' ? seg[2] : u.searchParams.get('clip')
     return id && KICK_CLIP.test(id) ? { kind: 'kick-clip', id } : null
   }
   return null
 }
 
-/** The first link in a message that gets a preview card, as Twitch's own chat shows one per message. */
+/** Only the first link gets a card, same as Twitch's own chat. */
 export function firstPreviewLink(parts: MessagePart[]): string | null {
   for (const p of parts) if (p.type === 'link' && previewTarget(p.url)) return p.url
   return null
@@ -99,7 +99,7 @@ function emoteWords(text: string, emotes: EmoteLookup): MessagePart[] {
   return out
 }
 
-/** Turns plain text into links and named emotes. */
+/** Plain text -> links and named emotes. */
 export function parseText(text: string, emotes: EmoteLookup = new Map()): MessagePart[] {
   return linkify(text).flatMap((p) => (p.type === 'text' ? emoteWords(p.text, emotes) : [p]))
 }
@@ -109,8 +109,8 @@ export function plainText(parts: MessagePart[]): string {
 }
 
 /**
- * Formats outgoing text for one platform. Text is sent as typed, except that a word matching
- * a native Kick emote becomes Kick's token. Anything else goes out as its plain name.
+ * Formats outgoing text for one platform. Sent as typed, except words matching a native Kick emote
+ * become Kick's emote token. Everything else goes out as its plain name.
  */
 export function serializeFor(platform: Platform, text: string, emotes: Pick<Emote, 'id' | 'name' | 'provider'>[]): string {
   if (platform !== 'kick') return text
@@ -121,7 +121,7 @@ export function serializeFor(platform: Platform, text: string, emotes: Pick<Emot
   }).join('')
 }
 
-/** Reads Kick's `[emote:id:name]` tokens from incoming text. */
+/** Parses Kick's `[emote:id:name]` tokens in incoming text. */
 export function parseKickContent(content: string, emotes: EmoteLookup = new Map()): MessagePart[] {
   const re = /\[emote:(\d+):([^\]\s]+)\]/g
   const out: MessagePart[] = []
@@ -135,7 +135,7 @@ export function parseKickContent(content: string, emotes: EmoteLookup = new Map(
   return out
 }
 
-/** Names exactly where a message will go. */
+/** Spells out exactly where the message is going to go. */
 export function composerPlaceholder(tab: Platform | 'all', destinations: Platform[], anyConnected: boolean): string {
   if (tab !== 'all') return `Send a message to ${PLATFORM_LABEL[tab]}...`
   if (!anyConnected) return 'No platforms connected'
@@ -144,7 +144,7 @@ export function composerPlaceholder(tab: Platform | 'all', destinations: Platfor
   return `Send a message to ${destinations.map((p) => PLATFORM_LABEL[p]).join(' and ')}...`
 }
 
-/** Picker order: native first on a platform tab; Twitch, third-party, Kick, YouTube on All. */
+/** Picker order: native first on a platform tab; on All it's Twitch, third-party, Kick, YouTube. */
 export function sortEmotes(emotes: Emote[], scope: Platform | 'all'): Emote[] {
   const rank = (e: Emote): number => {
     if (scope !== 'all') return e.provider === 'twitch' || e.provider === 'kick' || e.provider === 'emoji' ? 0 : 1

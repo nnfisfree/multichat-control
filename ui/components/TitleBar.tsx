@@ -5,7 +5,7 @@ import { useStore } from '../lib/store'
 import { ChannelStatsBar } from './ChannelStats'
 
 export function TitleBar({ demo }: { demo: boolean }): JSX.Element {
-  // The version the core reports, the same one Settings and the updater use.
+  // version as reported by Rust, same one Settings and the updater use
   const version = useStore((s) => s.boot?.version ?? '')
   const showStats = useStore((s) => s.settings?.showStats ?? true)
   return (
@@ -18,8 +18,8 @@ export function TitleBar({ demo }: { demo: boolean }): JSX.Element {
         </span>
         {demo && <span className="demo-tag" data-tauri-drag-region>DEMO</span>}
       </div>
-      {/* Channel stats, always in the very middle of the window, however many platforms show.
-          Its empty space drags the window too. */}
+      {/* Channel stats, dead centre of the window no matter how many platforms show.
+          The empty space around them drags the window too. */}
       <div className="title-status" data-tauri-drag-region>{showStats && <ChannelStatsBar />}</div>
       <div className="title-right" data-tauri-drag-region>
         <button className="win-btn" aria-label="Minimize" onClick={() => window.nnf.window('minimize')}>_</button>

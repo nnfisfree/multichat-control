@@ -10,7 +10,7 @@ const num = (v: unknown): number | undefined => {
   return Number.isFinite(n) && n > 0 ? n : undefined
 }
 
-/** A clip from Twitch's API (Get Clips) as a card. */
+/** Twitch Get Clips response -> card. */
 export function twitchClipPreview(c: any): LinkPreview | null {
   if (!c?.id) return null
   return {
@@ -21,7 +21,7 @@ export function twitchClipPreview(c: any): LinkPreview | null {
   }
 }
 
-/** A clip from the data Kick's website uses, as a card. */
+/** Kick's internal clip data -> card. */
 export function kickClipPreview(c: any): LinkPreview | null {
   if (!c?.id) return null
   const slug = /^[\w-]+$/.test(c.channel?.slug ?? '') ? c.channel.slug : ''
@@ -33,7 +33,7 @@ export function kickClipPreview(c: any): LinkPreview | null {
   }
 }
 
-/** YouTube's public oEmbed: title, channel and picture, with no login and no API quota. */
+/** YouTube's public oEmbed. Title, channel and thumbnail with no login and no quota cost. */
 async function youtube(t: Extract<PreviewTarget, { kind: 'youtube' | 'youtube-clip' }>, link: string): Promise<LinkPreview | null> {
   const page = t.kind === 'youtube-clip' ? link : `https://www.youtube.com/watch?v=${t.id}`
   const d = await fetchJson(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(page)}`)
@@ -43,18 +43,18 @@ async function youtube(t: Extract<PreviewTarget, { kind: 'youtube' | 'youtube-cl
     url: t.kind === 'youtube-clip' ? link : short ? `https://www.youtube.com/shorts/${t.id}` : page,
     platform: 'youtube', kind: t.kind === 'youtube-clip' ? 'clip' : short ? 'short' : 'video',
     title: String(d.title), channel: d.author_name || undefined,
-    // The 16:9 picture; oEmbed's own one has black bars.
+    // use the 16:9 thumbnail, oEmbed's own has black bars
     thumbnail: t.kind === 'youtube' ? `https://i.ytimg.com/vi/${t.id}/mqdefault.jpg` : d.thumbnail_url || undefined
   }
 }
 
 const MAX_CACHED = 500
-/** A failed lookup is tried again after this long, such as after logging in to Twitch. */
+// retry failed lookups after a while (e.g. the user has since logged in to Twitch)
 const RETRY_MS = 5 * 60 * 1000
 
 /**
- * Looks up the cards for links in chat. Each video or clip is looked up once, however many
- * messages link it, and the answers are kept for the session.
+ * Fetches preview cards for links in chat. Each video/clip is looked up once no matter how many
+ * messages link it, and results are kept for the session.
  */
 export class Previews {
   private cache = new Map<string, Promise<LinkPreview | null>>()

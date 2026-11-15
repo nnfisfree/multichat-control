@@ -9,7 +9,7 @@ interface Props {
   onClose(): void
   onReply(m: ChatMessage): void
   onResult(r: ActionResult): void
-  /** Opened from the users list: there is no message to reply to, copy or delete. */
+  /** Opened from the Users list, so there's no message to reply to, copy or delete. */
   userOnly?: boolean
   onCard?(m: ChatMessage): void
 }
@@ -35,7 +35,7 @@ export function ContextMenu({ x, y, m, onClose, onReply, onResult, userOnly, onC
     <div className="popover ctx" role="menu" style={{ left: Math.min(x, window.innerWidth - 210), top: Math.max(8, Math.min(y, window.innerHeight - 380)) }}>
       <div className="ctx-name">{m.author.name}</div>
       {onCard && <button role="menuitem" onClick={() => onCard(m)}>View user card</button>}
-      {/* A held message isn't in chat, so it can't be replied to, deleted or pinned: Allow or Deny it instead. */}
+      {/* held messages aren't in chat yet, so no reply/delete/pin, only Allow or Deny */}
       {!userOnly && !m.held && <>
         <button role="menuitem" onClick={() => onReply(m)}>Reply</button>
         <button role="menuitem" onClick={() => void navigator.clipboard.writeText(plainText(m.parts))}>Copy text</button>

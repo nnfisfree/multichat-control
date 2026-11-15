@@ -1,8 +1,8 @@
-//! Updates from the project's GitHub releases. Only GitHub is contacted, and a download is only
-//! installed when it matches the SHA-256 checksum GitHub publishes for it.
+//! Updates from the project's GitHub releases. Only GitHub is contacted, and a download only gets
+//! installed if it matches the SHA-256 GitHub publishes for it.
 //!
-//! The app is a single exe, so installing means: download the new exe beside the old one, swap
-//! them (Windows allows renaming a running exe), start the new one and exit. The old exe is
+//! The app is a single exe, so "installing" means: download the new exe next to the old one, swap
+//! them (Windows lets you rename a running exe), start the new one and exit. The old exe gets
 //! deleted on the next start.
 
 use crate::paths::{data_dir, exe_dir};
@@ -56,7 +56,7 @@ fn setting_bool(name: &str, default: bool) -> bool {
         .unwrap_or(default)
 }
 
-/// "0.2.1" or "v0.3.0-beta.1" as comparable parts. A full release beats its pre-releases.
+/// "0.2.1" or "v0.3.0-beta.1" split into comparable parts. A full release beats its pre-releases.
 fn version_key(v: &str) -> (Vec<u64>, Option<String>) {
     let v = v.trim().trim_start_matches(['v', 'V']);
     let (main, pre) = match v.split_once('-') { Some((m, p)) => (m, Some(p.to_string())), None => (v, None) };
@@ -109,7 +109,7 @@ async fn check(app: &AppHandle, manual: bool) -> Value {
             "version": r["tag_name"].as_str().unwrap_or("").trim_start_matches(['v', 'V']),
             "notes": r["body"].as_str().unwrap_or("").chars().take(20000).collect::<String>(),
             "page": r["html_url"],
-            // Only files with a checksum from GitHub may be installed automatically.
+            // only assets with a GitHub checksum are allowed to auto-install
             "canInstall": url.is_some() && sha.is_some(),
             "size": asset.as_ref().map(|a| a["size"].clone()).unwrap_or(Value::Null),
         });
@@ -124,7 +124,7 @@ async fn check(app: &AppHandle, manual: bool) -> Value {
         }
         Err(e) => {
             log("update", &format!("check failed: {e}"));
-            // Background checks stay quiet; only a manual check shows the error.
+            // background checks stay quiet, only a manual check shows the error
             if manual { set(app, json!({ "status": "error", "error": e })) } else { set(app, json!({ "status": "idle" })) }
         }
     }
@@ -144,7 +144,7 @@ pub async fn update_check(app: AppHandle, manual: Option<bool>) -> Value {
     check(&app, manual.unwrap_or(true)).await
 }
 
-/// Checks shortly after start, then every few hours, when automatic checks are on.
+/// Checks shortly after start, then every few hours, if auto-checks are on.
 #[tauri::command]
 pub fn update_start(app: AppHandle) {
     static STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -166,7 +166,7 @@ fn fail(app: &AppHandle, msg: &str) -> Result<(), String> {
     Err(msg.to_string())
 }
 
-/// Downloads the new exe next to the current one and checks it against GitHub's checksum.
+/// Downloads the new exe next to the current one and verifies it against GitHub's checksum.
 #[tauri::command]
 pub async fn update_download(app: AppHandle) -> Result<(), String> {
     let found = { updater().lock().unwrap().found.as_ref().map(|f| (f.url.clone(), f.sha256.clone())) };
@@ -209,7 +209,7 @@ pub async fn update_download(app: AppHandle) -> Result<(), String> {
     }
 }
 
-/// Swaps in the new exe, starts it, and exits. The engine saves what's waiting first.
+/// Swaps in the new exe, starts it and exits. The engine flushes pending writes first.
 #[tauri::command]
 pub fn update_install(app: AppHandle) -> Result<(), String> {
     let Some(new) = updater().lock().unwrap().ready.clone() else { return Err("No update is ready.".into()) };
@@ -218,7 +218,7 @@ pub fn update_install(app: AppHandle) -> Result<(), String> {
     let _ = std::fs::remove_file(&old);
     std::fs::rename(&exe, &old).map_err(|e| e.to_string())?;
     if let Err(e) = std::fs::rename(&new, &exe) {
-        // Put the current version back, so the app keeps working.
+        // put the current exe back so the app keeps working
         let _ = std::fs::rename(&old, &exe);
         return Err(e.to_string());
     }
@@ -237,7 +237,7 @@ pub fn update_open_page(app: AppHandle) {
     }
 }
 
-/// Deletes the exe an earlier update replaced.
+/// Deletes the exe a previous update replaced.
 pub fn remove_old_exe() {
     if let Ok(exe) = std::env::current_exe() {
         let _ = std::fs::remove_file(exe.with_extension("exe.old"));

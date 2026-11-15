@@ -7,7 +7,7 @@ import { money, text, tier, toPlatform, type AlertContext, type AlertService } f
 const API = 'https://streamlabs.com/api/v2.0'
 const SOCKET = 'wss://sockets.streamlabs.com/socket.io/'
 
-/** Turns one item of a Streamlabs socket event into an event. Unknown kinds are skipped. */
+/** One item of a Streamlabs socket event -> StreamEvent. Unknown types are skipped. */
 function toEvent(type: string, m: any, platform: Platform, eventId: string): StreamEvent | null {
   const who = text(m?.from) ?? text(m?.display_name) ?? text(m?.name) ?? 'Someone'
   const months = Number(m?.months)
@@ -27,8 +27,8 @@ function toEvent(type: string, m: any, platform: Platform, eventId: string): Str
     case 'resub': {
       const gifter = text(m?.gifter_display_name) ?? text(m?.gifter)
       if (gifter) return { ...base, type: 'gift', actor: gifter, text: `gifted a sub to ${who}`, amount: tier(m?.sub_plan) }
-      if (platform === 'youtube') return { ...base, type: 'sub', actor: who, text: months > 1 ? `is a member (${months} months)` : 'became a member' }
-      return { ...base, type: 'sub', actor: who, text: months > 1 ? `resubscribed (${months} months)` : 'subscribed', amount: tier(m?.sub_plan) }
+      if (platform === 'youtube') return { ...base, type: 'sub', actor: who, text: months > 1 ? `is a member (${months} months)` : 'became a member', months: months || undefined }
+      return { ...base, type: 'sub', actor: who, text: months > 1 ? `resubscribed (${months} months)` : 'subscribed', amount: tier(m?.sub_plan), months: months || undefined }
     }
     case 'bits':
       return { ...base, type: 'cheer', actor: who, text: 'cheered', amount: `${Number(m?.amount) || 0} bits` }
@@ -48,8 +48,8 @@ function toEvent(type: string, m: any, platform: Platform, eventId: string): Str
 
 
 /**
- * Streamlabs sends alerts live over its socket (socket.io, spoken here directly), and its API
- * lists past donations.
+ * Live alerts come over Streamlabs' socket (socket.io, but we speak the protocol directly instead of
+ * pulling in the client), and the REST API has past donations.
  */
 export class Streamlabs implements AlertService {
   readonly source = 'streamlabs' as const
@@ -62,10 +62,10 @@ export class Streamlabs implements AlertService {
 
   constructor(private ctx: AlertContext) {}
 
-  /** A request as the user's Streamlabs account; the core adds and renews the token. */
+  /** Authenticated call. Rust adds and refreshes the token. */
   private async api(url: string): Promise<any> {
     const data = await api('streamlabs', 'GET', url, undefined, { Accept: 'application/json' })
-    // A rejected login can get a web page back rather than an error.
+    // a rejected token can come back as an HTML page instead of an error
     if (!data || typeof data !== 'object') throw new HttpError(401, "Streamlabs didn't accept the login.", data)
     return data
   }
@@ -145,7 +145,7 @@ export class Streamlabs implements AlertService {
     for (const m of ([] as any[]).concat(evt?.message ?? [])) {
       const e = toEvent(type, m, platform, String(evt?.event_id ?? ''))
       if (!e) continue
-      // A test alert from the dashboard: shown until the app restarts, never saved.
+      // test alert from the dashboard: shown until restart, never saved
       const test = m?.isTest === true || m?.isTest === 'true' || evt?.isTest === true
       this.ctx.event(test ? { ...e, id: `${e.id}-test-${Date.now()}`, test: true } : e)
     }
@@ -162,7 +162,7 @@ export class Streamlabs implements AlertService {
       if (run !== this.run || ws !== this.ws) return
       const s = raw.toString()
       if (s.startsWith('0')) {
-        // Engine.io handshake: the client must ping on this interval.
+        // engine.io handshake, tells us the ping interval
         let o: any = {}
         try { o = JSON.parse(s.slice(1)) } catch { /* defaults below */ }
         const every = Number(o.pingInterval) || 25000
@@ -179,7 +179,7 @@ export class Streamlabs implements AlertService {
         this.attempt = 0
         this.ctx.status({ status: 'connected', account: 'Streamlabs' })
       } else if (s.startsWith('44')) {
-        // The live token was refused: a fresh start fetches a new one.
+        // socket token refused; reconnecting fetches a fresh one
         ws.close()
       } else if (s.startsWith('42')) {
         try {

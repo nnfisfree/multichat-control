@@ -4,15 +4,16 @@ import { backoff, message } from '../../net'
 const URL_DEFAULT = 'wss://eventsub.wss.twitch.tv/ws'
 
 export interface EventSubHandlers {
-  /** A fresh session exists and needs its subscriptions created. */
+  /** New session, subscriptions need creating. */
   onSession(sessionId: string): Promise<void>
   onNotification(type: string, messageId: string, event: any): void
   onState(state: 'connected' | 'reconnecting', detail?: string): void
 }
 
 /**
- * EventSub WebSocket client. A planned `session_reconnect` keeps subscriptions by swapping
- * sockets; any other loss starts a new session and resubscribes, because Twitch doesn't replay.
+ * EventSub over WebSocket. A planned `session_reconnect` keeps the subscriptions (we just swap
+ * sockets). Any other drop means a new session and resubscribing, and Twitch doesn't replay
+ * anything we missed.
  */
 export class EventSub {
   private socket: WebSocket | null = null
@@ -58,7 +59,7 @@ export class EventSub {
       const type = msg.metadata?.message_type
       const id = msg.metadata?.message_id
       if (id) {
-        // Twitch may redeliver a message, so drop repeats.
+        // Twitch can redeliver, drop dupes
         if (this.seen.has(id)) return
         this.seen.add(id)
         if (this.seen.size > 2000) this.seen.delete(this.seen.values().next().value!)

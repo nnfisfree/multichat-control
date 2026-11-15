@@ -1,7 +1,6 @@
-//! A WebSocket opened by the core for the engine, for servers that only accept connections that
-//! say they come from their own site (Kick's live server refuses anything else). A web page can't
-//! set that header, so the core opens the socket and passes messages both ways.
-//! Only Kick's servers are allowed here.
+//! WebSockets opened from Rust on the engine's behalf, for servers that only accept connections
+//! claiming to come from their own site (Kick refuses everything else). A web page can't set the
+//! Origin header, so Rust opens the socket and relays messages both ways. Only Kick hosts allowed.
 
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
@@ -28,7 +27,7 @@ fn allowed(u: &url::Url) -> bool {
     u.scheme() == "wss" && u.host_str().is_some_and(|h| h == "kick.com" || h.ends_with(".kick.com"))
 }
 
-/// Opens the socket; "ws:open", "ws:message" and "ws:close" events carry the returned id.
+/// Opens a socket. "ws:open", "ws:message" and "ws:close" events carry the returned id.
 #[tauri::command]
 pub fn ws_open(app: AppHandle, url: String) -> Result<u64, String> {
     let u = url::Url::parse(&url).map_err(|_| "Bad address.".to_string())?;

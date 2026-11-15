@@ -4,27 +4,24 @@ export const PLATFORM_LABEL: Record<Platform, string> = { twitch: 'Twitch', yout
 
 export type MessagePart =
   | { type: 'text'; text: string }
-  | { type: 'emote'; name: string; url: string; overlay?: boolean }
+  /** `giant`: made huge by Twitch's "Gigantify an Emote" Power-up. */
+  | { type: 'emote'; name: string; url: string; overlay?: boolean; giant?: boolean }
   | { type: 'link'; url: string; text: string }
   | { type: 'gif'; url: string; alt: string }
 
 export interface Badge { id: string; title: string; url?: string }
 
-/** What the card under a message shows for a YouTube video or a Twitch, Kick or YouTube clip. */
+/** Card under a YouTube video link or a Twitch/Kick/YouTube clip link. */
 export interface LinkPreview {
-  /** Where a click goes. */
   url: string
-  /** Where the video or clip lives. */
   platform: Platform
   kind: 'video' | 'short' | 'clip'
   title: string
-  /** The channel it is from. */
   channel?: string
   thumbnail?: string
-  /** Length in seconds, where the platform shares it. */
+  /** Seconds, if the platform tells us. */
   seconds?: number
   views?: number
-  /** Who made the clip. */
   clippedBy?: string
 }
 
@@ -43,28 +40,26 @@ interface Author {
 
 export interface UserEntry { id: string; name: string; login?: string; color?: string }
 
-/** The message pinned in Twitch chat, if any. */
 export interface PinnedMessage { id: string; text: string; sender: string; endsAt?: number }
 
-/** An outgoing Twitch raid during Twitch's countdown: who is being raided and when it goes. */
+/** Our outgoing raid during Twitch's countdown. */
 export interface RaidInfo {
   login: string
   name: string
   avatar?: string
-  /** What they are streaming; absent when they are offline. */
+  /** What they're streaming, or their last category if they're offline. */
   game?: string
   title?: string
   viewers?: number
   live: boolean
   startedAt: number
-  /** When Twitch sends the raid on its own. */
+  /** When Twitch sends it automatically. */
   endsAt: number
 }
 
-/** The result of a typed command. */
 export type CommandOutcome = ActionResult & { openUser?: UserEntry }
 
-/** What a platform tells about one account. Undefined means unknown; null means "no". */
+/** Account info for the user card. undefined = unknown, null = no. */
 export interface UserProfile {
   avatar?: string
   createdAt?: number
@@ -77,18 +72,18 @@ export interface UserProfile {
   about?: string
 }
 
-/** Everything the user card shows: the profile plus their history in this channel. */
+/** Profile plus this person's history in the channel. */
 export interface UserCard extends UserProfile {
   platform: Platform
   id: string
   name: string
   login?: string
   color?: string
-  /** Their messages in this channel, newest first, from this stream and the saved streams. */
+  /** Newest first, current stream plus saved history. */
   messages: ChatMessage[]
   total: number
   firstSeen?: number
-  /** In how many of the saved streams (plus this one) they chatted. */
+  /** Number of streams (saved ones + this one) they chatted in. */
   streams: number
   ofStreams: number
   deleted: number
@@ -97,19 +92,19 @@ export interface UserCard extends UserProfile {
 }
 export interface UserGroups { broadcaster: UserEntry[]; moderators: UserEntry[]; vips: UserEntry[]; members: UserEntry[]; users: UserEntry[] }
 
-/** What a platform itself reports about who is watching. */
+/** What the platform itself tells us about who's watching. */
 export interface UsersInfo {
   live: boolean
   viewers?: number
-  /** The platform's own list of users in chat, where it has one (Twitch). */
+  /** The platform's own chatter list, where there is one (Twitch only). */
   groups?: UserGroups
-  /** The login is missing the permission needed for the full list. */
+  /** Token lacks the scope the full list needs. */
   needsRelogin?: boolean
 }
 
 export interface PlatformUsers extends UsersInfo {
   platform: Platform
-  /** 'chatters' is the platform's own list; 'chat' is everyone who chatted this stream. */
+  /** 'chatters' = the platform's list, 'chat' = everyone who's talked this stream. */
   source: 'chatters' | 'chat'
   groups: UserGroups
   updatedAt: number
@@ -122,42 +117,43 @@ export interface ChatMessage {
   author: Author
   parts: MessagePart[]
   kind: 'chat' | 'action' | 'announcement' | 'paid' | 'system' | 'event' | 'cheer' | 'highlight'
-  /** Set on rows that are an event card rather than a message. */
+  /** Set when this row is an event card, not a message. */
   event?: StreamEvent
-  /** A Power-up changed how this message looks. */
+  /** Changed by a Power-up: "Gigantify an Emote" or "Message Effects" (the animated outline). */
   effect?: 'giant' | 'message-effect'
+  /** Which Message Effect, when Twitch says (it only does in the Bits event, see twitch/connector.ts). */
+  effectId?: string
   reply?: { author: string; text: string }
   deleted?: boolean
   firstTime?: boolean
-  /** Short tag shown on highlighted rows, such as a Super Chat amount. */
+  /** Short tag on highlighted rows, e.g. a Super Chat amount. */
   label?: string
-  /** From a past stream's saved history. */
+  /** Loaded from a past stream's saved history. */
   history?: boolean
-  /** A line between past streams and this one, rather than a message. */
+  /** Divider between past streams and this one (not a message). */
   divider?: string
-  /** Twitch's AutoMod held this message: no one else sees it until a moderator allows it. */
+  /** Held by AutoMod: nobody else sees it until a mod allows it. */
   held?: HeldInfo
-  /** A warning for moderators: Twitch marked the sender as suspicious, or the message looks like spam. */
+  /** Mod warning: Twitch flagged the sender as suspicious, or our own spam check matched. */
   flag?: MessageFlag
 }
 
 export interface HeldInfo {
-  /** Why it was held, in plain words, such as "AutoMod: Profanity (level 3)" or "Blocked link". */
+  /** Readable reason, e.g. "AutoMod: Profanity (level 3)" or "Blocked link". */
   reason: string
   status: 'pending' | 'allowed' | 'denied' | 'expired'
-  /** The moderator who allowed or denied it. */
+  /** The mod who allowed/denied it. */
   by?: string
 }
 
 export interface MessageFlag {
-  /** 'suspicious' comes from Twitch; 'spam' is this app's own check, on every platform. */
+  /** 'suspicious' comes from Twitch, 'spam' is our own check (all platforms). */
   kind: 'suspicious' | 'spam'
   label: string
-  /** The reasons, such as "Likely ban evader". */
+  /** e.g. "Likely ban evader" */
   notes: string[]
 }
 
-/** One saved past stream's chat. */
 export interface HistorySession { id: string; start: number; end: number; count: number }
 
 export type EventType =
@@ -178,36 +174,39 @@ export interface StreamEvent {
   platform: Platform
   ts: number
   type: EventType
-  /** One-line summary, with the actor kept separate so it can be emphasised. */
+  /** Kept separate from the text so the UI can bold it. */
   actor?: string
   text: string
-  /** Bold name after the text, such as the reward redeemed. */
+  /** Bold bit after the text, e.g. the reward that was redeemed. */
   subject?: string
   amount?: string
   message?: string
   details: Record<string, string>
   actions?: EventAction[]
-  /** Already visible as a chat message, so no event card is needed. */
+  /** Already shows as a chat message, so no event card. */
   noChat?: boolean
-  /** Large moments, such as gift bombs, get a stronger card. */
+  /** Gift bombs and the like, get a bigger card. */
   big?: boolean
-  /** Loaded from an earlier session or the platform's history, so it never becomes a chat card. */
+  /** From an earlier session or the platform's history. Never turns into a chat card. */
   history?: boolean
-  /** Reported by an alert service rather than the platform itself. */
+  /** Reported by an alert service instead of the platform. */
   source?: AlertSource
-  /** A new clip's card, shown under the event. */
+  /** Card for a newly created clip. */
   preview?: LinkPreview
-  /** A test alert (Streamer.bot test trigger, StreamElements or Streamlabs test). Never saved, so it's gone after a restart. */
+  /** Test alert (SB test trigger, SE or SL test). Never saved, gone after a restart. */
   test?: boolean
+  /** Total months subscribed, including this one. */
+  months?: number
+  /** Twitch resubs: consecutive months, if the viewer shares it. */
+  streak?: number
 }
 
-/** Alert and donation services that report events for the platforms. */
 export type AlertSource = 'streamelements' | 'streamlabs' | 'buymeacoffee'
-/** The alert services the streamer picks one of. Buy Me a Coffee runs beside them, not instead. */
+/** The user picks one of these. BMC runs alongside, not instead. */
 export type PickedAlertSource = 'streamelements' | 'streamlabs'
 export const ALERT_SOURCES: PickedAlertSource[] = ['streamelements', 'streamlabs']
 export const ALERT_SOURCE_LABEL: Record<AlertSource, string> = { streamelements: 'StreamElements', streamlabs: 'Streamlabs', buymeacoffee: 'Buy Me a Coffee' }
-/** Where a Buy Me a Coffee creator makes the read-only token the app connects with. */
+// where a BMC creator generates the read-only token we connect with
 export const BMC_TOKEN_URL = 'https://developers.buymeacoffee.com/dashboard'
 
 export interface IntegrationState {
@@ -238,12 +237,12 @@ export interface ConnectionState {
   platform: Platform
   status: ConnectionStatus
   account?: string
-  /** The names viewers tag the streamer with (without @), so those messages can be highlighted. */
+  /** Names viewers tag the streamer with (no @), used to highlight mentions. */
   mentions?: string[]
   detail?: string
-  /** Shown while Twitch device login waits for the user. */
+  /** Shown while the Twitch device login is waiting. */
   device?: { code: string; url: string }
-  /** Connected, but a newer feature needs the user to log in again; says which. */
+  /** Connected, but some newer feature needs a fresh login. Says which. */
   relogin?: string
 }
 
@@ -254,10 +253,10 @@ export interface Emote {
   provider: 'twitch' | '7tv' | 'bttv' | 'ffz' | 'kick' | 'emoji'
   platform: Platform
   group: string
-  /** Avatar shown beside the group's heading. */
+  /** Avatar next to the group heading. */
   groupIcon?: string
   animated?: boolean
-  /** Drawn on top of the emote before it, like 7TV's RainTime. */
+  /** Drawn on top of the previous emote (7TV zero-width, e.g. RainTime). */
   zeroWidth?: boolean
 }
 
@@ -277,7 +276,7 @@ export interface ActionDef {
   group: string
   label: string
   fields?: ActionField[]
-  /** Toggle actions show on/off state. */
+  /** Toggle actions show their on/off state. */
   active?: boolean
   confirm?: string
   note?: string
@@ -287,13 +286,13 @@ export interface ActionDef {
 export interface SendResult { platform: Platform; ok: boolean; error?: string }
 export interface ActionResult { ok: boolean; message?: string }
 
-/** The channel's own audience counts, for the stats under the message box. Missing means unknown. */
+/** Follower/sub counts for the stats pills. Missing = unknown. */
 export interface ChannelStats {
   followers?: number
   subscribers?: number
-  /** Kick: how many of the subscribers were gifted. */
+  /** Kick only: how many of the subs are gifted. */
   gifted?: number
-  /** YouTube rounds its subscriber count to three significant figures. */
+  /** YouTube rounds sub counts to 3 significant figures. */
   rounded?: boolean
 }
 
@@ -313,7 +312,7 @@ export interface UpdateInfo {
   version: string
   notes: string
   page: string
-  /** False when this copy can't update itself, so the download page is offered instead. */
+  /** false when this copy can't self-update; we link to the download page instead. */
   canInstall: boolean
   size?: number
 }
@@ -335,54 +334,53 @@ export interface Settings {
   kickClientId: string
   sendTargets: Record<Platform, boolean>
   confirmActions: boolean
-  /** The PC clock under the message box. */
   showClock: boolean
-  /** Followers and subscribers of each connected platform, under the message box. */
   showStats: boolean
-  /** The version whose "What's new" the user already acknowledged. Empty before the first one. */
+  /** Version whose What's New the user already dismissed. Empty before the first one. */
   seenVersion: string
   fontScale: number
   showTimestamps: boolean
   setupDismissed: boolean
-  /** 0 to 1. The main process keeps a small minimum so the window can't vanish. */
+  /** 0-1. Rust clamps it to a small minimum so the window can't vanish completely. */
   windowOpacity: number
-  /** Bends like jelly while dragged by the title bar, like KDE's wobbly windows. */
+  /** KDE-style wobbly window while dragging by the title bar. */
   windowWobble: boolean
-  /** 0 to 100: how much the window wobbles. */
+  /** 0-100 */
   wobbleIntensity: number
   uiFont: string
   chatFont: string
   showPronouns: boolean
-  /** A card under YouTube links and clip links in chat. */
+  /** Preview cards under YouTube and clip links. */
   linkPreviews: boolean
-  /** Marks messages that look like "buy followers" spam, on every platform. */
+  /** Flag "buy followers" spam (all platforms). */
   spamWarnings: boolean
   emoteProviders: EmoteProviders
   chatEvents: Record<ChatEventGroup, boolean>
-  /** New events also pop up above the message box for a few seconds. */
+  /** Pop-ups at the top of chat for new events. */
   eventPopups: boolean
-  /** How long each pop-up stays, in seconds. */
+  /** Seconds each pop-up stays up. */
   eventPopupSeconds: number
   closeAction: CloseAction
   eventFilter: EventFilter
   autoUpdate: boolean
   updatePrereleases: boolean
-  /** The one alert service this streamer uses, if any. */
   alertService: PickedAlertSource | 'none'
-  /** Saves chat from the last five streams on this PC. */
+  /** Keep chat from the last five streams on this PC. */
   keepChatHistory: boolean
-  /** Reads stream health from OBS's WebSocket server on this PC. */
+  /** OBS WebSocket stats. */
   obsEnabled: boolean
-  /** The one-time tip about connecting OBS was shown and closed. */
+  /** The one-time OBS tip was shown and dismissed. */
   obsTipSeen: boolean
-  /** OBS has been set up on this PC (it connected at least once), so the tip isn't needed. */
+  /** OBS connected at least once, so the tip isn't needed. */
   obsSetUp: boolean
   obsPort: number
-  /** Lists and runs Streamer.bot actions through its WebSocket server on this PC. */
+  /** Streamer.bot actions via its WebSocket server. */
   sbEnabled: boolean
   sbPort: number
-  /** The skin's id, from the renderer's skins list. */
+  /** Skin id, see ui/styles/skins.ts. */
   theme: string
+  /** Ticked "Don't show this again" on the note about Google's "unverified app" warning. */
+  youtubeNoticeSeen: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -414,39 +412,41 @@ export const DEFAULT_SETTINGS: Settings = {
   updatePrereleases: false,
   alertService: 'none',
   keepChatHistory: true,
-  // On for new installs; it just waits quietly until OBS is reachable.
+  // on by default, it just sits there quietly until OBS is reachable
   obsEnabled: true,
   obsTipSeen: false,
   obsSetUp: false,
   obsPort: 4455,
   sbEnabled: false,
   sbPort: 8080,
-  theme: 'pos',
-  // Every event type starts on; each can be turned off in Settings. A saved choice is kept.
+  // new installs start on Sweet; engine/store.ts keeps POS Club for anyone upgrading
+  theme: 'sweet',
+  youtubeNoticeSeen: false,
+  // all event types on by default, each one can be turned off in Settings
   chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: true, paid: true, donations: true, hype: true }
 }
 
-/** Client secrets are write-only from the UI: it learns only whether one is stored. */
+/** Secrets are write-only from the UI, it only ever learns whether one is stored. */
 export interface SecretState { youtubeSecret: boolean; kickSecret: boolean; obsPassword: boolean; sbPassword: boolean }
 
-/** Stream health read from OBS. Sizes in MB, durations in ms, bitrates in kb/s. */
+/** OBS stats. Sizes in MB, durations in ms, bitrates in kb/s. */
 export interface ObsStats {
   cpu: number
   memoryMb: number
   diskMb: number
   fps: number
   renderMs: number
-  /** When these stats were read, so the uptime can keep counting between updates. */
+  /** When these were read, so the uptime can keep ticking between updates. */
   at: number
-  /** The stream encoder in plain words, and the output video size and frame rate. */
+  /** Readable encoder name, plus output size and fps. */
   encoder?: string
   output?: {
     width: number
     height: number
     fps: number
-    /** The canvas OBS draws on, before scaling. */
+    /** Base canvas, before scaling. */
     canvas?: { width: number; height: number }
-    /** Set when the stream encoder rescales again (Advanced output mode). */
+    /** Set when the encoder rescales again (Advanced output mode). */
     stream?: { width: number; height: number }
   }
   renderMissed: number
@@ -463,15 +463,13 @@ export interface ObsState {
   stats?: ObsStats
 }
 
-/** A Streamer.bot action, as GetActions lists it. */
 export interface SbAction { id: string; name: string; group: string; enabled: boolean }
-/** A Streamer.bot chat command (such as !lurk). Streamer.bot runs it when it sees it in chat. */
+/** A Streamer.bot chat command (e.g. !lurk). SB runs it itself when it sees it in chat. */
 export interface SbCommand { id: string; name: string; group: string; enabled: boolean; commands: string[] }
 
 export interface StreamerbotState {
   status: 'off' | 'connecting' | 'connected' | 'error'
   detail?: string
-  /** Streamer.bot's version, once connected. */
   version?: string
   actions: SbAction[]
   commands: SbCommand[]
@@ -504,29 +502,29 @@ export interface HubBatch {
   messages: ChatMessage[]
   events: StreamEvent[]
   deleted: string[]
-  /** Messages that changed, such as a held message being allowed. They replace the ones with the same id. */
+  /** Changed messages (e.g. a held message got allowed). Replace the ones with the same id. */
   updated?: ChatMessage[]
-  /** Removes all of one user's messages (ban), or a whole platform's (chat clear). */
+  /** Wipes one user's messages (ban) or a whole platform's (chat clear). */
   purged: { platform: Platform; userId?: string }[]
   statuses: ConnectionState[]
-  /** Twitch login to display label, sent as lookups finish. */
+  /** Twitch login -> display label, sent as lookups finish. */
   pronouns: Record<string, string>
-  /** Latest train state; null ends it, undefined means no change. */
+  /** null ends the train, undefined = no change. */
   hype?: HypeTrain | null
-  /** Platforms whose quick actions changed, such as a reward being turned on. */
+  /** Platforms whose quick actions changed, e.g. a reward got enabled. */
   actionsChanged?: Platform[]
   integrations?: IntegrationState[]
-  /** The pinned Twitch message; null when it is removed, undefined means no change. */
+  /** null = unpinned, undefined = no change. */
   pinned?: PinnedMessage | null
-  /** The outgoing raid; null when it goes or is cancelled, undefined means no change. */
+  /** null = sent or cancelled, undefined = no change. */
   raid?: RaidInfo | null
 }
 
-/** The skin's colours, so Twitch's rewards panel can match the app. */
+/** Skin colours, so Twitch's rewards panel can match the app. */
 export interface PanelColors { window: string; base: string; alt: string; text: string; muted: string; accent: string; accentHover: string; onAccent: string; line: string }
 export interface PanelBounds { x: number; y: number; width: number; height: number; colors?: PanelColors }
 
-/** The only surface the renderer can reach. Implemented in the preload script. */
+/** Everything the UI can call. Implemented by the engine (engine/index.ts) and exposed as window.nnf. */
 export interface NnfApi {
   bootstrap(): Promise<Bootstrap>
   onBatch(cb: (batch: HubBatch) => void): () => void
@@ -539,13 +537,13 @@ export interface NnfApi {
   streamerbot: {
     setPassword(password: string): Promise<SecretState>
     reconnect(): Promise<void>
-    /** Runs an action by its id. `input` reaches the action as rawInput, input0, input1… */
+    /** `input` arrives as rawInput, input0, input1... */
     run(actionId: string, input?: string): Promise<ActionResult>
   }
   updates: { check(): Promise<UpdateState>; download(): Promise<void>; install(): Promise<void>; openPage(): Promise<void> }
   send(targets: Platform[], text: string, replyTo?: { platform: Platform; messageId: string }): Promise<SendResult[]>
   moderate(platform: Platform, req: ModerationRequest): Promise<ActionResult>
-  /** Allows or denies a message Twitch's AutoMod held, by its held-message row id. */
+  /** Allow/deny an AutoMod hold, by its held-message row id. */
   automod(messageId: string, allow: boolean): Promise<ActionResult>
   emotes(platform: Platform): Promise<Emote[]>
   actions(platform: Platform): Promise<ActionDef[]>
@@ -557,12 +555,12 @@ export interface NnfApi {
   saveSecret(key: 'youtubeSecret' | 'kickSecret', value: string): Promise<SecretState>
   removeEvents(ids: string[]): Promise<void>
   users(platform: Platform): Promise<PlatformUsers>
-  /** Followers and subscribers, as far as the platform shares them; null when not connected. */
+  /** Whatever the platform shares. null when not connected. */
   stats(platform: Platform): Promise<ChannelStats | null>
   userCard(platform: Platform, user: UserEntry): Promise<UserCard>
-  /** The card for a YouTube video or a clip link; null when the link has none or the lookup fails. */
+  /** null when the link has no card or the lookup fails. */
   linkPreview(url: string): Promise<LinkPreview | null>
-  /** Runs a Twitch chat command such as /raid or /pin. */
+  /** Slash commands like /raid or /pin. */
   twitchCommand(text: string): Promise<CommandOutcome>
   history: {
     sessions(): Promise<HistorySession[]>
@@ -573,7 +571,7 @@ export interface NnfApi {
     login(source: AlertSource): Promise<void>
     logout(source: AlertSource): Promise<void>
     reconnect(source: AlertSource): Promise<void>
-    /** Buy Me a Coffee: saves a pasted token (checked first), then starts. */
+    /** BMC: saves a pasted token (tested first), then starts. */
     connect(source: 'buymeacoffee', token: string): Promise<void>
   }
   openExternal(url: string): Promise<void>

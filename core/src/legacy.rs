@@ -1,9 +1,8 @@
-//! Tidies up after updating from the Electron version (0.1.x).
+//! Cleanup after updating from the Electron build (0.1.x).
 //!
-//! The old updater copies the new files over the old ones, so Electron's ~70 files would stay
-//! beside the new exe. This removes exactly those, by name, and only when Electron's own
-//! `resources/app.asar` shows that this folder really held the old version. The `user-data`
-//! folder is never touched.
+//! The old updater copies the new files over the old ones, so Electron's ~70 files would be left
+//! sitting next to the new exe. This deletes exactly those, by name, and only if Electron's own
+//! `resources/app.asar` proves this folder really had the old version. `user-data` is never touched.
 
 use crate::paths::exe_dir;
 use crate::storage::log;
@@ -19,7 +18,7 @@ const FOLDERS: &[&str] = &["locales"];
 const RESOURCES: &[&str] = &["app.asar", "elevate.exe", "icon.png"];
 
 pub fn remove_electron_leftovers() {
-    // Development builds run from the project, which has nothing to tidy.
+    // dev builds run from the project folder, nothing to clean up there
     if cfg!(debug_assertions) {
         return;
     }
@@ -43,7 +42,7 @@ pub fn remove_electron_leftovers() {
         let _ = fs::remove_file(res.join(f));
     }
     let _ = fs::remove_dir_all(res.join("proto"));
-    // Removes the resources folder only if nothing else is left in it.
+    // only removes resources/ if it's empty now
     let _ = fs::remove_dir(&res);
     log("update", &format!("moved from the Electron version: removed {removed} old files"));
 }

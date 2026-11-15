@@ -14,7 +14,7 @@ type Row =
   | { kind: 'head'; label: string; icon?: string }
   | { kind: 'emotes'; emotes: Emote[] }
 
-/** Kept between openings, so the picker appears at once and refreshes quietly behind it. */
+// kept between opens so the picker shows instantly and refreshes in the background
 const lists = new Map<string, Emote[]>()
 
 function loadRecent(): string[] {
@@ -83,7 +83,7 @@ export function EmotePicker({ scope, onPick, onClose }: Props): JSX.Element {
       groups.get(label)!.emotes.push(e)
     }
     const ordered = [...groups]
-    // The first category is always the channel's own; recent picks follow it.
+    // channel's own emotes always first, recent picks after
     if (!term) {
       const recent = loadRecent().flatMap((n) => all.find((e) => e.name === n) ?? [])
       if (recent.length) ordered.splice(1, 0, ['Frequently used', { emotes: recent }])
@@ -96,7 +96,7 @@ export function EmotePicker({ scope, onPick, onClose }: Props): JSX.Element {
     return out
   }, [all, q, scope, columns])
 
-  // Only rows on screen exist, so even thousands of emotes stay fast.
+  // virtualized, only visible rows exist, so thousands of emotes are fine
   const v = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scroller.current,

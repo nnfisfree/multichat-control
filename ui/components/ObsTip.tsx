@@ -2,18 +2,17 @@ import { useEffect, useState, type JSX } from 'react'
 import { updateSettings, useStore } from '../lib/store'
 import { ObsLogo } from './Icons'
 
-/** How long OBS gets to connect on its own before the tip is shown. */
+// give OBS this long to connect on its own before showing the tip
 const WAIT_MS = 8000
 
 /**
- * A one-time tip about OBS stats, for a new install or anyone who never set OBS up. It waits for
- * "What's new" to be put away and for OBS to have had a chance to connect, and never shows again
- * once closed.
+ * One-time tip about OBS stats for new installs, or anyone who never set OBS up. Waits until
+ * What's New is dismissed and OBS has had a chance to connect, and never shows again once closed.
  */
 export function ObsTip({ onSetup }: { onSetup(): void }): JSX.Element | null {
   const version = useStore((s) => s.boot?.version ?? '')
   const seenVersion = useStore((s) => s.settings?.seenVersion ?? '')
-  // Already set up (OBS connected before, or a password is saved): no reminder, even when OBS
+  // Already set up (connected before, or a password is saved): no nagging, even if OBS just
   // happens to be closed right now.
   const seen = useStore((s) => (s.settings?.obsTipSeen ?? true) || (s.settings?.obsSetUp ?? true) || s.secrets.obsPassword)
   const connected = useStore((s) => s.obs.status === 'connected')
@@ -26,7 +25,7 @@ export function ObsTip({ onSetup }: { onSetup(): void }): JSX.Element | null {
     const t = setTimeout(() => setReady(true), WAIT_MS)
     return () => clearTimeout(t)
   }, [waiting, ready])
-  // OBS already works: nothing to explain.
+  // OBS already works, nothing to explain
   useEffect(() => {
     if (waiting && connected) void updateSettings({ obsTipSeen: true })
   }, [waiting, connected])

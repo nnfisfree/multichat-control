@@ -1,3 +1,4 @@
+import { plainNote } from '../../shared/events'
 import { core } from '../core'
 import { api, HttpError, message } from '../net'
 import { money, text, type AlertContext, type AlertService } from './alerts'
@@ -5,28 +6,27 @@ import { money, text, type AlertContext, type AlertService } from './alerts'
 const API = 'https://developers.buymeacoffee.com/api/v1'
 const STATE_FILE = 'bmc-state.json'
 
-/** New tips are looked for this often. Memberships and shop purchases change less often. */
+// Tips get checked often; memberships and shop purchases change less, see below.
 const TIPS_EVERY = 15_000
 const SUBS_EVERY = 60_000
-/** Every member's renewal date is checked this often (all pages; page 1 is checked every minute). */
+// Full scan of every member's renewal date. Page 1 alone is checked every minute.
 const FULL_SCAN_EVERY = 5 * 60_000
-/** At most this many pages of a list are read in one go. */
+// safety cap on pages per list
 const MAX_PAGES = 40
 const MAX_SEEN = 3000
 
-/** One membership or monthly donation, as last seen. */
+/** A membership or monthly donation, as of the last check. */
 interface SubState {
-  /** When its current paid period started (ms). It moves forward when the supporter renews. */
+  /** Start of the current paid period (ms). Moves forward on renewal. */
   periodStart: number
-  /** Paid months on this subscription so far. */
   months: number
   active: boolean
-  /** Who it belongs to (a hash, never the email itself), so months add up across re-joins. */
+  /** Hash of the supporter, never the email itself. Lets months add up if they leave and re-join. */
   who: string
 }
 
 interface BmcState {
-  /** False until the first full look: what's found then is history, not news. */
+  /** false until the first full scan. Whatever that finds is history, not news. */
   synced: boolean
   tips: string[]
   extras: string[]
@@ -35,15 +35,15 @@ interface BmcState {
 
 const emptyState = (): BmcState => ({ synced: false, tips: [], extras: [], subs: {} })
 
-/** The first value that's present, so both the REST names and the webhook names are understood. */
+// REST and webhook payloads use different field names; take the first one that's there.
 function pick(o: any, ...keys: string[]): any {
   for (const k of keys) if (o?.[k] !== undefined && o?.[k] !== null && o?.[k] !== '') return o[k]
   return undefined
 }
 
 /**
- * BMC dates come as "2026-11-14 18:03:11" (UTC), as ISO text, or as Unix seconds.
- * Returns ms, or 0 when there's no usable date.
+ * BMC dates show up as "2026-11-14 18:03:11" (UTC), as ISO strings, or as unix seconds.
+ * Returns ms, or 0 if there's nothing usable.
  */
 export function bmcTime(v: unknown): number {
   if (typeof v === 'number') return v < 1e12 ? v * 1000 : v
@@ -56,8 +56,8 @@ export function bmcTime(v: unknown): number {
 }
 
 /**
- * Billing months from a to b, rounded. Billing dates drift: a membership started on Jan 31 renews
- * on Feb 28, and renewals can land hours or a day off, so calendar days can't be compared exactly.
+ * Billing months between a and b, rounded. Billing dates drift (a membership started Jan 31 renews
+ * Feb 28, and renewals can land hours or a day late), so exact calendar comparisons don't work.
  */
 export function monthsBetween(a: number, b: number): number {
   if (!a || !b || b <= a) return 0
@@ -68,9 +68,9 @@ const isYearly = (s: any): boolean => /year|annual/i.test(String(pick(s, 'subscr
 const periodMonths = (s: any): number => (isYearly(s) ? 12 : 1)
 
 /**
- * Paid months on a subscription seen for the first time: every period from its start to the one
- * running now. Pauses can't be seen in the list, so the start-to-now count is used; from then on
- * each renewal adds exactly one period.
+ * Months paid on a subscription we're seeing for the first time: every period from its start until
+ * now. Pauses aren't visible in the list, so this is a best guess. From here on each renewal adds
+ * exactly one.
  */
 export function monthsSoFar(s: any): number {
   const started = bmcTime(pick(s, 'subscription_created_on', 'started_at'))
@@ -80,7 +80,7 @@ export function monthsSoFar(s: any): number {
   return Math.floor(monthsBetween(started, period) / step) * step + step
 }
 
-/** A short, stable stand-in for a supporter, so no email is ever saved. */
+// short stable id for a supporter so we never have to store an email
 async function hashOf(v: string): Promise<string> {
   const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v.trim().toLowerCase())))
   return Array.from(bytes.slice(0, 8), (b) => b.toString(16).padStart(2, '0')).join('')
@@ -90,9 +90,9 @@ const isPublic = (v: unknown): boolean => !(v === 0 || v === '0' || v === false 
 const truthy = (v: unknown): boolean => v === true || v === 1 || v === '1' || v === 'true'
 
 /**
- * Buy Me a Coffee has no live socket for apps and no OAuth: the streamer pastes a read-only
- * token, and its API is checked every few seconds. Tips, memberships (with every renewal, and
- * the total months a supporter has paid) and shop purchases all come through.
+ * BMC has no socket and no OAuth for apps. The streamer pastes a read-only token and we poll the
+ * API every few seconds. Tips, memberships (every renewal, plus total months paid) and shop
+ * purchases all come through here.
  */
 export class BuyMeACoffee implements AlertService {
   readonly source = 'buymeacoffee' as const
@@ -102,7 +102,7 @@ export class BuyMeACoffee implements AlertService {
   private lastSubs = 0
   private lastFullScan = 0
   private failures = 0
-  /** Whether this session's first look is done: after that, anything new is live. */
+  // set after this session's first pass; anything new after that is live
   private warm = false
 
   constructor(private ctx: AlertContext, private demo = false) {}
@@ -111,7 +111,7 @@ export class BuyMeACoffee implements AlertService {
     return api('buymeacoffee', 'GET', API + path, undefined, { Accept: 'application/json' })
   }
 
-  /** Every page of a list, newest first. `stop` ends early once an item is already known. */
+  /** Pages through a list, newest first. `stop` bails out once we hit an item we already know. */
   private async list(path: string, stop?: (item: any) => boolean, maxPages = MAX_PAGES): Promise<any[]> {
     const out: any[] = []
     for (let page = 1; page <= maxPages; page++) {
@@ -120,7 +120,7 @@ export class BuyMeACoffee implements AlertService {
       try {
         r = await this.get(`${path}${sep}page=${page}`)
       } catch (err) {
-        // BMC answers 404 when a list is empty (no supporters or members yet).
+        // BMC returns 404 for an empty list (no supporters/members yet)
         if (err instanceof HttpError && err.status === 404) break
         throw err
       }
@@ -131,7 +131,7 @@ export class BuyMeACoffee implements AlertService {
     return out
   }
 
-  /** Buy Me a Coffee logs in with a pasted token, never through the browser. */
+  /** No browser login for BMC, it's always a pasted token. */
   async login(): Promise<void> {
     throw new Error('Paste your Buy Me a Coffee token in Settings to connect.')
   }
@@ -151,7 +151,7 @@ export class BuyMeACoffee implements AlertService {
   logout(): void {
     this.stop()
     void core.logout('buymeacoffee')
-    // A new token may belong to another page: start its history fresh.
+    // a new token might be for a different page, start its history from scratch
     this.state = emptyState()
     void core.removeFile(STATE_FILE).catch(() => {})
     this.ctx.status({ status: 'needs-login' })
@@ -192,7 +192,7 @@ export class BuyMeACoffee implements AlertService {
     await core.writeFile(STATE_FILE, JSON.stringify(this.state)).catch(() => {})
   }
 
-  /** One round of checks, then the next one is planned. Rounds never overlap. */
+  /** One round of checks, then schedules the next. Rounds never overlap. */
   private async poll(run: number): Promise<void> {
     try {
       const now = Date.now()
@@ -219,7 +219,7 @@ export class BuyMeACoffee implements AlertService {
         void core.logout('buymeacoffee')
         return this.ctx.status({ status: 'needs-login', detail: "Buy Me a Coffee didn't accept the token any more. Connect again with a new one." })
       }
-      // Busy (429) or down: wait longer each time, from 30 s up to 5 minutes.
+      // rate limited (429) or down: back off, 30s doubling up to 5 min
       const wait = Math.min(5 * 60_000, 30_000 * 2 ** Math.min(this.failures++, 4))
       this.ctx.status({ status: 'reconnecting', account: 'Buy Me a Coffee', detail: message(err) })
       this.next(run, wait)
@@ -232,9 +232,9 @@ export class BuyMeACoffee implements AlertService {
   }
 
   /**
-   * Whether something just found should be a chat card. On a session's first look only the
-   * last 10 minutes count; after that everything new is live. The very first connect shows
-   * nothing as live, so years of supporters don't flood chat.
+   * Should something we just found become a chat card? On a session's first pass only the last
+   * 10 minutes count; after that everything new is live. The very first connect shows nothing as
+   * live, otherwise years of supporters would flood chat.
    */
   private live(ts: number): boolean {
     if (!this.state.synced) return false
@@ -242,12 +242,12 @@ export class BuyMeACoffee implements AlertService {
     return ts > 0 && Date.now() - ts < 10 * 60_000
   }
 
-  // ---- One-time tips ----
+  // --- one-time tips ---
 
   private async tips(): Promise<boolean> {
     const seen = new Set(this.state.tips)
     const known = (t: any): boolean => seen.has(String(pick(t, 'support_id', 'id')))
-    // Only the newest pages: once a known tip shows up, everything older is known too.
+    // only the newest pages: once we hit a known tip, everything older is known too
     const items = await this.list('/supporters', this.state.synced ? known : undefined, this.state.synced ? 5 : MAX_PAGES)
     let changed = false
     for (const t of items.reverse()) {
@@ -265,21 +265,21 @@ export class BuyMeACoffee implements AlertService {
       this.ctx.event({
         id: `bmc-don-${id}`, platform: this.ctx.home(), ts: live ? Date.now() : ts || Date.now(), source: 'buymeacoffee',
         history: !live || undefined, type: 'donation',
-        actor: text(pick(t, 'supporter_name', 'payer_name')) ?? 'Someone',
+        actor: plainNote(text(pick(t, 'supporter_name', 'payer_name'))) ?? 'Someone',
         text: coffees === 1 ? 'bought a coffee' : `bought ${coffees} coffees`,
         amount: money(total, pick(t, 'support_currency', 'currency')),
-        message: isPublic(pick(t, 'support_visibility')) && !truthy(pick(t, 'note_hidden')) ? text(t?.support_note) : undefined,
+        message: isPublic(pick(t, 'support_visibility')) && !truthy(pick(t, 'note_hidden')) ? plainNote(text(t?.support_note), text(pick(t, 'supporter_name', 'payer_name'))) : undefined,
         big: total >= 50, details: { Coffees: String(coffees) }
       })
     }
     return changed
   }
 
-  // ---- Memberships and monthly donations ----
+  // --- memberships and monthly donations ---
 
   private async subscriptions(full: boolean): Promise<boolean> {
     const items = await this.list('/subscriptions?status=all', undefined, full ? MAX_PAGES : 1)
-    // Ids are numbers on BMC, newest last once reversed, so renewals count in the right order.
+    // ids are numeric; reversed so renewals get counted in order
     let changed = false
     for (const s of items.reverse()) {
       const id = String(pick(s, 'subscription_id', 'id') ?? '')
@@ -294,7 +294,7 @@ export class BuyMeACoffee implements AlertService {
         const months = monthsSoFar(s)
         this.state.subs[id] = { periodStart: period, months, active, who }
         changed = true
-        // Older members found on the very first look are listed quietly, once, with their total.
+        // members found on the very first pass get listed quietly, once, with their total
         if (active) this.emitSub(s, id, period, months, false, !this.live(bmcTime(pick(s, 'subscription_created_on', 'started_at'))))
         continue
       }
@@ -305,7 +305,7 @@ export class BuyMeACoffee implements AlertService {
         changed = true
         this.emitSub(s, id, period, before.months, true, !this.live(period))
       } else if (before.active !== active) {
-        // Cancelled or paused: noted, but no card, as with the platforms' unsubscribes.
+        // cancelled/paused: remember it, but no card (same as unsubscribes on the platforms)
         before.active = active
         changed = true
       }
@@ -313,7 +313,7 @@ export class BuyMeACoffee implements AlertService {
     return changed
   }
 
-  /** Months this supporter has paid in total, over every membership they've had here. */
+  /** Total months across every membership this supporter has ever had here. */
   private totalMonths(who: string): number {
     let n = 0
     for (const s of Object.values(this.state.subs)) if (s.who === who) n += s.months
@@ -338,10 +338,11 @@ export class BuyMeACoffee implements AlertService {
     this.ctx.event({
       id: `bmc-sub-${id}-${period || 0}`, platform: this.ctx.home(), ts: history ? period || started || Date.now() : Date.now(),
       source: 'buymeacoffee', history: history || undefined, type: 'sub',
-      actor: text(pick(s, 'payer_name', 'supporter_name')) ?? 'Someone', text: text_,
+      actor: plainNote(text(pick(s, 'payer_name', 'supporter_name'))) ?? 'Someone', text: text_,
       amount: level ?? (amount ? `${amount}/${per}` : undefined),
-      message: isPublic(pick(s, 'message_visibility')) ? text(pick(s, 'subscription_message', 'supporter_feedback')) : undefined,
+      message: isPublic(pick(s, 'message_visibility')) ? plainNote(text(pick(s, 'subscription_message', 'supporter_feedback')), text(pick(s, 'payer_name', 'supporter_name'))) : undefined,
       big: renewal && total >= 12 && total % 12 === 0,
+      months: total || undefined,
       details: {
         ...(level ? { Level: level } : {}),
         'Total months': String(total),
@@ -352,7 +353,7 @@ export class BuyMeACoffee implements AlertService {
     })
   }
 
-  // ---- Shop purchases (Extras) ----
+  // --- shop purchases (Extras) ---
 
   private async extras(): Promise<boolean> {
     const seen = new Set(this.state.extras)
@@ -372,7 +373,7 @@ export class BuyMeACoffee implements AlertService {
       const amount = money(pick(x, 'purchase_amount', 'amount'), pick(x, 'purchase_currency', 'currency'))
       this.ctx.event({
         id: `bmc-ext-${id}`, platform: this.ctx.home(), ts: live ? Date.now() : ts || Date.now(), source: 'buymeacoffee',
-        history: !live || undefined, type: 'donation', actor: text(pick(x, 'payer_name', 'supporter_name')) ?? 'Someone',
+        history: !live || undefined, type: 'donation', actor: plainNote(text(pick(x, 'payer_name', 'supporter_name'))) ?? 'Someone',
         text: 'bought', subject: title, amount, big: Number(pick(x, 'purchase_amount', 'amount')) >= 50, details: {}
       })
     }

@@ -1,4 +1,4 @@
-// No console window in release builds.
+// no console window in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod auth;
@@ -20,14 +20,14 @@ mod youtube;
 use serde::Serialize;
 use tauri::{Emitter, WebviewUrl, WebviewWindowBuilder};
 
-/// WebView2 options. Tauri's own defaults are repeated, because setting any replaces them.
-/// Chat must keep running while the window is hidden or in the tray, so nothing is throttled,
-/// and the helper processes are merged where possible to save memory.
+/// WebView2 flags. Tauri's defaults are repeated here because passing any flags replaces them.
+/// Chat has to keep running while the window is hidden or in the tray, so nothing gets throttled,
+/// and helper processes are merged where possible to save memory.
 pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
     --disable-background-timer-throttling --disable-renderer-backgrounding \
     --disable-backgrounding-occluded-windows --in-process-gpu --renderer-process-limit=1";
 
-/// Development builds can open a debugging port for testing (NNF_DEBUG_PORT). Never in releases.
+/// Dev builds can expose a debugging port (NNF_DEBUG_PORT). Never in release.
 pub fn browser_args() -> String {
     match std::env::var("NNF_DEBUG_PORT") {
         Ok(port) if cfg!(debug_assertions) && port.chars().all(|c| c.is_ascii_digit()) => format!("{BROWSER_ARGS} --remote-debugging-port={port}"),
@@ -35,7 +35,7 @@ pub fn browser_args() -> String {
     }
 }
 
-/// What the engine needs to know at start.
+/// Handed to the engine on startup.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AppInfo {
@@ -54,12 +54,12 @@ fn app_info(app: tauri::AppHandle) -> AppInfo {
 }
 
 fn main() {
-    // Without WebView2 there is no window to show: say so and offer Microsoft's installer.
+    // no WebView2 means no window at all, so say so and offer Microsoft's installer
     if !webview2::ensure() {
         return;
     }
     let result = tauri::Builder::default()
-        // A second start just brings the open window forward.
+        // second launch just focuses the window that's already open
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             window::show(app);
             let _ = app.emit("app:second-instance", ());
@@ -74,10 +74,10 @@ fn main() {
                 .inner_size(1000.0, 780.0)
                 .min_inner_size(420.0, 420.0)
                 .decorations(false)
-                // Shown once it is back where it was last time, so it never jumps on screen.
+                // stays hidden until it's been moved back to its saved spot, so it never jumps
                 .visible(false)
                 .data_directory(paths::webview_dir())
-                // The font list in Settings reads the installed fonts without asking each time.
+                // let the Settings font list read installed fonts without prompting every time
                 .on_permission_request(|_, kind| match kind {
                     tauri::webview::PermissionKind::LocalFonts => tauri::webview::PermissionResponse::Allow,
                     _ => tauri::webview::PermissionResponse::Default,

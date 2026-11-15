@@ -15,7 +15,7 @@ function from7tv(list: any[], platform: Platform, group: string): Emote[] {
   return (list ?? []).flatMap((e: any): Emote[] => {
     const host = e.data?.host?.url
     if (!host) return []
-    // Flag 1 on the set entry (or 256 on the emote) marks an emote meant to sit on top of the previous one.
+    // flag 1 on the set entry (or 256 on the emote) = zero-width, sits on top of the previous emote
     const zeroWidth = !!((e.flags ?? 0) & 1) || !!((e.data?.flags ?? 0) & 256)
     return [{ id: e.id, name: e.name, url: `https:${host}/2x.webp`, provider: '7tv', platform, group, animated: !!e.data?.animated, zeroWidth }]
   })
@@ -29,7 +29,7 @@ export async function load7tv(service: Service, userId: string | undefined, plat
   return [...from7tv(user?.emote_set?.emotes, platform, '7TV Channel'), ...from7tv(global?.emotes, platform, '7TV Global')]
 }
 
-// Modifiers such as h! (flip) change the next emote rather than being emotes, so they stay text.
+// BTTV modifiers like h! (flip) alter the next emote instead of being one, so leave them as text
 const fromBttv = (list: any[], group: string): Emote[] => (list ?? []).filter((e: any) => !e.modifier).map((e: any) => ({
   id: e.id, name: e.code, url: `https://cdn.betterttv.net/emote/${e.id}/2x`, provider: 'bttv', platform: 'twitch', group, animated: !!e.animated
 }))
@@ -44,7 +44,7 @@ async function loadBttv(userId: string | undefined): Promise<Emote[]> {
 
 const fromFfz = (sets: Record<string, any> | undefined, group: string): Emote[] =>
   Object.values(sets ?? {}).flatMap((s: any) => (s.emoticons ?? []).filter((e: any) => !e.hidden && !e.modifier).flatMap((e: any): Emote[] => {
-    // Animated emotes have their own links; a missing link skips the emote rather than failing all.
+    // animated emotes have their own URLs; skip just this one if a URL is missing
     const url: string | undefined = e.animated?.['2'] ?? e.animated?.['1'] ?? e.urls?.['2'] ?? e.urls?.['1']
     if (!url) return []
     return [{ id: String(e.id), name: e.name, url: url.startsWith('//') ? `https:${url}` : url, provider: 'ffz', platform: 'twitch', group, animated: !!e.animated }]
@@ -58,7 +58,7 @@ async function loadFfz(userId: string | undefined): Promise<Emote[]> {
   return [...fromFfz(room?.sets, 'FrankerFaceZ Channel'), ...fromFfz(global?.sets, 'FrankerFaceZ Global')]
 }
 
-/** Loads the extra sets the user has enabled. */
+/** Loads whichever third-party sets the user turned on. */
 export async function loadTwitchExtras(userId: string | undefined, on: EmoteProviders): Promise<Emote[]> {
   const [seven, bttv, ffz] = await Promise.all([
     on.seventv ? load7tv('twitch', userId, 'twitch') : [],
@@ -69,7 +69,7 @@ export async function loadTwitchExtras(userId: string | undefined, on: EmoteProv
 }
 
 export function toLookup(emotes: Emote[]): Map<string, { name: string; url: string; overlay?: boolean }> {
-  // Reverse order, so higher-priority sets win when two share a name.
+  // walk in reverse so higher-priority sets win on name clashes
   const map = new Map<string, { name: string; url: string; overlay?: boolean }>()
   for (const e of [...emotes].reverse()) if (e.url) map.set(e.name, { name: e.name, url: e.url, overlay: e.zeroWidth || undefined })
   return map

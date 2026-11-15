@@ -9,7 +9,7 @@ export interface YtResult {
   ended?: boolean
 }
 
-/** gRPC enums arrive as TEXT_MESSAGE_EVENT; REST uses textMessageEvent. Both map to the latter. */
+/** gRPC sends TEXT_MESSAGE_EVENT, REST sends textMessageEvent. Normalize to the REST form. */
 export function canonicalType(t: unknown): string {
   const s = String(t ?? '')
   if (!s.includes('_')) return s
@@ -64,7 +64,7 @@ export function normalize(item: any): YtResult {
       const d = s.memberMilestoneChatDetails ?? {}
       return {
         message: d.userComment ? msg(d.userComment, { kind: 'paid', label: `${d.memberMonth} months` }) : undefined,
-        event: ev({ type: 'sub', noChat: !!d.userComment, text: 'hit a membership milestone', amount: `${d.memberMonth} months`, message: d.userComment, details: { Level: d.memberLevelName ?? '' } })
+        event: ev({ type: 'sub', noChat: !!d.userComment, text: 'hit a membership milestone', amount: `${d.memberMonth} months`, months: Number(d.memberMonth) || undefined, message: d.userComment, details: { Level: d.memberLevelName ?? '' } })
       }
     }
     case 'membershipGiftingEvent': {

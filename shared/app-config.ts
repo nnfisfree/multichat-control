@@ -1,18 +1,18 @@
 export const APP_NAME = 'Multichat Control'
 
 /**
- * Streamlabs and StreamElements logins stay off until both services approve the app (Streamlabs
- * allows only 10 test users before that; StreamElements hasn't issued its keys yet). Set to true
- * once both have approved: the Settings choice, the Connections menu and the engine all follow it.
+ * SL and SE logins stay disabled until both services approve the app. Streamlabs only allows 10
+ * test users before approval, and StreamElements hasn't issued keys yet. Flip this once both are
+ * approved; the Settings option, the Connections menu and the engine all key off it.
  */
 export const ALERTS_READY = false
 
 /**
- * Kick needs an exact redirect match, so this port is fixed. Register this URL in the Kick app.
- * Shown in Settings; the login itself runs in the Rust core (core/src/auth.rs).
+ * Kick wants an exact redirect URI match, so the port is fixed. Register this URL in the Kick app.
+ * Shown in Settings; the actual login happens in Rust (core/src/auth.rs).
  *
- * Building your own copy? The other values live in the core:
- *   - the Twitch Client ID: TWITCH_CLIENT_ID in core/src/auth.rs
+ * Building your own copy? The other values are on the Rust side:
+ *   - Twitch Client ID: TWITCH_CLIENT_ID in core/src/auth.rs
  *   - where updates come from: UPDATE_REPO in core/src/updater.rs
  */
 export const KICK_REDIRECT_PORT = 53682

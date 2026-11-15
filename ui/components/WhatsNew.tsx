@@ -4,47 +4,57 @@ import { BmcLogo, Icon } from './Icons'
 import type { SettingsFocus } from './Settings'
 
 /**
- * What changed in THIS version only. Replace the whole list for every release (never append to the
- * previous one), so the window stays short. It shows once, on the first start of a new version (or
- * of a new install), until the user clicks "Cool!".
+ * What changed in THIS version only. Replace the whole list every release (don't append to the
+ * last one) so the window stays short. Shows once, on the first start of a new version or a fresh
+ * install, until the user clicks "Cool!".
  */
 interface NewThing {
   icon: ReactNode
   title: string
   text: string
-  /** A fix rather than something new; it gets a small "Fixed" label. */
+  /** A fix rather than a feature, gets a small "Fixed" label. */
   fixed?: boolean
-  /** Where "Show me" goes: a place in Settings, or the commands list. */
+  /** Where "Show me" goes: a Settings page or the command list. */
   show?: SettingsFocus | 'commands'
 }
 
 const NEW_THINGS: NewThing[] = [
   {
-    icon: <BmcLogo size={20} />,
-    title: 'Buy Me a Coffee',
-    text: 'Tips, memberships and shop sales from your Buy Me a Coffee page now pop up in chat and in Recent events. When a member renews, you see how many months they have supported you. Connect it in Settings with one token.',
-    show: { cat: 'connections', target: 'bmc-settings' }
+    icon: <Icon.palette />,
+    title: 'Three light skins',
+    text: 'Butterfly, Catppuccin Latte and Everforest Light: dark text on a pale window, for bright rooms and daytime streams. New installs now start on Sweet; your current skin stays as it is.',
+    show: { cat: 'appearance', target: 'skins-settings' }
   },
   {
     icon: <Icon.events />,
-    title: 'Event pop-ups',
-    text: 'New subs, gifts, cheers, raids and follows rise out of the message box, stay for as long as you like, then slide back down. Hover one to keep it, click it to close it.',
+    title: 'Calmer event pop-ups',
+    text: 'One pop-up at a time, at the top of chat. A wave of follows becomes one card ("Sam and 5 others" ×6), big cheers stay a little longer, and pop-ups wait while a panel is open over chat.',
     show: { cat: 'chat', target: 'popup-settings' }
   },
   {
+    icon: <Icon.gem />,
+    title: 'Resub months and tips at a glance',
+    text: 'Resubs and memberships show their months (SUB ×14) and streak. Tips get a TIP badge with the logo of the service they came through: StreamElements, Streamlabs, Buy Me a Coffee or the platform itself.'
+  },
+  {
+    icon: <BmcLogo size={20} />,
+    title: 'Support the project',
+    text: 'A small Buy Me a Coffee button now sits under the message box. It is entirely optional, and it keeps the app free.'
+  },
+  {
     icon: <Icon.bolt />,
-    title: 'Test alerts while offline',
-    text: 'Test triggers from Streamer.bot and test alerts from StreamElements or Streamlabs now show up in Recent events and chat with a TEST tag. They are never saved, so they are gone after a restart, or right away with Clear → Clear tests.'
+    title: "Twitch's Power-ups, as on Twitch",
+    text: 'Message Effects get their animated RGB outline, Gigantify an Emote pops the emote in big, and On-Screen Celebrations sparkle. Highlight My Message shows once, without an extra card.'
   },
   {
     icon: <Icon.check />,
-    title: 'Your own gifts and redemptions are real again',
-    text: 'Things you do on your own channel, like gifting a sub, were wrongly tagged TEST. Only real test alerts get the tag now.',
+    title: 'Fixes',
+    text: 'Tips from StreamElements, Streamlabs and Buy Me a Coffee now show on every tab, Buy Me a Coffee messages no longer end in "<br>" and a name, and pop-ups stay clear of the raid bar and Hype Train.',
     fixed: true
   }
 ]
 
-/** "What's new", shown once per version. Only "Cool!" or "Show me" put it away for good. */
+/** Shown once per version. Only "Cool!" or "Show me" dismiss it for good. */
 export function WhatsNew({ onSettings, onCommands }: { onSettings(f: SettingsFocus): void; onCommands(): void }): JSX.Element | null {
   const version = useStore((s) => s.boot?.version ?? '')
   const seen = useStore((s) => s.settings?.seenVersion ?? '')

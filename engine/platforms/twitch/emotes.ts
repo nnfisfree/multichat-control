@@ -5,7 +5,7 @@ const MY_CHANNEL_GROUP = 'My Channel Emotes'
 
 export interface Owner { name: string; avatar: string }
 
-/** Avatars show at 20px, so the small size loads much faster than the 300px default. */
+/** Avatars render at 20px, so ask for 70x70 instead of the 300x300 default. */
 export const smallAvatar = (url: string | undefined): string => (url ?? '').replace('300x300', '70x70')
 
 const toEmote = (e: any, group: string, groupIcon?: string): Emote => ({
@@ -19,7 +19,7 @@ const toEmote = (e: any, group: string, groupIcon?: string): Emote => ({
   animated: e.format?.includes('animated')
 })
 
-/** Orders emotes: your channel, then each channel you're subscribed to by name, then the rest. */
+/** Your channel first, then each channel you're subbed to (by name), then the rest. */
 export function buildEmoteList(self: { id: string; avatar: string }, channel: any[], user: any[], global: any[], owners: ReadonlyMap<string, Owner>): Emote[] {
   const mine: Emote[] = channel.map((e) => toEmote(e, MY_CHANNEL_GROUP, self.avatar))
   const byChannel = new Map<string, Emote[]>()
@@ -38,7 +38,7 @@ export function buildEmoteList(self: { id: string; avatar: string }, channel: an
     .filter((e) => !seen.has(e.name) && !!seen.add(e.name))
 }
 
-/** Twitch accepts 100 IDs per request, so large emote collections take several calls at once. */
+/** Helix takes 100 ids per call, so big collections get fetched in parallel batches. */
 export async function fetchOwners(helix: Helix, ids: string[]): Promise<Map<string, Owner>> {
   const unique = [...new Set(ids.filter((id) => /^[1-9]\d*$/.test(id)))]
   const pages: string[][] = []

@@ -21,7 +21,7 @@ const ev = (over: Omit<StreamEvent, 'id' | 'platform' | 'ts' | 'details'> & { de
   id: `kick-${Date.now()}-${++eventSeq}`, platform: 'kick', ts: Date.now(), details: {}, ...over
 })
 
-/** Normalizes one socket event. These payloads are unofficial, so every field is treated as optional. */
+/** One socket event. These payloads are undocumented, so treat every field as optional. */
 export function normalize(rawName: string, d: any, third: EmoteLookup): KickResult {
   const name = clean(rawName)
   switch (name) {
@@ -60,7 +60,7 @@ export function normalize(rawName: string, d: any, third: EmoteLookup): KickResu
     case 'UserUnbannedEvent':
       return { event: ev({ type: 'moderation', actor: d?.unbanned_by?.username, text: `unbanned ${d?.user?.username ?? 'a user'}` }) }
     case 'SubscriptionEvent':
-      return { event: ev({ type: 'sub', actor: d?.username ?? d?.usernames?.[0], text: 'subscribed', amount: d?.months ? `${d.months} months` : undefined }) }
+      return { event: ev({ type: 'sub', actor: d?.username ?? d?.usernames?.[0], text: d?.months > 1 ? `resubscribed (${d.months} months)` : 'subscribed', months: Number(d?.months) || undefined }) }
     case 'GiftedSubscriptionsEvent': {
       const list: string[] = d?.gifted_usernames ?? []
       return { event: ev({ type: 'gift', big: list.length >= 5, actor: d?.gifter_username, text: `gifted ${list.length} sub${list.length === 1 ? '' : 's'}`, amount: String(list.length), details: { Recipients: list.join(', '), 'Total gifted': String(d?.gifter_total ?? '') } }) }

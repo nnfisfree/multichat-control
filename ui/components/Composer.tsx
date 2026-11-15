@@ -4,6 +4,7 @@ import { composerPlaceholder, plainText } from '../../shared/parts'
 import { allCommands, COMMAND_GROUPS, findCommand, findSbAction, isSbCommand, isTwitchCommand, matchCommands, SB_PREFIX, type CommandGroup, type CommandInfo } from '../lib/commands'
 import { ObsStrip } from './ObsStrip'
 import { Clock } from './Clock'
+import { SupportPill } from './SupportPill'
 import { AppLogo, Icon, PlatformIcon, StreamerbotLogo } from './Icons'
 import { connected, updateSettings, useStore } from '../lib/store'
 import type { Tab } from './Tabs'
@@ -22,11 +23,11 @@ interface Props {
   setPop(p: Pop): void
   replyTo: ChatMessage | null
   clearReply(): void
-  /** Set by the picker; consumed once. */
+  /** Set by the emote picker, consumed once. */
   insert: { text: string; n: number } | null
   onSettings(): void
   onObsSettings(): void
-  /** /user name opens their user card. */
+  /** "/user name" opens their user card. */
   onOpenUser(user: UserEntry): void
 }
 
@@ -44,10 +45,8 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
   const sbEnabled = useStore((s) => s.settings!.sbEnabled)
   const showClock = useStore((s) => s.settings!.showClock)
   const obsOn = useStore((s) => (s.settings!.obsEnabled || !!s.boot?.demo) && s.obs.status !== 'off')
-  // The row under the message box holds the OBS stats (middle) and the clock (right).
-  const footRow = showClock || obsOn
-  // Popovers above the message box move down when that row is hidden.
-  useEffect(() => { document.documentElement.dataset.clock = footRow ? 'on' : 'off' }, [footRow])
+  // Row under the message box: support pill on the left, OBS stats in the middle, clock on the right.
+  // The support pill is always there, so the row always shows.
 
   const destinations: Platform[] = replyTo ? [replyTo.platform]
     : tab === 'all' ? PLATFORMS.filter((p) => targets[p] && connected(statuses, p))
@@ -65,14 +64,14 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
       el?.focus()
       el?.setSelectionRange(at + piece.length, at + piece.length)
     })
-    // Only a new pick should insert; the text it reads is the value at that moment.
+    // only a new pick should insert; reads the text as it is at that moment
   }, [insert?.n])
 
   useEffect(() => {
     if (replyTo) input.current?.focus()
   }, [replyTo])
 
-  // Opening the commands list starts a fresh search, ready to type into.
+  // opening the command list starts a fresh search, focused and ready to type
   useEffect(() => {
     if (pop !== 'commands') return
     setQuery('')
@@ -93,7 +92,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
 
   const send = async (): Promise<void> => {
     const body = text.trim()
-    // The app's own commands run here and never reach a platform.
+    // app commands run locally and never reach a platform
     const command = findCommand(body)
     if (command) {
       setText('')
@@ -102,7 +101,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
       input.current?.focus()
       return
     }
-    // Streamer.bot actions run in Streamer.bot, whatever tab is open.
+    // /sb runs in Streamer.bot no matter which tab is open
     if (isSbCommand(body)) {
       const found = findSbAction(body, sb.actions)
       if (!found) {
@@ -119,7 +118,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
       input.current?.focus()
       return
     }
-    // Twitch's commands run through Twitch's API, whatever tab is open.
+    // Twitch commands go through Helix no matter which tab is open
     if (isTwitchCommand(body)) {
       setBusy(true)
       const r = await window.nnf.twitchCommand(body).catch((e) => ({ ok: false, message: String(e?.message ?? e) }))
@@ -140,7 +139,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     const r = await window.nnf.send(destinations, body, replyTo ? { platform: replyTo.platform, messageId: replyTo.id } : undefined)
     setBusy(false)
     setResults(r)
-    // Keep the text if nothing went out, so a failed send doesn't lose it.
+    // keep the text if nothing went out, so a failed send doesn't eat it
     if (r.some((x) => x.ok)) {
       setText('')
       clearReply()
@@ -161,12 +160,12 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     requestAnimationFrame(() => input.current?.focus())
   }
   const full = pop === 'commands'
-  // Every word typed in the search has to appear in the command, its usage or its description.
+  // every word in the search has to show up in the name, usage or description
   const words = full ? query.toLowerCase().split(/\s+/).filter(Boolean) : []
   const commandList = full
     ? allCommands(sb).filter((c) => { const hay = `${c.usage} ${c.description}`.toLowerCase(); return words.every((w) => hay.includes(w)) })
     : matchCommands(text, sb)
-  // In the full list, the Streamer.bot group shows even when empty, to say why.
+  // in the full list the SB group shows even when empty, to explain why
   const sbNote = !full || words.length || commandList.some((c) => c.group === 'streamerbot') ? null
     : !sbEnabled ? 'Connect Streamer.bot in Settings → Connections to run its actions from here.'
     : sb.status === 'connected' ? 'No actions or chat commands are turned on in Streamer.bot yet.'
@@ -191,7 +190,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     : composerPlaceholder(tab, destinations, PLATFORMS.some((p) => connected(statuses, p)))
 
   return (
-    <footer className={footRow ? 'composer-wrap' : 'composer-wrap no-clock'}>
+    <footer className="composer-wrap">
       {replyTo && (
         <div className="replying">
           <Icon.reply /> Replying to <b>{replyTo.author.name}</b>: <span>{plainText(replyTo.parts)}</span>
@@ -226,12 +225,11 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
         <button className={pop === 'actions' ? 'icon-btn on' : 'icon-btn'} aria-label="Actions" title="Quick actions" data-pop-toggle onClick={() => setPop(pop === 'actions' ? null : 'actions')}><Icon.bolt /></button>
         <button className="send" aria-label="Send" disabled={!text.trim() || (!findCommand(text) && (busy || (!isSbCommand(text) && !destinations.length)))} onClick={() => void send()}><Icon.send /></button>
       </div>
-      {footRow && (
-        <div className="clock-row">
-          <span className="stats-cell">{obsOn && <ObsStrip onFix={onObsSettings} />}</span>
-          <span className="clock-cell">{showClock && <Clock />}</span>
-        </div>
-      )}
+      <div className="clock-row">
+        <span className="support-cell"><SupportPill /></span>
+        <span className="stats-cell">{obsOn && <ObsStrip onFix={onObsSettings} />}</span>
+        <span className="clock-cell">{showClock && <Clock />}</span>
+      </div>
       {(full || groups.length > 0) && (
         <div className="popover commands" role="menu" aria-label="Commands">
           <h3>Commands</h3>

@@ -1,10 +1,10 @@
-//! Logins and authorised requests for Twitch, Kick, YouTube, StreamElements, Streamlabs and
-//! Buy Me a Coffee (which has no OAuth: the user pastes a personal token, see `auth_set_token`).
+//! Logins and authenticated requests for Twitch, Kick, YouTube, StreamElements, Streamlabs and
+//! Buy Me a Coffee (no OAuth there, the user pastes a personal token, see `auth_set_token`).
 //!
-//! Tokens live only here. The engine asks for a request ("GET this Helix URL as Twitch") and this
-//! module adds the token, renews it shortly before it expires, retries once after a 401, and only
-//! ever sends a token to that service's own servers. The page never sees a token, except the one
-//! StreamElements needs inside its socket, which `socket_token` hands out on purpose.
+//! Tokens only ever live here. The engine says "GET this Helix URL as Twitch" and this module
+//! attaches the token, refreshes it shortly before expiry, retries once on a 401, and only ever
+//! sends a token to that service's own hosts. The webview never sees a token, with one exception:
+//! StreamElements needs its token inside the socket, which `socket_token` hands out on purpose.
 
 use crate::paths::data_dir;
 use crate::secrets;
@@ -24,7 +24,7 @@ use tauri_plugin_opener::OpenerExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
-/// Twitch's public client: public clients have no secret, so this is safe to ship.
+/// Twitch public client. Public clients have no secret, so it's fine to ship this.
 const TWITCH_CLIENT_ID: &str = "4m3nuqjxsh7i77pmmhicljsoomghwd";
 const TWITCH_SCOPES: &str = "user:read:chat user:write:chat user:read:emotes \
 moderator:manage:announcements moderator:manage:shoutouts moderator:manage:chat_settings \
@@ -72,7 +72,7 @@ impl Service {
             Self::BuyMeACoffee => "Buy Me a Coffee",
         }
     }
-    /// The only servers this service's token is ever sent to.
+    /// The only hosts this service's token is ever sent to.
     fn hosts(self) -> &'static [&'static str] {
         match self {
             Self::Twitch => &["api.twitch.tv", "id.twitch.tv"],
@@ -90,7 +90,7 @@ impl Service {
             Self::Youtube => "https://oauth2.googleapis.com/token",
             Self::StreamElements => "https://api.streamelements.com/oauth2/token",
             Self::Streamlabs => "https://streamlabs.com/api/v2.0/token",
-            // Never used: a pasted token has nothing to renew it with.
+            // unused, a pasted token has nothing to refresh with
             Self::BuyMeACoffee => "",
         }
     }
@@ -109,12 +109,12 @@ struct Tokens {
     access: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     refresh: Option<String>,
-    /// Streamlabs tokens never expire, and the Electron version saved them without a time.
+    /// Streamlabs tokens never expire, and the old Electron build saved them without an expiry.
     #[serde(default = "never")]
     expires_at: f64,
 }
 
-/// Far in the future (year 2255): for tokens that don't expire.
+/// Year 2255, for tokens that don't expire.
 fn never() -> f64 {
     9e15
 }
@@ -143,7 +143,7 @@ fn client() -> &'static reqwest::Client {
     })
 }
 
-// ---- Which developer app each service logs in with ----
+// ---- which developer app each service logs in with ----
 
 struct Creds { id: String, secret: Option<String> }
 
@@ -169,7 +169,7 @@ fn built_in(s: Service) -> Option<Creds> {
     }
 }
 
-/// A user's own developer app wins, so they can opt out of the shared quota.
+/// The user's own developer app wins, so they can get off the shared quota if they want.
 fn creds(s: Service) -> Option<Creds> {
     match s {
         Service::Twitch => Some(Creds { id: setting("twitchClientId").unwrap_or_else(|| TWITCH_CLIENT_ID.into()), secret: None }),
@@ -185,7 +185,7 @@ fn creds(s: Service) -> Option<Creds> {
     }
 }
 
-// ---- Renewing tokens ----
+// ---- token refresh ----
 
 static REFRESHING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
@@ -215,8 +215,8 @@ fn tokens_from(body: &Value, old_refresh: Option<String>) -> Result<Tokens, Stri
     })
 }
 
-/// Renews the token. `stale` is the token that just failed: if another request already renewed
-/// it meanwhile, that newer token is used instead of renewing twice.
+/// `stale` is the token that just failed. If another request already refreshed it in the meantime
+/// we use the newer one instead of refreshing twice.
 async fn refresh(app: &AppHandle, s: Service, stale: Option<&str>) -> Result<Tokens, String> {
     let _guard = REFRESHING.lock().await;
     let current = load_tokens(s).ok_or_else(|| format!("Not logged in to {}.", s.label()))?;
@@ -234,7 +234,7 @@ async fn refresh(app: &AppHandle, s: Service, stale: Option<&str>) -> Result<Tok
     let status = res.status();
     let body: Value = res.json().await.unwrap_or(Value::Null);
     if status.is_client_error() {
-        // The login is gone (revoked or too old): forget it so the app asks again.
+        // login is gone (revoked or too old): forget it so the app asks again
         save_tokens(s, None);
         changed(app, s, false);
         log(s.key(), &format!("login expired: {}", error_text(&body, status.as_str())));
@@ -253,7 +253,7 @@ async fn fresh(app: &AppHandle, s: Service) -> Result<Tokens, String> {
     if t.expires_at - 60_000.0 > now_ms() { Ok(t) } else { refresh(app, s, Some(&t.access)).await }
 }
 
-// ---- Requests ----
+// ---- requests ----
 
 #[derive(Serialize)]
 pub struct HttpReply { status: u16, body: String }
@@ -285,7 +285,7 @@ async fn send(method: &str, url: &url::Url, headers: &HashMap<String, String>, b
     Ok(HttpReply { status, body: res.text().await.unwrap_or_default() })
 }
 
-/// A request made as one of the user's accounts. The token is added here.
+/// Authenticated request as one of the user's accounts. The token gets added here.
 #[tauri::command]
 pub async fn api_request(app: AppHandle, service: String, method: String, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Result<HttpReply, String> {
     let s = Service::parse(&service)?;
@@ -309,15 +309,15 @@ pub async fn api_request(app: AppHandle, service: String, method: String, url: S
     send(&method, &u, &headers, body.as_ref(), Some(("Authorization", &s.header(&host, &t.access)))).await
 }
 
-/// A plain request with no account: emote lists, Kick's channel page and the like. The page
-/// can't do these itself, because most of those servers don't allow requests from web pages.
+/// Unauthenticated request: emote lists, Kick's channel page and so on. The webview can't make
+/// these itself because most of those servers don't send CORS headers.
 #[tauri::command]
 pub async fn net_fetch(method: String, url: String, headers: Option<HashMap<String, String>>, body: Option<String>) -> Result<HttpReply, String> {
     let u = checked_url(&url)?;
     send(&method, &u, &headers.unwrap_or_default(), body.as_ref(), None).await
 }
 
-// ---- Logging in ----
+// ---- logging in ----
 
 fn cancel_flag(s: Service) -> &'static AtomicBool {
     static FLAGS: [AtomicBool; 6] = [const { AtomicBool::new(false) }; 6];
@@ -336,7 +336,7 @@ async fn post_form(url: &str, form: &[(&str, String)]) -> Result<(u16, Value), S
     Ok((status, res.json().await.unwrap_or(Value::Null)))
 }
 
-/// Twitch's device flow: the app shows a code, the user confirms it on twitch.tv.
+/// Twitch device flow: we show a code, the user confirms it on twitch.tv.
 async fn twitch_login(app: &AppHandle) -> Result<Tokens, String> {
     let id = creds(Service::Twitch).map(|c| c.id).unwrap_or_else(|| TWITCH_CLIENT_ID.into());
     let (status, d) = post_form("https://id.twitch.tv/oauth2/device", &[("client_id", id.clone()), ("scopes", TWITCH_SCOPES.into())]).await?;
@@ -390,8 +390,8 @@ fn page(ok: bool) -> String {
     format!("<!doctype html><meta charset=\"utf-8\"><title>Multichat Control</title><body style=\"background:#150a3c;color:#fff;font:18px sans-serif;display:grid;place-items:center;height:90vh\"><div>{text}</div>")
 }
 
-/// Opens the browser and waits for the login's redirect on a local port. PKCE and the state value
-/// mean a stray request to the port can't complete or hijack the login.
+/// Opens the browser and waits for the OAuth redirect on a local port. PKCE plus the state value
+/// mean a random request to that port can't complete or hijack the login.
 async fn loopback_login(app: &AppHandle, s: Service) -> Result<Tokens, String> {
     let c = creds(s).ok_or_else(|| format!("This copy of the app has no {} login built in yet.", s.label()))?;
     let cfg = loopback_of(s);
@@ -442,10 +442,10 @@ async fn loopback_login(app: &AppHandle, s: Service) -> Result<Tokens, String> {
             break q["code"].clone();
         }
         if let Some(why) = q.get("error_description").or_else(|| q.get("error")) {
-            // StreamElements only says error=true when the user declines.
+            // StreamElements just says error=true when the user declines
             let declined = why == "true" || why == "access_denied";
-            // Until Google verifies the app, its login page shows an "unverified app" warning, and
-            // "Back to safety" there also comes back as a decline.
+            // Until Google verifies the app its consent screen shows an "unverified app" warning,
+            // and "Back to safety" there also comes back as a decline.
             return Err(if declined && s == Service::Youtube {
                 "Login was declined in the browser. If Google said the app isn't verified, log in again and choose Advanced, then Go to MultichatControl.".into()
             } else if declined {
@@ -485,8 +485,8 @@ pub async fn auth_login(app: AppHandle, service: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Saves a token the user pasted, for services without OAuth (only Buy Me a Coffee). The token is
-/// tried once first, so a typo is caught here instead of showing up later as a silent failure.
+/// Saves a pasted token (only BMC, which has no OAuth). We try it once first so a typo shows up
+/// right away instead of as a silent failure later.
 #[tauri::command]
 pub async fn auth_set_token(app: AppHandle, service: String, token: String) -> Result<(), String> {
     let s = Service::parse(&service)?;
@@ -500,7 +500,7 @@ pub async fn auth_set_token(app: AppHandle, service: String, token: String) -> R
     let u = checked_url("https://developers.buymeacoffee.com/api/v1/supporters?page=1")?;
     let reply = send("GET", &u, &HashMap::new(), None, Some(("Authorization", &s.header("", &token)))).await?;
     match reply.status {
-        200..=299 | 404 => {} // 404: BMC answers "no supporters yet" this way on brand-new pages.
+        200..=299 | 404 => {} // BMC returns 404 for "no supporters yet" on brand-new pages
         401 | 403 => return Err("Buy Me a Coffee didn't accept that token. Make a new one and paste it again.".into()),
         code => return Err(format!("Buy Me a Coffee answered with error {code}. Try again in a minute.")),
     }
@@ -520,7 +520,7 @@ pub fn auth_cancel(service: String) -> Result<(), String> {
 pub async fn auth_logout(app: AppHandle, service: String) -> Result<(), String> {
     let s = Service::parse(&service)?;
     if let Some(t) = load_tokens(s) {
-        // Revoking is a courtesy to the service: a failure doesn't stop the logout.
+        // revoking is just being polite, a failure doesn't block the logout
         let revoke = match s {
             Service::Twitch => Some(("https://id.twitch.tv/oauth2/revoke".to_string(), vec![("client_id", creds(s).map(|c| c.id).unwrap_or_default()), ("token", t.access.clone())])),
             Service::Youtube => t.refresh.clone().map(|r| ("https://oauth2.googleapis.com/revoke".to_string(), vec![("token", r)])),
@@ -537,7 +537,7 @@ pub async fn auth_logout(app: AppHandle, service: String) -> Result<(), String> 
     Ok(())
 }
 
-/// Whether there's a saved login, and whether the app can log in at all (a developer app exists).
+/// Is there a saved login, and can we log in at all (is there a developer app).
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthState { logged_in: bool, configured: bool }
@@ -548,14 +548,14 @@ pub fn auth_state(service: String) -> Result<AuthState, String> {
     Ok(AuthState { logged_in: load_tokens(s).is_some(), configured: s == Service::BuyMeACoffee || creds(s).is_some() })
 }
 
-/// Which platforms this copy has a built-in login for (shown in Settings).
+/// Platforms this build has a built-in login for (shown in Settings).
 #[tauri::command]
 pub fn built_in_logins() -> Value {
     json!({ "youtube": built_in(Service::Youtube).is_some(), "kick": built_in(Service::Kick).is_some() })
 }
 
-/// StreamElements wants its token inside the socket's subscribe message, so this one service
-/// gets its (renewed) token handed to the engine. No other service's token ever leaves here.
+/// StreamElements wants its token inside the socket's subscribe message, so this one service gets
+/// its (refreshed) token handed to the engine. No other token ever leaves Rust.
 #[tauri::command]
 pub async fn socket_token(app: AppHandle, service: String) -> Result<String, String> {
     let s = Service::parse(&service)?;
@@ -565,8 +565,8 @@ pub async fn socket_token(app: AppHandle, service: String) -> Result<String, Str
     Ok(fresh(&app, s).await?.access)
 }
 
-/// The answer to a WebSocket server's password challenge, computed here so the password stays
-/// here. OBS and Streamer.bot use the same scheme: base64(sha256(base64(sha256(password + salt)) + challenge)).
+/// Answer to a WebSocket password challenge, computed here so the password never leaves Rust.
+/// OBS and Streamer.bot use the same scheme: base64(sha256(base64(sha256(password + salt)) + challenge)).
 fn challenge_answer(secret_name: &str, salt: &str, challenge: &str) -> String {
     let password = secrets::get(secret_name).unwrap_or_default();
     let b64 = base64::engine::general_purpose::STANDARD;
@@ -574,26 +574,24 @@ fn challenge_answer(secret_name: &str, salt: &str, challenge: &str) -> String {
     b64.encode(Sha256::digest(format!("{secret}{challenge}").as_bytes()))
 }
 
-/// OBS's WebSocket login.
 #[tauri::command]
 pub fn obs_auth(salt: String, challenge: String) -> String {
     challenge_answer("obs.password", &salt, &challenge)
 }
 
-/// Streamer.bot's WebSocket login.
 #[tauri::command]
 pub fn sb_auth(salt: String, challenge: String) -> String {
     challenge_answer("streamerbot.password", &salt, &challenge)
 }
 
-// ---- For other parts of the core (YouTube's chat stream) ----
+// ---- for the rest of the Rust side (YouTube's gRPC stream) ----
 
-/// A token that is valid now, renewed first if it's about to run out. Stays inside the core.
+/// A token that's valid right now, refreshed first if it's about to expire. Never leaves Rust.
 pub(crate) async fn access_token(app: &AppHandle, service: &str) -> Result<String, String> {
     Ok(fresh(app, Service::parse(service)?).await?.access)
 }
 
-/// Renews a token the service just refused.
+/// Refreshes a token the service just rejected.
 pub(crate) async fn renew(app: &AppHandle, service: &str, stale: &str) -> Result<(), String> {
     refresh(app, Service::parse(service)?, Some(stale)).await.map(|_| ())
 }

@@ -11,5 +11,5 @@ import { startEngine } from '../engine'
 import { App } from './App'
 import './styles/theme.css'
 
-// The engine sets up window.nnf, which the interface talks to, before the interface starts.
+// the engine has to put window.nnf in place before React mounts
 void startEngine().finally(() => createRoot(document.getElementById('root')!).render(<App />))

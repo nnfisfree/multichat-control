@@ -1,9 +1,9 @@
-//! YouTube's live chat stream (gRPC), which a web page can't open itself.
+//! YouTube's live chat stream (gRPC), which a web page can't open on its own.
 //!
-//! The message types below are written by hand from proto/stream_list.proto (same field numbers),
-//! so no code generator is needed. Items are sent to the engine as JSON in the same shape the
-//! Electron version's grpc-js produced (camelCase names, enum names as text), so the existing
-//! normaliser reads them unchanged. The token is added here and never reaches the page.
+//! The message types below are hand-written from proto/stream_list.proto (same field numbers), so
+//! no codegen step. Items go to the engine as JSON in the same shape grpc-js produced in the
+//! Electron build (camelCase names, enums as strings), so the existing normalizer reads them
+//! unchanged. The token is added here and never reaches the webview.
 
 use crate::auth;
 use serde_json::{json, Map, Value};
@@ -64,7 +64,7 @@ struct Author {
     is_chat_moderator: Option<bool>,
 }
 
-/// The proto's `oneof displayed_content` is wire-compatible with separate optional fields.
+/// The proto's `oneof displayed_content` is wire-compatible with separate optional fields, so we just do that.
 #[derive(Clone, PartialEq, prost::Message)]
 struct Snippet {
     #[prost(int32, optional, tag = "1")]
@@ -181,7 +181,7 @@ struct GiftReceivedDetails {
     gifter_channel_id: Option<String>,
 }
 
-// ---- To the JSON shape the normaliser reads ----
+// ---- into the JSON shape the normalizer expects ----
 
 fn type_name(n: i32) -> &'static str {
     match n {
@@ -193,7 +193,7 @@ fn type_name(n: i32) -> &'static str {
     }
 }
 
-/// Builds a JSON object from (name, value) pairs, leaving out what's absent.
+/// JSON object from (name, value) pairs, skipping the Nones.
 fn obj(fields: Vec<(&str, Option<Value>)>) -> Value {
     let mut m = Map::new();
     for (k, v) in fields {
@@ -207,7 +207,7 @@ fn obj(fields: Vec<(&str, Option<Value>)>) -> Value {
 fn s(v: &Option<String>) -> Option<Value> { v.clone().map(Value::String) }
 fn b(v: &Option<bool>) -> Option<Value> { v.map(Value::Bool) }
 fn n<T: Into<Value> + Copy>(v: &Option<T>) -> Option<Value> { v.map(Into::into) }
-/// 64-bit numbers as text, as grpc-js gave them.
+/// u64s as strings, like grpc-js did.
 fn long(v: &Option<u64>) -> Option<Value> { v.map(|x| Value::String(x.to_string())) }
 
 fn item_json(m: &ChatMessage) -> Value {
@@ -250,7 +250,7 @@ fn item_json(m: &ChatMessage) -> Value {
     obj(vec![("id", s(&m.id)), ("snippet", snippet), ("authorDetails", author)])
 }
 
-// ---- The stream ----
+// ---- the stream ----
 
 static NEXT: AtomicU64 = AtomicU64::new(1);
 
@@ -259,7 +259,7 @@ fn running() -> &'static Mutex<HashMap<u64, tauri::async_runtime::JoinHandle<()>
     RUNNING.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// gRPC status codes the engine acts on: 9 = the chat ended, 16 = the login was refused.
+/// gRPC status codes the engine cares about: 9 = chat ended, 16 = auth refused.
 async fn stream(app: &AppHandle, id: u64, live_chat_id: String, page_token: Option<String>) -> Result<(), (i32, String)> {
     let tls = ClientTlsConfig::new().with_native_roots();
     let channel = Channel::from_static("https://youtube.googleapis.com").tls_config(tls).map_err(|e| (14, e.to_string()))?
@@ -279,7 +279,7 @@ async fn stream(app: &AppHandle, id: u64, live_chat_id: String, page_token: Opti
         let codec: tonic::codec::ProstCodec<ListRequest, ListResponse> = tonic::codec::ProstCodec::default();
         let mut s = match grpc.server_streaming(req, path, codec).await {
             Ok(r) => r.into_inner(),
-            // A refused login is renewed once, then reported.
+            // auth refused: refresh once, then give up and report it
             Err(st) if st.code() == tonic::Code::Unauthenticated && !retried => {
                 retried = true;
                 auth::renew(app, "youtube", &token).await.map_err(|e| (16, e))?;
@@ -300,7 +300,7 @@ async fn stream(app: &AppHandle, id: u64, live_chat_id: String, page_token: Opti
     }
 }
 
-/// Opens the stream; items and the end arrive as events tagged with the returned id.
+/// Opens the stream. Items and the end arrive as events tagged with the returned id.
 #[tauri::command]
 pub fn youtube_stream_start(app: AppHandle, live_chat_id: String, page_token: Option<String>) -> u64 {
     let id = NEXT.fetch_add(1, Ordering::SeqCst);

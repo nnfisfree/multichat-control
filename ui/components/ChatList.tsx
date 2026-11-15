@@ -18,9 +18,9 @@ export function ChatList({ messages, showPlatform, showTime, onMenu }: Props): J
   const scroller = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
   const pausedRef = useRef(false)
-  /** The newest message when reading started, so only later messages count as new. */
+  // newest message at the moment the user scrolled up, so only later ones count as new
   const pausedAt = useRef<string | undefined>(undefined)
-  /** Distance from the bottom to keep while older chat is added on top. */
+  // distance from the bottom to hold while older chat is prepended
   const anchor = useRef<number | null>(null)
   const programmatic = useRef(false)
 
@@ -55,7 +55,7 @@ export function ChatList({ messages, showPlatform, showTime, onMenu }: Props): J
     else if (!bottom && !pausedRef.current) setPause(true)
   }
 
-  // Row heights settle after measuring, so keep pinning across the frames that follow.
+  // row heights settle after measuring, so keep pinning to the bottom for a few frames
   useLayoutEffect(() => {
     if (pausedRef.current) return
     toBottom()
@@ -65,7 +65,7 @@ export function ChatList({ messages, showPlatform, showTime, onMenu }: Props): J
 
   useEffect(() => () => setHoldHistory(false), [])
 
-  // Older chat was added on top: keep the same lines in view while the new rows are measured.
+  // older chat was added on top: keep the same lines in view while the new rows get measured
   useLayoutEffect(() => {
     const el = scroller.current
     if (anchor.current === null || !el) return
@@ -89,7 +89,7 @@ export function ChatList({ messages, showPlatform, showTime, onMenu }: Props): J
 
   const older = useStore((s) => s.historySessions[s.historySessions.length - 1 - s.historyShown])
   const loadOlder = (): void => {
-    // Older chat goes on top, so the view stays where the user is reading.
+    // prepend older chat, the view stays where the user is reading
     setPause(true)
     const el = scroller.current
     if (el) anchor.current = el.scrollHeight - el.scrollTop

@@ -2,11 +2,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 /**
- * A WebSocket with the small part of the Node `ws` package's style the connectors were written
- * for (on/send/close/terminate), so their logic carries over unchanged.
+ * WebSocket wrapper with just enough of the `ws` package's API (on/send/close/terminate) that the
+ * connectors didn't have to change when we moved off Node.
  *
- * Most connections use the browser's own WebSocket. Kick's live server only accepts connections
- * that come from kick.com, which a page can't claim, so those are opened by the core instead.
+ * Most connections use the browser's WebSocket. Kick's server only accepts connections whose
+ * origin is kick.com, which a page can't fake, so those are opened from Rust instead.
  */
 type Handler = (...args: any[]) => void
 
@@ -20,7 +20,7 @@ const CONNECTING = 0
 const OPEN = 1
 const CLOSED = 3
 
-/** A socket the core opens and relays (see core/src/sockets.rs). */
+/** Socket opened and relayed by Rust (core/src/sockets.rs). */
 class CoreBackend implements Backend {
   readyState = CONNECTING
   private id = 0
@@ -33,7 +33,7 @@ class CoreBackend implements Backend {
   }
 
   private async open(url: string): Promise<void> {
-    // Events for this socket are told apart by id; the listeners are ready before it opens.
+    // events are matched by socket id; listeners go up before it opens so nothing is missed
     const early: { kind: string; p: any }[] = []
     const route = (kind: string, p: any): void => {
       if (!this.id) return void early.push({ kind, p })
@@ -76,14 +76,13 @@ class CoreBackend implements Backend {
   }
 }
 
-/** The browser's own WebSocket. */
 class PageBackend implements Backend {
   private ws: WebSocket
 
   constructor(url: string, emit: (event: string, ...args: unknown[]) => void) {
     this.ws = new WebSocket(url)
     this.ws.addEventListener('open', () => emit('open'))
-    // Text arrives as a string; `toString()` on it gives the same text as `ws` did.
+    // data is already a string here; toString() on it gives the same thing `ws` did
     this.ws.addEventListener('message', (e) => emit('message', e.data))
     this.ws.addEventListener('error', () => emit('error', new Error('Connection error.')))
     this.ws.addEventListener('close', (e) => emit('close', e.code, e.reason))
@@ -118,7 +117,7 @@ export class Socket {
   private handlers: Record<string, Handler[]> = {}
   private timer: ReturnType<typeof setTimeout> | null = null
 
-  /** `handshakeTimeout` closes the socket if it hasn't opened in time. Other options are ignored. */
+  /** Only `handshakeTimeout` is supported (closes if it hasn't opened in time). The rest is ignored. */
   constructor(url: string, options?: { handshakeTimeout?: number; headers?: Record<string, string> }) {
     const emit = (event: string, ...args: unknown[]): void => {
       if (event === 'open' || event === 'close') this.clear()
@@ -137,7 +136,7 @@ export class Socket {
     return this
   }
 
-  /** Forgets the handlers for one event (or all), so a socket being replaced can't report anything more. */
+  /** So a socket that's being replaced can't fire anything else. */
   removeAllListeners(event?: string): this {
     if (event) delete this.handlers[event]
     else this.handlers = {}
@@ -152,7 +151,6 @@ export class Socket {
     this.backend.close(code)
   }
 
-  /** Drops the connection at once. */
   terminate(): void {
     this.close()
   }

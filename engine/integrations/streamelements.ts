@@ -8,7 +8,7 @@ const API = 'https://api.streamelements.com/kappa/v2'
 const OAUTH = 'https://api.streamelements.com/oauth2'
 const ASTRO = 'wss://astro.streamelements.com'
 const HISTORY_DAYS = 30
-/** Gifted subs arrive one by one next to their gift bomb; a short wait lets them be folded in. */
+// Gifted subs trickle in one by one next to their gift bomb. Wait a moment so they can be folded in.
 const GROUP_MS = 3000
 const TYPES = [
   'follow', 'tip', 'subscriber', 'communityGiftPurchase', 'cheer', 'raid', 'host', 'superchat', 'sponsor',
@@ -17,12 +17,12 @@ const TYPES = [
 
 const lower = (v: unknown): string => String(v ?? '').toLowerCase()
 
-/** StreamElements' test (emulated) alerts. Its docs don't name the flag, so each known spelling is checked. */
+// Emulated (test) alerts. SE doesn't document the flag, so check every spelling we've seen.
 const isTest = (a: any): boolean =>
   [a?.isMock, a?.isTest, a?.mock, a?.data?.isMock, a?.data?.isTest, a?.data?.mock].some((v) => v === true || v === 'true') ||
   a?.activityGroup === 'test' || a?.origin === 'test'
 
-/** Turns one StreamElements activity into an event. Unknown kinds are skipped. */
+/** One SE activity -> StreamEvent. Unknown types are skipped. */
 function toEvent(a: any, fallback: Platform): StreamEvent | null {
   const d = a?.data ?? {}
   const platform = toPlatform(a?.provider) ?? fallback
@@ -43,7 +43,7 @@ function toEvent(a: any, fallback: Platform): StreamEvent | null {
       return { ...base, type: 'donation', actor: who, text: 'bought', subject: text(d.items?.[0]?.name) ?? text(d.itemName) ?? 'merch', amount: money(d.amount, d.currency) }
     case 'subscriber':
       if (d.gifted) return { ...base, type: 'gift', actor: text(d.sender) ?? 'Someone', text: `gifted a sub to ${who}`, amount: tier(d.tier) }
-      return { ...base, type: 'sub', actor: who, text: amount > 1 ? `resubscribed (${amount} months)` : 'subscribed', amount: tier(d.tier) }
+      return { ...base, type: 'sub', actor: who, text: amount > 1 ? `resubscribed (${amount} months)` : 'subscribed', amount: tier(d.tier), months: amount || undefined }
     case 'communityGiftPurchase':
       return { ...base, type: 'gift', big: amount >= 5, actor: text(d.sender) ?? who, text: `gifted ${amount || 'some'} subs to the community`, amount: tier(d.tier) }
     case 'cheer':
@@ -55,7 +55,7 @@ function toEvent(a: any, fallback: Platform): StreamEvent | null {
     case 'superchat':
       return { ...base, type: 'paid', actor: who, text: 'sent a Super Chat', amount: money(d.amount, d.currency) }
     case 'sponsor':
-      return { ...base, type: 'sub', actor: who, text: amount > 1 ? `is a member (${amount} months)` : 'became a member' }
+      return { ...base, type: 'sub', actor: who, text: amount > 1 ? `is a member (${amount} months)` : 'became a member', months: amount || undefined }
     case 'redemption':
     case 'channelPointsRedemption':
       return { ...base, type: 'redemption', actor: who, text: 'redeemed', subject: text(d.redemption) ?? text(d.itemName) ?? text(d.title) }
@@ -70,8 +70,8 @@ function toEvent(a: any, fallback: Platform): StreamEvent | null {
 
 
 /**
- * StreamElements keeps a dated activity feed (subs, gifts, Bits, raids, tips...), so it fills
- * the gaps platform APIs leave, and its live socket adds new ones as they happen.
+ * SE keeps a dated activity feed (subs, gifts, Bits, raids, tips...), which fills the gaps the
+ * platform APIs leave. New stuff arrives over its socket.
  */
 export class StreamElements implements AlertService {
   readonly source = 'streamelements' as const
@@ -80,7 +80,7 @@ export class StreamElements implements AlertService {
   private attempt = 0
   private retry: ReturnType<typeof setTimeout> | null = null
   private channelId = ''
-  /** The token StreamElements wants inside its socket, fetched from the core before each connection. */
+  // SE wants its own token inside the socket; fetched from Rust before each connect
   private socketToken = ''
   private platform: Platform = 'twitch'
   private account = ''
@@ -90,10 +90,10 @@ export class StreamElements implements AlertService {
 
   constructor(private ctx: AlertContext) {}
 
-  /** A request as the user's StreamElements account; the core adds and renews the token. */
+  /** Authenticated call. Rust adds and refreshes the token. */
   private async get(url: string): Promise<any> {
     const data = await api('streamelements', 'GET', url, undefined, { Accept: 'application/json' })
-    // A rejected login can get a web page back rather than an error.
+    // a rejected token can come back as an HTML page instead of an error
     if (!data || typeof data !== 'object') throw new HttpError(401, "StreamElements didn't accept the login.", data)
     return data
   }
@@ -157,7 +157,7 @@ export class StreamElements implements AlertService {
     this.ws = null
   }
 
-  /** The last 30 days of the activity feed. */
+  /** Last 30 days of the activity feed. */
   private async loadHistory(run: number): Promise<void> {
     const q = new URLSearchParams({
       after: new Date(Date.now() - HISTORY_DAYS * 86400000).toISOString(), before: new Date().toISOString(),
@@ -183,7 +183,7 @@ export class StreamElements implements AlertService {
     }
     for (const [k, t] of this.bombs) if (t < now - HISTORY_DAYS * 86400000) this.bombs.delete(k)
     for (const a of list) {
-      // Each sub of a gift bomb is also listed alone; the bomb row already says it.
+      // every sub in a gift bomb is also listed on its own; the bomb row already covers them
       if (a?.type === 'subscriber' && a.data?.gifted) {
         const bomb = this.bombs.get(lower(a.data.sender))
         if (bomb && Math.abs((Date.parse(a.createdAt) || now) - bomb) < 120000) continue
@@ -191,7 +191,7 @@ export class StreamElements implements AlertService {
       const e = toEvent(a, this.platform)
       if (!e) continue
       if (history) this.ctx.event({ ...e, history: true })
-      // An emulated alert from the dashboard: shown until the app restarts, never saved.
+      // emulated alert from the dashboard: shown until restart, never saved
       else this.ctx.event(isTest(a) ? { ...e, id: `${e.id}-test-${Date.now()}`, ts: Date.now(), test: true } : e)
     }
   }
@@ -211,7 +211,7 @@ export class StreamElements implements AlertService {
         ws.send(JSON.stringify({ type: 'subscribe', nonce: 'activities', data: { topic: 'channel.activities', room: this.channelId, token: this.socketToken, token_type: 'oauth2' } }))
       } else if (msg.type === 'response' && msg.nonce === 'activities') {
         if (msg.error) {
-          // Usually an expired token: the restart after closing renews it.
+          // usually an expired token, the reconnect after close refreshes it
           this.ctx.status({ status: 'reconnecting', account: this.account, detail: msg.data?.message ?? msg.error })
           ws.close()
         } else {
@@ -227,7 +227,7 @@ export class StreamElements implements AlertService {
           this.handle(batch, false)
         }, GROUP_MS)
       } else if (msg.type === 'reconnect' && msg.data?.reconnect_token) {
-        // A planned restart: the new connection keeps the subscription.
+        // planned restart, the new connection keeps the subscription
         ws.removeAllListeners('close')
         ws.close()
         this.open(run, `${ASTRO}/?reconnect_token=${encodeURIComponent(msg.data.reconnect_token)}`)

@@ -24,15 +24,15 @@ import { ALERTS_READY } from '../shared/app-config'
 import { loadStore, store } from './store'
 import { StreamerbotLink } from './streamerbot'
 
-/** What the Rust core tells the engine at start. */
+/** Passed in from Rust on startup. */
 interface AppInfo { demo: boolean; version: string; dataDir: string }
 
-/** The interface listens for this to show the "close or keep in the tray?" question. */
+/** The UI listens for this to show the close / keep-in-tray prompt. */
 export const CLOSE_ASK_EVENT = 'nnf:close-ask'
 
 /**
- * Builds the engine and puts it where the interface expects it: window.nnf. The engine runs the
- * chats, alerts and OBS link in this page; the Rust core keeps logins, files and the window.
+ * Builds the engine and hangs it on window.nnf. Chat, alerts and OBS run here in the webview;
+ * Rust owns logins, files and the window itself.
  */
 export async function startEngine(): Promise<void> {
   const info = await invoke<AppInfo>('app_info')
@@ -50,7 +50,7 @@ export async function startEngine(): Promise<void> {
   const tell = <T>(set: Set<(v: T) => void>, v: T): void => { for (const cb of set) cb(v) }
   hub.attach((batch) => tell(batchListeners, batch))
 
-  // Saved events and chat history. Demo mode keeps its invented ones out of the real files.
+  // Demo mode never touches the real history files.
   const chatLog = new ChatLog(() => store.settings.keepChatHistory)
   if (!demo) {
     const [events, removed] = await Promise.all([loadEvents(), loadRemoved()])
@@ -60,7 +60,6 @@ export async function startEngine(): Promise<void> {
     hub.record(chatLog)
   }
 
-  // The platforms.
   let twitch: TwitchConnector | null = null
   const connectors = new Map<Platform, Connector>()
   for (const p of PLATFORMS) {
@@ -73,16 +72,16 @@ export async function startEngine(): Promise<void> {
     hub.register(c)
   }
 
-  // Cards for video and clip links in chat. Demo mode invents them, without asking anyone.
+  // Link preview cards. Demo mode fakes them so nothing goes out over the network.
   const previews = new Previews((id) => twitch?.clipPreview(id) ?? Promise.resolve(null), demo ? demoPreview : undefined)
 
-  // Alert services: only the one the streamer picked runs.
+  // Only the alert service the user picked gets started.
   const alerts = {
     streamelements: new StreamElements(hub.alertContext('streamelements')),
     streamlabs: new Streamlabs(hub.alertContext('streamlabs'))
   }
-  // Buy Me a Coffee runs beside the picked service whenever a token is saved. It needs nobody's
-  // approval, so ALERTS_READY doesn't hold it back.
+  // BMC runs next to whichever service is picked, as long as a token is saved. It doesn't need
+  // anyone's approval, so ALERTS_READY doesn't gate it.
   const bmc = new BuyMeACoffee(hub.alertContext('buymeacoffee'), demo)
   void bmc.start().catch(() => {})
   const startAlerts = async (): Promise<void> => {
@@ -95,7 +94,7 @@ export async function startEngine(): Promise<void> {
     }
   }
 
-  // A login the core found gone (revoked or expired) stops that connection.
+  // Rust noticed a token got revoked or expired.
   await onAuthChanged(({ service, loggedIn }) => {
     if (service === 'buymeacoffee') {
       if (!loggedIn) bmc.stop()
@@ -107,12 +106,12 @@ export async function startEngine(): Promise<void> {
     else if (service === store.settings.alertService) alerts[service as PickedAlertSource].stop()
   })
 
-  // OBS: real stats, or invented ones in demo mode.
+  // OBS (fake stats in demo mode)
   let obsState: ObsState = { status: 'off' } as ObsState
   const sendObs = (s: ObsState): void => { obsState = s; tell(obsListeners, s) }
   const obs = new ObsLink(sendObs)
 
-  // Streamer.bot: its actions and commands, kept in step with what's set up there.
+  // Streamer.bot actions and commands, kept in sync with whatever is set up there
   let sbState: StreamerbotState = { status: 'off', actions: [], commands: [] }
   const sendSb = (s: StreamerbotState): void => { sbState = s; tell(sbListeners, s) }
   const sb = new StreamerbotLink(sendSb, (e) => hub.testEvent(e))
@@ -121,7 +120,7 @@ export async function startEngine(): Promise<void> {
     sendSb(store.settings.sbEnabled ? DEMO_STREAMERBOT : { status: 'off', actions: [], commands: [] })
   }
 
-  // The rest lives in the core: the updater, the Twitch panel's sign-in, the window.
+  // Updater, Twitch panel sign-in and window state all live on the Rust side.
   let update: UpdateState = await invoke<UpdateState>('update_state').catch(() => ({ status: 'idle' } as UpdateState))
   let panelSignedIn = await invoke<boolean | null>('panel_signed_in').catch(() => null)
   await listen<UpdateState>('update:state', (e) => { update = e.payload; tell(updateListeners, e.payload) })
@@ -137,8 +136,8 @@ export async function startEngine(): Promise<void> {
     return next
   }
 
-  // Shutting down: everything that's waiting is written first. A step that fails is skipped,
-  // and the core closes the app within a few seconds whatever happens here.
+  // Flush whatever is pending before quitting. A failing step is skipped; Rust force-closes after
+  // a few seconds anyway.
   let quitting: Promise<void> | null = null
   const quit = (): Promise<void> => (quitting ??= (async () => {
     log('app', 'closing')
@@ -168,7 +167,7 @@ export async function startEngine(): Promise<void> {
   }
   await listen('app:close-requested', () => void closeAsked())
   await listen('app:quit', () => void quit())
-  // Opening the app again rescues a window left almost invisible.
+  // Launching it a second time resets the opacity, in case someone faded the window to nothing.
   await listen('app:second-instance', () => { saveSettings({ windowOpacity: 1 }); void applyOpacity() })
 
   const win = getCurrentWindow()
@@ -214,7 +213,7 @@ export async function startEngine(): Promise<void> {
       if (patch.windowOpacity !== undefined) await applyOpacity()
       if (patch.windowWobble !== undefined || patch.wobbleIntensity !== undefined) await applyWobble()
       if (patch.emoteProviders) await hub.refreshEmotes()
-      // Turning history off also deletes what was saved.
+      // turning history off wipes the saved log as well
       if (patch.keepChatHistory === false && !demo) chatLog.clear()
       if (!demo && (before.obsEnabled !== next.obsEnabled || before.obsPort !== next.obsPort)) obs.start()
       if (before.sbEnabled !== next.sbEnabled || before.sbPort !== next.sbPort) startSb()
@@ -297,11 +296,11 @@ export async function startEngine(): Promise<void> {
     window: (action) => {
       if (action === 'minimize') void win.minimize()
       else if (action === 'maximize') void win.toggleMaximize()
-      // Sent through the core, the same way as Alt+F4.
+      // through Rust, same path as Alt+F4
       else void invoke('window_close').catch(() => closeAsked())
     }
   }
-  // The close question's answers, used by the interface.
+  // Close-prompt answers, called from the UI.
   ;(window as unknown as { nnfClose: unknown }).nnfClose = {
     tray: (remember: boolean) => { if (remember) saveSettings({ closeAction: 'tray' }); void invoke('window_to_tray') },
     exit: (remember: boolean) => { if (remember) saveSettings({ closeAction: 'exit' }); void quit() }
@@ -313,7 +312,7 @@ export async function startEngine(): Promise<void> {
   if (demo) startDemoObs(sendObs)
   else obs.start()
   startSb()
-  // Demo copies are for trying the app, so they never update themselves.
+  // demo builds never self-update
   if (!demo) void invoke('update_start').catch(() => {})
   log('app', `started ${info.version}${demo ? ' in demo mode' : ''}`)
   void Promise.all([hub.startAll(), startAlerts()])

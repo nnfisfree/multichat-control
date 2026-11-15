@@ -3,10 +3,10 @@ import { PLATFORMS, PLATFORM_LABEL, type ChannelStats, type Platform } from '../
 import { PlatformIcon } from './Icons'
 import { connected, useStore } from '../lib/store'
 
-/** How often each platform is asked. YouTube's daily quota is small, so it's asked less often. */
+// Poll interval per platform. YouTube's daily quota is tiny, so it gets asked less.
 const EVERY: Record<Platform, number> = { twitch: 60000, youtube: 5 * 60000, kick: 60000 }
 
-/** 4,343 up to a million, then 1.2M. */
+// 4,343 below a million, 1.2M above
 const show = (n: number): string => (n < 1_000_000 ? n.toLocaleString('en-US') : `${(n / 1_000_000).toFixed(n < 10_000_000 ? 1 : 0).replace(/\.0$/, '')}M`)
 
 const Heart = (): JSX.Element => (
@@ -16,9 +16,9 @@ const Star = (): JSX.Element => (
   <svg className="stat-icon star" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2 3.100 6.300 6.900 1-5 4.900 1.200 6.900L12 17.800l-6.200 3.300L7 14.200 2 9.300l6.900-1L12 2z" /></svg>
 )
 
-/** One platform's pill: its logo, then the follower-like count (heart) and the subscriber-like one (star). */
+/** Logo, then the follower-ish count (heart) and the sub-ish count (star). */
 function Pill({ p, s }: { p: Platform; s: ChannelStats }): JSX.Element | null {
-  // YouTube has no followers: its subscribers are the people who follow the channel.
+  // YouTube has no followers, its subscribers are what follows the channel
   const follow = p === 'youtube' ? s.subscribers : s.followers
   const sub = p === 'youtube' ? undefined : s.subscribers
   if (follow === undefined && sub === undefined) return null
@@ -37,8 +37,8 @@ function Pill({ p, s }: { p: Platform; s: ChannelStats }): JSX.Element | null {
 }
 
 /**
- * Followers and subscribers of every connected platform, in the middle of the row under the
- * message box. Refreshed on a timer, and soon after a follow or sub arrives.
+ * Follower/sub pills for every connected platform. Refreshed on a timer, and again shortly after a
+ * follow or sub comes in.
  */
 export function ChannelStatsBar(): JSX.Element | null {
   const statuses = useStore((s) => s.statuses)
@@ -53,7 +53,7 @@ export function ChannelStatsBar(): JSX.Element | null {
     void window.nnf.stats(p).then((r) => setStats((prev) => ({ ...prev, [p]: r ?? undefined })), () => {})
   }
 
-  // Ask each connected platform now, then whenever its interval has passed.
+  // ask each connected platform now, then again whenever its interval is up
   useEffect(() => {
     const ps = liveKey ? (liveKey.split(',') as Platform[]) : []
     setStats((prev) => Object.fromEntries(Object.entries(prev).filter(([p]) => ps.includes(p as Platform))))
@@ -64,7 +64,7 @@ export function ChannelStatsBar(): JSX.Element | null {
     return () => clearInterval(t)
   }, [liveKey])
 
-  // A new follow or sub: read that platform again a few seconds later (YouTube waits for its timer).
+  // new follow/sub: re-read that platform a few seconds later (YouTube just waits for its timer)
   const latest = useMemo(() => {
     const out: Partial<Record<Platform, string>> = {}
     for (const e of events) if (!e.history && (e.type === 'follow' || e.type === 'sub' || e.type === 'gift')) out[e.platform] = e.id

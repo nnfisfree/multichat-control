@@ -1,10 +1,10 @@
 import type { AlertSource, IntegrationState, Platform, StreamEvent } from '../../shared/types'
 
-/** How an alert service reports to the hub. */
+/** What an alert integration gets from the hub. */
 export interface AlertContext {
   event(e: StreamEvent): void
   status(s: Omit<IntegrationState, 'source'>): void
-  /** The platform a donation is filed under when the service doesn't say. */
+  /** Platform to file a donation under when the service doesn't say. */
   home(): Platform
 }
 
@@ -24,7 +24,7 @@ const PROVIDERS: Record<string, Platform> = {
 
 export const toPlatform = (provider: unknown): Platform | undefined => PROVIDERS[String(provider ?? '').toLowerCase()]
 
-/** "12.5" + "EUR" becomes "€12.50" in the viewer's own format. */
+/** "12.5" + "EUR" -> "€12.50", formatted for the user's locale. */
 export function money(amount: unknown, currency: unknown): string | undefined {
   const n = Number(amount)
   if (!Number.isFinite(n) || amount === '' || amount == null) return undefined

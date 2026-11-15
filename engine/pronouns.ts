@@ -6,7 +6,7 @@ const MAX_CACHE = 5000
 
 export interface PronounDef { subject: string; object: string; singular: boolean }
 
-/** Matches the service's display: "He/Him", "They/Them", or "Any" for single-word entries. */
+/** Formats like the service itself does: "He/Him", "They/Them", or "Any" for single-word ones. */
 export function formatPronoun(defs: Record<string, PronounDef>, id: string | null | undefined, alt?: string | null): string | null {
   const main = id ? defs[id] : undefined
   if (!main) return null
@@ -15,7 +15,7 @@ export function formatPronoun(defs: Record<string, PronounDef>, id: string | nul
   return main.singular ? main.subject : `${main.subject}/${main.object}`
 }
 
-/** Looks up chatters' pronouns from the community service used across Twitch tools. */
+/** Chatter pronouns from the community pronouns service most Twitch tools use. */
 export class Pronouns {
   private defs: Promise<Record<string, PronounDef>> | null = null
   private known = new Map<string, string | null>()
@@ -32,7 +32,7 @@ export class Pronouns {
     return this.defs!
   }
 
-  /** Each login is asked once, so busy chats don't repeat lookups. */
+  /** Each login gets asked about once, busy chats don't spam the service. */
   request(login: string): void {
     if (!login || this.known.has(login)) return
     if (this.known.size >= MAX_CACHE) this.known.delete(this.known.keys().next().value!)
@@ -59,7 +59,7 @@ export class Pronouns {
       this.known.set(login, label)
       if (label) this.found(login, label)
     } catch (err) {
-      // A 404 means the user set none. Anything else may be temporary, so allow a later retry.
+      // 404 = they never set any. Anything else might be temporary, so allow a retry later.
       if (!(err instanceof HttpError && err.status === 404)) this.known.delete(login)
     }
   }

@@ -1,14 +1,14 @@
 // Builds, checks and publishes a release to GitHub.
-//   npm run release -- --notes notes.md          publish a normal release
-//   npm run release -- --notes notes.md --pre    publish a test version (pre-release)
+//   npm run release -- --notes notes.md          normal release
+//   npm run release -- --notes notes.md --pre    pre-release (test version)
 //   npm run release -- --dry                     build and check only, publish nothing
-// The version comes from package.json. Everything is checked before anything is uploaded.
+// Version comes from package.json. Everything gets checked before anything is uploaded.
 //
-// Two downloads are published, and both are needed:
-//   Multichat-Control-<v>-portable.exe   the app itself: one file. New users and v0.2+ updates use it.
-//   Multichat-Control-<v>-x64.zip        for copies of 0.1.x (Electron) installed from the zip: their
-//                                        updater only takes a zip holding resources/app.asar, so a
-//                                        tiny placeholder is included. The new app deletes it on start.
+// Two assets get published, and both are needed:
+//   Multichat-Control-<v>-portable.exe   the app, one file. New users and v0.2+ updates use this.
+//   Multichat-Control-<v>-x64.zip        for 0.1.x (Electron) installs from the zip: their updater
+//                                        only accepts a zip containing resources/app.asar, so a tiny
+//                                        placeholder goes in. The new app deletes it on start.
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir, userInfo } from 'node:os'
@@ -35,7 +35,7 @@ const stop = (text) => {
 }
 const git = (...a) => execFileSync('git', a, { cwd: root, encoding: 'utf8' }).trim()
 
-// 1. The release must match what is on GitHub, and every version number must agree.
+// 1. Release has to match what's on GitHub, and all version numbers have to agree.
 step(`Preparing ${tag} for ${repo}${dry ? ' (dry run: nothing is published)' : ''}`)
 if (!repo) stop('package.json has no GitHub repository URL.')
 const cargo = /^version\s*=\s*"([^"]+)"/m.exec(readFileSync(join(root, 'core', 'Cargo.toml'), 'utf8'))?.[1]
@@ -52,8 +52,8 @@ if (!dry) {
   const token = /^password=(.*)$/m.exec(execSync('git credential fill', { input: 'protocol=https\nhost=github.com\n\n', encoding: 'utf8', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }))?.[1]
   if (!token) stop('No GitHub login found. Push once with git to sign in.')
   headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'multichat-release' }
-  // The build takes minutes, and GitHub drops idle connections meanwhile, so a dropped
-  // connection is retried. A request that never got an answer is safe to send again.
+  // The build takes minutes and GitHub drops idle connections in the meantime, so retry on a
+  // dropped connection. A request that never got an answer is safe to resend.
   send = async (url, init) => {
     for (let attempt = 1; ; attempt++) {
       try {
@@ -72,13 +72,13 @@ if (!dry) {
   if ((await api('GET', `/releases/tags/${tag}`)).status === 200) stop(`${tag} already exists. Raise the version first (package.json, core/Cargo.toml, core/tauri.conf.json).`)
 }
 
-// 2. Build from clean, so nothing left over from tests or earlier builds can ship.
+// 2. Clean build, so nothing left over from tests or earlier builds can ship.
 step('Building from clean')
 const built = join(root, 'core', 'target', 'release', EXE)
 for (const p of [out, join(root, 'dist'), built]) rmSync(p, { recursive: true, force: true })
 const typecheck = spawnSync('npx tsc --noEmit', { cwd: root, shell: true, stdio: 'inherit' })
 if (typecheck.status !== 0) stop('The code has type errors.')
-// scripts/build.mjs keeps this PC's folder paths out of the exe.
+// scripts/build.mjs keeps this machine's paths out of the exe
 const build = spawnSync('node scripts/build.mjs', { cwd: root, shell: true, stdio: 'inherit' })
 if (build.status !== 0 || !existsSync(built)) stop('Build failed.')
 
@@ -95,7 +95,7 @@ try {
   rmSync(stage, { recursive: true, force: true })
 }
 
-// 3. Privacy audit of exactly what will be uploaded, plus the interface built into the exe.
+// 3. Privacy audit of exactly what gets uploaded, plus the UI bundled into the exe.
 step('Checking the release for personal data')
 const work = mkdtempSync(join(tmpdir(), 'release-audit-'))
 try {
@@ -125,7 +125,7 @@ if (dry) {
   process.exit(0)
 }
 
-// 4. Publish. The updaters only install files that carry GitHub's SHA-256 checksum.
+// 4. Publish. The updaters only install assets that have GitHub's SHA-256 checksum.
 step(`Publishing ${tag}${pre ? ' as a test version' : ''}`)
 const made = await api('POST', '/releases', {
   tag_name: tag, target_commitish: git('rev-parse', 'HEAD'), name: `Multichat Control ${version}`,
@@ -141,7 +141,7 @@ for (const f of [files.exe, files.zip]) {
   if (r.status !== 201 || asset.size !== data.length) stop(`Upload failed for ${f}. The release exists but is incomplete; delete it on GitHub and try again.`)
   console.log(`  uploaded ${f} (${(data.length / 1048576).toFixed(1)} MB)`)
 }
-// GitHub adds each file's checksum shortly after the upload.
+// GitHub computes each asset's checksum shortly after upload
 await new Promise((r) => setTimeout(r, 3000))
 const assets = (await api('GET', `/releases/${made.json.id}/assets`)).json ?? []
 const missing = assets.filter((a) => !/^sha256:[0-9a-f]{64}$/i.test(a.digest ?? '')).map((a) => a.name)

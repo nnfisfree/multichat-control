@@ -79,7 +79,7 @@ function Section({ data, filter, onUser, onCard }: { data: PlatformUsers; filter
   )
 }
 
-/** Who is in chat on each platform, grouped by role, like OBS's "Users in Chat". */
+/** Who's in chat on each platform, grouped by role, like OBS's "Users in Chat". */
 export function UsersDrawer({ open, onClose, onUser, onCard }: Props): JSX.Element {
   const users = useStore((s) => s.users)
   const statuses = useStore((s) => s.statuses)

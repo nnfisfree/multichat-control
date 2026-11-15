@@ -1,4 +1,4 @@
-/** Twitch chat commands the app runs through Twitch's API, for the help list and suggestions. */
+/** Twitch commands we run through the API. Used for the help list and autocomplete. */
 export const TWITCH_COMMANDS: { name: string; usage: string; description: string }[] = [
   { name: '/raid', usage: '/raid channel', description: 'Raid another channel' },
   { name: '/raidnow', usage: '/raidnow', description: 'Send the raid without waiting for the countdown' },
@@ -35,7 +35,7 @@ export const TWITCH_COMMANDS: { name: string; usage: string; description: string
   { name: '/block', usage: '/block name', description: 'Block someone (/unblock)' }
 ]
 
-/** Every command word the app handles for Twitch, including the variants listed in the help. */
+// every command word we handle, including the aliases listed in the help
 export const TWITCH_COMMAND_NAMES = new Set([
   ...TWITCH_COMMANDS.map((c) => c.name),
   '/announceblue', '/announcegreen', '/announceorange', '/announcepurple', '/so', '/slowoff', '/followersoff',

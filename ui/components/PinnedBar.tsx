@@ -8,8 +8,8 @@ const left = (ms: number): string => {
 }
 
 /**
- * The message pinned in Twitch chat, at the top of chat. It steps aside while a Hype Train
- * banner shows, and comes back when the train ends. During a raid it always shows, under the raid bar.
+ * Twitch's pinned message, at the top of chat. Steps aside while a Hype Train banner is up and
+ * comes back after. During a raid it always shows, under the raid bar.
  */
 export function PinnedBar(): JSX.Element | null {
   const pinned = useStore((s) => s.pinned)

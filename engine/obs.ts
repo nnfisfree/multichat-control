@@ -5,10 +5,10 @@ import { backoff } from './net'
 import { store } from './store'
 
 const POLL_MS = 2000
-/** Encoder and video settings rarely change, so they are read less often. */
+// encoder/video settings rarely change, so poll them less often
 const SETUP_MS = 30000
 
-/** OBS's encoder IDs differ between versions and output modes; this names them in plain words. */
+/** Encoder ids vary between OBS versions and output modes; map them to readable names. */
 export function encoderName(id: string): string {
   const e = id.toLowerCase()
   const codec = /hevc|h265|265/.test(e) ? 'HEVC' : /av1/.test(e) ? 'AV1' : 'H.264'
@@ -21,8 +21,8 @@ export function encoderName(id: string): string {
   return id
 }
 /**
- * Reads stream health from OBS through its built-in WebSocket server (OBS 28 and newer,
- * protocol v5). Only reads: it never changes scenes, starts or stops anything.
+ * Stream health from OBS's built-in WebSocket server (OBS 28+, protocol v5). Read-only on purpose:
+ * it never switches scenes or starts/stops anything.
  */
 export class ObsLink {
   private ws: WebSocket | null = null
@@ -35,17 +35,17 @@ export class ObsLink {
   private state: ObsState = { status: 'off' }
   private setup: { at: number; encoder?: string; output?: ObsStats['output'] } | null = null
 
-  /** Reads the stream encoder from the current profile, and the output size and frame rate. */
+  /** Stream encoder from the current profile, plus output size and fps. */
   private async readSetup(): Promise<void> {
     if (this.setup && Date.now() - this.setup.at < SETUP_MS) return
     const param = async (category: string, name: string): Promise<string> =>
       String((await this.request('GetProfileParameter', { parameterCategory: category, parameterName: name }))?.parameterValue ?? '')
     const mode = await param('Output', 'Mode')
-    // Advanced output mode keeps its encoder elsewhere than Simple mode.
+    // Advanced output mode stores the encoder somewhere else than Simple mode
     const id = mode === 'Advanced' ? await param('AdvOut', 'Encoder') : await param('SimpleOutput', 'StreamEncoder')
     const video = await this.request('GetVideoSettings')
     const fps = video?.fpsDenominator ? Number(video.fpsNumerator) / Number(video.fpsDenominator) : 0
-    // In Advanced mode the stream encoder can rescale again, after the output scaling.
+    // in Advanced mode the encoder can rescale again after output scaling
     let stream: { width: number; height: number } | undefined
     if (mode === 'Advanced' && /^true$/i.test(await param('AdvOut', 'Rescale'))) {
       const m = /^(\d+)x(\d+)$/i.exec(await param('AdvOut', 'RescaleRes'))
@@ -62,7 +62,7 @@ export class ObsLink {
     }
   }
 
-  /** The previous byte count, to work out the bitrate. */
+  // last byte counts, for working out the bitrate
   private last: { bytes: number; at: number; recBytes: number } | null = null
 
   constructor(private send: (s: ObsState) => void) {}
@@ -72,7 +72,7 @@ export class ObsLink {
   }
 
   private set(next: ObsState): void {
-    // Connected once: OBS is set up, so the one-time OBS tip never needs to show.
+    // we've connected once, so OBS is clearly set up and the setup tip can go
     if (next.status === 'connected' && !store.settings.obsSetUp) store.saveSettings({ obsSetUp: true })
     this.state = next
     this.send(next)
@@ -112,8 +112,8 @@ export class ObsLink {
         return
       }
       if (msg.op === 0) {
-        // Hello: answer with the password proof if OBS asks for one.
-        // The password stays in the core, which computes the proof OBS asks for.
+        // Hello. If OBS wants auth, answer with the proof. The password stays in Rust, which
+        // computes the proof for us.
         const auth = msg.d?.authentication
         void (async () => {
           if (auth && !(await core.secretState()).obsPassword) {
@@ -143,7 +143,7 @@ export class ObsLink {
       if (this.poll) clearInterval(this.poll)
       this.poll = null
       this.last = null
-      // 4009 is OBS's "wrong password": retrying can't fix it.
+      // 4009 = wrong password, retrying won't help
       if (code === 4009) return this.set({ status: 'error', detail: 'OBS refused the password. In OBS, open Tools → WebSocket Server Settings → Show Connect Info and copy the Server Password again.' })
       if (refused) return
       this.set({ status: 'connecting', detail: `Waiting for OBS on port ${port}. Is OBS open, with its WebSocket server on?` })
@@ -171,7 +171,7 @@ export class ObsLink {
     const bytes = Number(stream?.outputBytes) || 0
     const recBytes = Number(record?.outputBytes) || 0
     const since = this.last ? (now - this.last.at) / 1000 : 0
-    // Bits sent since the last check, per second. A restart of the output resets the count.
+    // bits per second since the last poll; restarting the output resets the counter
     const kbps = (b: number, prev: number | undefined): number | undefined =>
       since > 0 && prev !== undefined && b >= prev ? Math.round(((b - prev) * 8) / since / 1000) : undefined
     const out: ObsStats = {

@@ -19,7 +19,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/chat.png" width="760" alt="NoName's Multichat Control: Twitch, YouTube and Kick chat merged in one window with subs and a Super Chat as event cards, and three event pop-ups rising above the message box, one a cheer with its message" />
+<img src="docs/media/chat.png" width="760" alt="NoName's Multichat Control: Twitch, YouTube and Kick chat merged in one window in the Sweet skin, with subs, a Super Chat and tips as event cards, an event pop-up at the top of chat, and the support button, OBS stats and clock under the message box" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -65,13 +65,17 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 ### ⚡ Events and history
 - Subs, gifts, raids, redemptions, follows and donations as coloured cards in chat
-- **Event pop-ups** rise out of the message box and slide away after the time you pick (on by default, 6 seconds). Hover to keep one, click to close it
+- **Event pop-ups** at the top of chat, one at a time, gone after the time you pick (on by default, 6 seconds). Hover to keep one, click to close it
+- **A wave of follows becomes one pop-up** ("Sam and 5 others" ×6), big cheers stay longer, and pop-ups wait while a panel covers chat
+- **Resub months at a glance**: SUB ×14 on the pop-up, months and streak in Recent events
+- **Tips carry the logo** of the service they came through: StreamElements, Streamlabs, Buy Me a Coffee or the platform
 - **The supporter's message always shows**: resubs, cheers, Super Chats and tips, in chat, in pop-ups and in Recent events
 - **Recent events from every platform, in time order**, kept between sessions
 - Filter by platform and type, sort newest or oldest first. Pop-ups follow the same filters
 - **Test alerts** from Streamer.bot, StreamElements and Streamlabs are tagged **TEST**, never saved, and cleared in one click
 - **Gift bombs**: one summary card, then a line for every sub and who received it
-- **Custom Power-ups by name**, and animated icons on every event badge
+- **Twitch Power-ups as on Twitch**: Message Effects get their animated RGB outline, Gigantify an Emote pops in big, On-Screen Celebrations sparkle, and custom Power-ups show by name
+- Animated icons on every event badge
 - Hype Train banner with level, progress and countdown
 
 </td>
@@ -114,7 +118,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td valign="top">
 
 ### 🎨 Skins and emotes
-- **9 skins**: POS Club, Myst Bourne, Dracula, Catppuccin Mocha, Tokyo Night, Kanagawa, Sweet, Rosé Pine and OLED Black, Twitch's panel included
+- **12 skins**: Sweet (the default), POS Club, Myst Bourne, Dracula, Catppuccin Mocha, Tokyo Night, Kanagawa, Rosé Pine and OLED Black, plus three light ones: Butterfly, Catppuccin Latte and Everforest Light
 - **Wobbly window**, inspired by KDE Plasma on Linux: it bends like jelly while you drag it (optional, with an intensity slider)
 - **Remembers its size and place**, monitor included
 - Picker that follows the active tab, with search
@@ -131,6 +135,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 - A status menu for every connection, with reconnect and log in
 - **Followers and subscribers** of every connected platform, in the title bar
 - **A clock** beside the OBS stats: point at it for the date. Everything follows the skin and can be hidden.
+- A small, optional **Support the project** button (Buy Me a Coffee) under the message box
 - Installs new versions in one click, checked against GitHub's checksum, and shows **what's new** after each update
 
 </td>
@@ -141,7 +146,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/popups.gif" alt="Event pop-ups rising out of the message box one after another: subs, gifts, a resub with its message and a Super Chat, each with a bar that drains, then sliding back down" /><br /><b>Events pop up above the message box, then slide away</b></td>
+<td align="center" colspan="2"><img src="docs/media/popups.gif" alt="Event pop-ups appearing one at a time at the top of chat: a Super Chat with its TIP badge, a Power-up, a resub marked ×7, a follow, a Buy Me a Coffee membership, and two new members grouped into one card marked ×2, each with a bar that drains" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/media/moderation.png" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and a spam bot offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots, one click away</b></td>
@@ -152,7 +157,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td align="center"><img src="docs/media/streamerbot.png" alt="Typing /sb S suggests the Streamer.bot actions that match, in the commands list" /><br /><b>Run Streamer.bot actions from the message box</b></td>
 </tr>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/skins.png" width="50%" alt="Settings, Appearance: nine skin cards from POS Club and Myst Bourne to Kanagawa, Sweet and OLED Black" /><br /><b>Nine skins, one click each</b></td>
+<td align="center" colspan="2"><img src="docs/media/skins.png" width="50%" alt="Settings, Appearance: twelve skin cards, from Sweet and POS Club to the light Butterfly, Catppuccin Latte and Everforest Light skins" /><br /><b>Twelve skins, three of them light, one click each</b></td>
 </tr>
 </table>
 
@@ -173,7 +178,7 @@ That's it. Future versions arrive through the app's own update banner.
 
 Open the gear icon and click **Log in** beside each platform you stream on. You sign in on the platform's own page: Twitch, your Google account for YouTube, or your Kick account. There's nothing else to set up.
 
-- **YouTube:** Google will show *"Google hasn't verified this app"*. **That's expected and safe:** click **Advanced**, then **Go to MultichatControl (unsafe)**. [Why it says that](#about-the-youtube-login-warning).
+- **YouTube:** Google will show *"Google hasn't verified this app"*. The app explains why before Google's page opens. **That's expected and safe:** click **Advanced**, then **Go to MultichatControl (unsafe)**. [Why it says that](#about-the-youtube-login-warning).
 - **Twitch** expires its logins after about 30 days, so the app may ask you to log in again.
 - **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in. Your custom Power-ups and points only show once you're signed in.
 - **Buy Me a Coffee:** click **Connect**. Buy Me a Coffee's developer page opens: log in, click **Create new token**, keep it read only, and paste the token into the app. That's it.

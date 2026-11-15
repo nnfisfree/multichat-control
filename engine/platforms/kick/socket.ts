@@ -3,7 +3,7 @@ import { backoff, message } from '../../net'
 import type { KickRealtime } from './discovery'
 
 const SILENCE_LIMIT_MS = 90000
-/** Rejoin this long before the guest token expires, so the swap is invisible. */
+// rejoin this long before the guest token expires so the swap isn't noticeable
 const TOKEN_MARGIN_S = 90
 
 export interface KickSocketHandlers {
@@ -12,8 +12,8 @@ export interface KickSocketHandlers {
 }
 
 /**
- * Client for the Centrifugo socket behind Kick's website, written against its observed traffic:
- * newline-separated JSON commands, an empty `{}` frame as ping and pong, and events in `push`.
+ * Client for the Centrifugo socket behind kick.com. Undocumented, so this is based on what the site
+ * actually sends: newline-separated JSON commands, an empty `{}` frame for ping/pong, events in `push`.
  */
 export class KickSocket {
   private ws: WebSocket | null = null

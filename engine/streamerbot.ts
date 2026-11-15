@@ -6,22 +6,22 @@ import { log } from './log'
 import { backoff } from './net'
 import { store } from './store'
 
-/** A safety net in case Streamer.bot's "something changed" events don't arrive. */
+// safety net in case SB's change events don't come through
 const REFRESH_MS = 60000
-/** Streamer.bot 0.2.4 and older send no Hello, so after this long the app goes on without one. */
+// SB 0.2.4 and older never send Hello, so give up waiting after this
 const HELLO_WAIT_MS = 1500
-/** The events that mean an action or a command was added, changed or deleted. */
+// events that mean an action or command was added, changed or removed
 const CHANGE_EVENTS = ['ActionAdded', 'ActionUpdated', 'ActionDeleted', 'CommandAdded', 'CommandUpdated', 'CommandDeleted']
 
 const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
-/** Streamer.bot calls an action without a group "None". */
+// SB reports "no group" as the string "None"
 const group = (v: unknown): string => (text(v).toLowerCase() === 'none' ? '' : text(v))
 const byName = <T extends { group: string; name: string }>(a: T, b: T): number =>
   a.group.localeCompare(b.group, undefined, { sensitivity: 'base' }) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
 
 /**
  * Talks to Streamer.bot's WebSocket server on this PC: lists its actions and chat commands, keeps
- * the lists in step when they change there, and runs an action when the streamer asks.
+ * them in sync when they change there, and runs actions on request.
  */
 export class StreamerbotLink {
   private ws: WebSocket | null = null
@@ -76,7 +76,7 @@ export class StreamerbotLink {
     const port = Number(store.settings.sbPort) || 8080
     const ws = new WebSocket(`ws://127.0.0.1:${port}/`, { handshakeTimeout: 5000 })
     this.ws = ws
-    /** Set once retrying can't help: a missing or wrong password. */
+    // set once retrying is pointless (missing or wrong password)
     let refused = false
     let greeted = false
     let authenticating = false
@@ -102,7 +102,7 @@ export class StreamerbotLink {
       } catch {
         return
       }
-      // A reply to one of the app's requests.
+      // reply to one of our requests
       if (typeof msg?.id === 'string' && this.pending.has(msg.id) && !msg.event) {
         const done = this.pending.get(msg.id)!
         this.pending.delete(msg.id)
@@ -131,10 +131,10 @@ export class StreamerbotLink {
         })()
         return
       }
-      // Something changed in Streamer.bot: read the lists again, once things settle.
+      // something changed in SB, re-read the lists once it settles
       const source = text(msg?.event?.source).toLowerCase()
       if (source === 'application' && CHANGE_EVENTS.includes(text(msg?.event?.type))) return this.refreshSoon(run)
-      // A test trigger fired in Streamer.bot: it shows in the Events list until the app restarts.
+      // test trigger fired in SB; shows in Events until restart
       const test = source ? sbTestEvent(source, text(msg?.event?.type), msg?.data) : null
       if (test) this.onTest(test)
     })
@@ -144,7 +144,7 @@ export class StreamerbotLink {
       this.clearTimers()
       for (const done of this.pending.values()) done(null)
       this.pending.clear()
-      // Streamer.bot drops the connection when the password is wrong.
+      // SB just drops the connection on a wrong password
       if (authenticating) {
         refused = true
         this.set({ status: 'error', detail: 'Streamer.bot refused the password. Copy it again from its WebSocket Server settings.' })
@@ -168,12 +168,12 @@ export class StreamerbotLink {
     if (run === this.run) this.poll = setInterval(() => void this.refresh(run), REFRESH_MS)
   }
 
-  /** Asks Streamer.bot to say when actions or commands change, and when a test trigger fires. */
+  /** Subscribes to action/command changes and test triggers. */
   private async subscribe(run: number): Promise<void> {
     const list = await this.request('GetEvents')
     if (run !== this.run) return
     const events: Record<string, unknown> = list?.events && typeof list.events === 'object' ? list.events : {}
-    /** The category's events this Streamer.bot offers, spelled exactly as it spells them. */
+    // only the events this SB version actually offers, spelled the way it spells them
     const pick = (category: string, names: string[], ifUnknown: boolean): [string, string[]] => {
       const key = Object.keys(events).find((k) => k.toLowerCase() === category.toLowerCase())
       const offered = key && Array.isArray(events[key]) ? (events[key] as unknown[]).map(text) : []
@@ -186,7 +186,7 @@ export class StreamerbotLink {
       if (r?.status !== 'ok') log('streamerbot', `could not subscribe to changes (${text(r?.error) || 'no answer'}); the lists refresh every minute instead`)
     }
     if (run !== this.run) return
-    // Test triggers, asked for separately so an older Streamer.bot refusing them can't stop the above.
+    // test triggers go in a separate request, so an older SB refusing them can't break the one above
     const tests: Record<string, string[]> = {}
     for (const [category, names] of Object.entries(SB_TEST_EVENTS)) {
       const [key, wanted] = pick(category, names, false)
@@ -202,7 +202,7 @@ export class StreamerbotLink {
     this.refreshTimer = setTimeout(() => void this.refresh(run), 400)
   }
 
-  /** Reads the actions and commands again. Called on connect, on changes, and every minute. */
+  /** Re-reads actions and commands. Runs on connect, on changes, and once a minute. */
   async refresh(run = this.run): Promise<void> {
     const [a, c] = await Promise.all([this.request('GetActions'), this.request('GetCommands')])
     if (run !== this.run) return
@@ -214,7 +214,7 @@ export class StreamerbotLink {
       .map((x: any) => ({ id: text(x?.id), name: text(x?.name), group: group(x?.group), enabled: x?.enabled !== false }))
       .filter((x: SbAction) => x.id && x.name)
       .sort(byName)
-    // GetCommands needs Streamer.bot 0.2.5 or newer; older ones just have no list.
+    // GetCommands needs SB 0.2.5+; older versions just don't get a command list
     const commands: SbCommand[] = c?.status === 'ok' && Array.isArray(c.commands)
       ? c.commands
         .map((x: any) => ({
@@ -227,7 +227,7 @@ export class StreamerbotLink {
     this.set({ status: 'connected', detail: undefined, actions, commands })
   }
 
-  /** Runs an action. `input` reaches it the way a chat command's text would: rawInput, input0, input1… */
+  /** `input` reaches the action the same way a chat command's text would: rawInput, input0, input1... */
   async runAction(id: string, input?: string): Promise<ActionResult> {
     if (this.state.status !== 'connected') return { ok: false, message: 'Streamer.bot is not connected.' }
     const action = this.state.actions.find((a) => a.id === id)

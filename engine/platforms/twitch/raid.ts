@@ -1,12 +1,12 @@
 import type { RaidInfo } from '../../../shared/types'
 import type { Helix } from './connector'
 
-/** Twitch sends a raid on its own 90 seconds after it is set up. */
+// Twitch sends the raid by itself 90s after it's started
 export const RAID_COUNTDOWN_MS = 90_000
 
 /**
- * Starts a raid and gathers what the raid bar shows about the channel: picture, game, viewers
- * and title. A failed lookup still leaves the raid running, just with less to show.
+ * Starts the raid and collects what the raid bar shows: avatar, game, viewers and title. If a
+ * lookup fails the raid still goes ahead, there's just less to show.
  */
 export async function startRaid(helix: Helix, me: string, login: string): Promise<RaidInfo> {
   const clean = login.trim().replace(/^@/, '').toLowerCase()
@@ -17,7 +17,7 @@ export async function startRaid(helix: Helix, me: string, login: string): Promis
   const startedAt = Date.parse(r?.data?.[0]?.created_at ?? '') || Date.now()
   const s = (await helix('GET', '/streams', { user_id: u.id }).catch(() => null))?.data?.[0]
   let game: string | undefined = s?.game_name || undefined
-  // Offline channels still have a category set; it shows as what they last streamed.
+  // offline channels still have a category set, show it as what they last streamed
   if (!s) game = (await helix('GET', '/channels', { broadcaster_id: u.id }).catch(() => null))?.data?.[0]?.game_name || undefined
   return {
     login: u.login, name: u.display_name || u.login, avatar: u.profile_image_url || undefined,

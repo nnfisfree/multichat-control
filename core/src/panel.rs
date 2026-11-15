@@ -1,10 +1,10 @@
-//! Twitch's own Rewards & Power-ups, shown inside the app.
+//! Twitch's own Rewards & Power-ups panel, inside the app.
 //!
-//! It is Twitch's popout chat page in a WebView2 placed over the app's flyout. A page script
-//! (panel/isolate.js) hides everything but the rewards popover and makes it fill the view. The
-//! page never gets any way to call the app: it can only ask for a reload, by navigating to a
-//! private address that this module intercepts and blocks. The skin's colours are applied to
-//! Twitch's own colour variables so the panel matches the app.
+//! It's Twitch's popout chat page in a WebView2 positioned over our flyout. An injected script
+//! (panel/isolate.js) hides everything except the rewards popover and stretches it to fill the view.
+//! The page gets no way to call into the app: the only thing it can do is ask for a reload, by
+//! navigating to a private URL that this module intercepts and blocks. Skin colours are mapped onto
+//! Twitch's own CSS variables so the panel matches the app.
 
 use crate::storage::log;
 use serde::{Deserialize, Serialize};
@@ -63,12 +63,12 @@ pub(crate) fn is_twitch(u: &url::Url) -> bool {
     u.scheme() == "https" && u.host_str().is_some_and(|h| h == "twitch.tv" || h.ends_with(".twitch.tv"))
 }
 
-/// Colour values only: no quotes, semicolons or braces, so nothing else can reach the page's CSS.
+/// Colour values only. No quotes, semicolons or braces, so nothing else can get into the page's CSS.
 fn safe(v: &str) -> bool {
     !v.is_empty() && v.len() <= 240 && v.chars().all(|c| c.is_ascii_alphanumeric() || "#(),.% -".contains(c))
 }
 
-/// Twitch's own colour variables, set to the app's skin. Names read from Twitch's dark theme.
+/// Twitch's colour variables set to our skin. Variable names taken from Twitch's dark theme.
 fn skin_css(c: &Colors) -> String {
     let all = [&c.window, &c.base, &c.alt, &c.text, &c.muted, &c.accent, &c.accent_hover, &c.on_accent, &c.line];
     if !all.iter().all(|v| safe(v)) {
@@ -102,7 +102,7 @@ fn webview(app: &AppHandle) -> Option<Webview> {
     app.get_webview(LABEL)
 }
 
-/// Sends the current state to the page: skin, sign-in, whether it's on screen.
+/// Pushes the current state to the page: skin, sign-in, whether it's on screen.
 fn sync_page(w: &Webview) {
     let (skin, signed, shown) = {
         let p = panel().lock().unwrap();
@@ -115,9 +115,9 @@ fn sync_page(w: &Webview) {
     ));
 }
 
-/// Every automatic reload goes through here. At most two in 30 seconds: after that the page shows
-/// its Open button instead, so whatever goes wrong, the panel can't keep reloading. Pressing Open
-/// is always allowed. Each reload and its reason goes in the app's log.
+/// Every automatic reload goes through here. Max two per 30 seconds, after that the page shows its
+/// Open button instead, so whatever breaks, the panel can't get stuck in a reload loop. Pressing
+/// Open is always allowed. Every reload and its reason gets logged.
 fn reload(app: &AppHandle, reason: &str, user: bool) {
     let Some(w) = webview(app) else { return };
     let (url, shown, allowed) = {
@@ -141,7 +141,7 @@ fn reload(app: &AppHandle, reason: &str, user: bool) {
     }
 }
 
-/// A message from the page (a blocked navigation to the private address).
+/// Message from the page (a blocked navigation to the private URL).
 fn on_message(app: &AppHandle, u: &url::Url) {
     let data: serde_json::Value = u.fragment()
         .map(|f| url::form_urlencoded::parse(format!("x={f}").as_bytes()).next().map(|(_, v)| v.into_owned()).unwrap_or_default())
@@ -151,20 +151,20 @@ fn on_message(app: &AppHandle, u: &url::Url) {
         let reason = data["reason"].as_str().unwrap_or("the page asked").chars().take(120).collect::<String>();
         let user = data["user"].as_bool().unwrap_or(false);
         let app = app.clone();
-        // Not from inside the navigation callback: the webview is busy there.
+        // not from inside the navigation callback, the webview is busy there
         tauri::async_runtime::spawn(async move { reload(&app, &reason, user) });
     }
 }
 
-/// Watches Twitch's sign-in cookie, which the page itself can't read, and checks that the page
-/// still answers. Runs on its own task: reading cookies on Windows must not block the main thread.
+/// Watches Twitch's sign-in cookie (the page can't read it) and checks that the page still
+/// responds. Own task, because reading cookies on Windows must not block the main thread.
 fn watch(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         let mut silent = 0;
         loop {
             tokio::time::sleep(Duration::from_secs(2)).await;
             let Some(w) = webview(&app) else { continue };
-            // Sign-in.
+            // sign-in
             let cookies = w.cookies_for_url(url::Url::parse("https://www.twitch.tv").unwrap()).unwrap_or_default();
             let now = cookies.iter().any(|c| c.name() == "auth-token" && !c.value().is_empty());
             let (before, channel) = {
@@ -175,7 +175,7 @@ fn watch(app: AppHandle) {
             if before != Some(now) {
                 let _ = app.emit("panel:signedIn", now);
                 sync_page(&w);
-                // Signing in or out on Twitch: back to the popout, fresh.
+                // signed in or out on Twitch: go back to a fresh popout
                 if before.is_some() {
                     log("rewards", if now { "signed in to Twitch" } else { "signed out of Twitch" });
                     if let Some(u) = popout_url(&channel) {
@@ -183,7 +183,7 @@ fn watch(app: AppHandle) {
                     }
                 }
             }
-            // A page that stops answering (blank and frozen) is loaded again.
+            // page stopped responding (blank and frozen), load it again
             if panel().lock().unwrap().loading {
                 silent = 0;
                 continue;
@@ -236,7 +236,7 @@ pub async fn panel_show(app: AppHandle, bounds: Bounds, channel: Option<String>)
             let win_app = app.clone();
             let load_app = app.clone();
             let builder = WebviewBuilder::new(LABEL, WebviewUrl::External(url.clone()))
-                // The same WebView2 data folder and options as the window, so it stays portable.
+                // same WebView2 data folder and flags as the main window, keeps it portable
                 .data_directory(crate::paths::webview_dir())
                 .additional_browser_args(&crate::browser_args())
                 .initialization_script(script)
@@ -248,14 +248,14 @@ pub async fn panel_show(app: AppHandle, bounds: Bounds, channel: Option<String>)
                     if is_twitch(u) {
                         return true;
                     }
-                    // Links to other sites open in the browser, never inside the panel.
+                    // links to other sites open in the browser, never inside the panel
                     if u.scheme() == "https" {
                         let _ = nav_app.opener().open_url(u.as_str(), None::<&str>);
                     }
                     false
                 })
                 .on_new_window(move |u, _| {
-                    // Twitch's own windows (such as buying Bits) open in the browser.
+                    // Twitch's own popups (buying Bits etc.) open in the browser too
                     if u.scheme() == "https" {
                         let _ = win_app.opener().open_url(u.as_str(), None::<&str>);
                     }
@@ -289,7 +289,7 @@ pub async fn panel_show(app: AppHandle, bounds: Bounds, channel: Option<String>)
     }
     if first_show {
         let _ = w.show();
-        // Each time the flyout opens, open the popover again in case Twitch closed it.
+        // Twitch sometimes closes the popover, so reopen it every time the flyout opens
         let _ = w.eval("window.__nnfPanel && window.__nnfPanel.open && window.__nnfPanel.open()");
     }
     if first_show || skin_changed {
@@ -307,7 +307,7 @@ pub async fn panel_hide(app: AppHandle) {
     }
 }
 
-/// Whether the panel is signed in to Twitch; null until first known.
+/// Whether the panel is signed in to Twitch. null until we know.
 #[tauri::command]
 pub fn panel_signed_in() -> serde_json::Value {
     json!(panel().lock().unwrap().signed_in)

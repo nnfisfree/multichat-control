@@ -49,8 +49,8 @@ h2, h3 { margin: 0; }
 ::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-thumb:hover { background: var(--purple-2); background-clip: content-box; }
 
-/* The window edge is one unbroken gradient line, as thin as a normal Windows window border:
-   the page shows through as a 1px frame. Only its colour stands out, never its width. */
+/* Window edge: one unbroken 1px gradient line, same thickness as a normal Windows border. Only the
+   colour should stand out, never the width. */
 #root { padding: 1px; background: var(--edge); }
 .app {
   height: 100%;
@@ -62,16 +62,16 @@ h2, h3 { margin: 0; }
 }
 
 /* Title bar */
-/* Dragging comes from data-tauri-drag-region only. No CSS app-region: WebView2 updates those
-   areas late, and a stale one swallowed clicks on the window buttons. */
+/* Dragging is data-tauri-drag-region only, no CSS app-region. WebView2 updates app-region areas late,
+   and a stale one ended up eating clicks on the window buttons. */
 .titlebar { height: 38px; flex: none; display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, auto) minmax(80px, 1fr); align-items: center; gap: 16px; padding: 0 10px 0 10px; }
-/* Both sides are always equally wide (at least room for the window buttons), so the middle is
-   centred on the window. When space is short the app's name shortens instead. */
+/* Both sides are always the same width (at least enough for the window buttons) so the middle stays
+   centred on the window. When space runs out the app name gets shortened instead. */
 .title-left, .title-right { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
 .title-right { justify-content: flex-end; }
 .brand-icon { width: 20px; height: 20px; flex: none; }
 .brand { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-/* Smaller and dimmer than the name, so the two read as name and detail. */
+/* smaller and dimmer than the name, so it reads as name + detail */
 .brand-version { margin-left: 6px; font-size: 11px; font-weight: 500; letter-spacing: 0.02em; color: color-mix(in srgb, var(--muted) 72%, transparent); }
 .demo-tag { font-size: 11px; font-weight: 700; color: #151040; background: var(--orange); padding: 0 8px; border-radius: 8px; }
 .win-btn { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; line-height: 1; color: var(--win-glyph); background: var(--win-min); transition: filter 0.15s, box-shadow 0.15s; }
@@ -111,6 +111,7 @@ h2, h3 { margin: 0; }
 
 /* Chat */
 .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.chat-area { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
 .chat-wrap { flex: 1; min-height: 0; position: relative; }
 .chat { height: 100%; overflow-y: auto; overflow-x: hidden; padding: 4px 0; overflow-anchor: none; }
 .row-slot { position: absolute; top: 0; left: 0; width: 100%; }
@@ -128,7 +129,7 @@ h2, h3 { margin: 0; }
 .name { font-weight: 700; color: var(--blue-2); }
 .name:hover { text-decoration: underline; }
 .emote { height: 1.7em; width: auto; margin: -0.3em 1px; vertical-align: middle; }
-/* Overlay emotes are centred on top of the emote they follow. */
+/* zero-width emotes centred on top of the emote before them */
 .emote-stack { position: relative; display: inline-grid; vertical-align: middle; margin: -0.3em 1px; }
 .emote-stack > .emote { grid-area: 1 / 1; margin: 0; justify-self: center; align-self: center; }
 .emote-stack > .emote.layer { pointer-events: none; }
@@ -143,18 +144,36 @@ h2, h3 { margin: 0; }
 .row.kind-cheer .tag { color: #d2b8ff; }
 .row.kind-highlight { background: rgba(var(--purple-rgb), 0.3); border-left: 3px solid var(--purple-2); }
 .row.kind-highlight .tag { color: #e0a8ff; }
-/* A viewer tagged the streamer: a soft band in the platform's own colour, fading out so the skin
-   still shows through, and a solid stripe on the left. */
+/* Streamer mention: soft band in the platform's colour that fades out so the skin shows through,
+   plus a solid stripe on the left. */
 .row.mention { --pf: var(--twitch); background: linear-gradient(90deg, color-mix(in srgb, var(--pf) 24%, transparent), color-mix(in srgb, var(--pf) 7%, transparent) 75%); border-left: 3px solid var(--pf); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pf) 18%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--pf) 18%, transparent); }
 .row.mention-youtube { --pf: var(--youtube); }
 .row.mention-kick { --pf: var(--kick); }
 .row.mention:hover { background: linear-gradient(90deg, color-mix(in srgb, var(--pf) 32%, transparent), color-mix(in srgb, var(--pf) 11%, transparent) 75%); }
-.row.effect-message-effect { background: linear-gradient(90deg, rgba(var(--blue-rgb), 0.28), rgba(var(--purple-rgb), 0.28)); }
-.row.effect-giant .emote:last-of-type { height: 5em; margin: 2px 2px; }
+/* Twitch Power-ups on messages.
+   Message Effects: an RGB outline that keeps running around the message, like on Twitch. The
+   rainbow is a rotating conic gradient, masked down to a 2px ring, so it never changes the row's
+   size. Each effect also gets an .fx-<id> class (ids are logged as "message effect: …") for its own look later. */
+@property --fx-turn { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.row.effect-message-effect { position: relative; margin: 3px 8px; padding: 6px 12px; border-radius: 10px; background: linear-gradient(90deg, rgba(var(--purple-rgb), 0.16), rgba(var(--blue-rgb), 0.12)); }
+.row.effect-message-effect::before,
+.row.effect-message-effect::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: conic-gradient(from var(--fx-turn), #ff3b3b, #ffb03b, #f7f33b, #3bff6f, #3bd8ff, #4b5bff, #c23bff, #ff3b3b); animation: fx-turn 2.6s linear infinite; }
+/* both are cut down to a ring: a sharp 2px line, and a soft blurred band hugging its outside */
+.row.effect-message-effect::before, .row.effect-message-effect::after { -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.row.effect-message-effect::before { padding: 2px; }
+.row.effect-message-effect::after { inset: -4px; padding: 6px; border-radius: 14px; filter: blur(3px); opacity: 0.55; }
+.row.effect-message-effect:hover { background: linear-gradient(90deg, rgba(var(--purple-rgb), 0.24), rgba(var(--blue-rgb), 0.18)); }
+@keyframes fx-turn { to { --fx-turn: 360deg; } }
+/* Gigantify an Emote: the emote pops in big, like on Twitch */
+.emote.giant { height: 4.6em; margin: 4px 2px; vertical-align: bottom; animation: giant-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes giant-pop { from { transform: scale(0.3); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .row.effect-message-effect::before, .row.effect-message-effect::after, .emote.giant { animation: none; }
+}
 .gif { display: block; max-width: min(320px, 100%); max-height: 200px; margin: 4px 0 2px; border-radius: 8px; }
 
-/* Moderator warnings: messages Twitch's AutoMod held (amber), suspicious users and likely spam
-   (red). A strip above the message says why and holds the buttons. */
+/* Mod warnings: AutoMod holds are amber, suspicious users and likely spam are red. The strip above
+   the message says why and holds the buttons. */
 .row.held, .row.flagged { --mc: var(--orange); background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 20%, transparent), color-mix(in srgb, var(--mc) 5%, transparent) 80%); border-left: 3px solid var(--mc); }
 .row.flagged { --mc: var(--bad); }
 .row.held:hover, .row.flagged:hover { background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 27%, transparent), color-mix(in srgb, var(--mc) 8%, transparent) 80%); }
@@ -170,11 +189,11 @@ h2, h3 { margin: 0; }
 .modbar .btn.sm { padding: 2px 10px; font-size: 12px; line-height: 1.5; }
 .modbar-note { flex-basis: 100%; color: var(--muted); }
 
-/* Notices from the app itself, such as asking to log in again. */
+/* the app's own notices, e.g. "log in again" */
 .row.kind-system { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin: 4px 10px; padding: 7px 12px; font-size: 0.74em; font-weight: 400; color: var(--text); background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; }
 .row.kind-system > svg { flex: none; }
 .row.kind-system > span { flex: 1 1 14em; }
-/* A "log in again" notice that the new login answered; removed from chat when this ends (RELOGIN_FADE_MS). */
+/* "log in again" notice that's been resolved. Removed from chat when this transition ends (RELOGIN_FADE_MS in store.ts). */
 .row.kind-system.relogin-done { animation: relogin-done 0.6s ease forwards; pointer-events: none; }
 @keyframes relogin-done { to { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .row.kind-system.relogin-done { animation-duration: 0.01s; } }
@@ -187,6 +206,11 @@ h2, h3 { margin: 0; }
 .row.kind-event:hover { background: none; }
 .ev { --c: 139, 92, 246; padding: 7px 12px; border-radius: var(--radius); border: 1px solid rgba(var(--c), 0.5); border-left-width: 4px; background: linear-gradient(90deg, rgba(var(--c), 0.34), rgba(var(--c), 0.08)); box-shadow: 0 0 14px rgba(var(--c), 0.14); }
 .ev-sub, .ev-pop-sub { --c: 168, 85, 247; }
+/* On-Screen Celebration: confetti colours sweep across the card a few times, like the effect on stream */
+.ev-celebration { position: relative; overflow: hidden; isolation: isolate; }
+.ev-celebration::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5; background: linear-gradient(105deg, transparent 20%, rgba(255, 59, 120, 0.35) 32%, rgba(255, 210, 59, 0.4) 40%, rgba(59, 255, 160, 0.35) 48%, rgba(59, 170, 255, 0.35) 56%, transparent 68%) no-repeat; background-size: 250% 100%; animation: celebrate 1.8s ease-in-out 3 both; }
+@keyframes celebrate { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+@media (prefers-reduced-motion: reduce) { .ev-celebration::after { animation: none; opacity: 0; } }
 .ev-gift, .ev-pop-gift { --c: 236, 72, 153; }
 .ev-cheer, .ev-pop-cheer { --c: 145, 70, 255; }
 .ev-raid, .ev-pop-raid { --c: 39, 169, 232; }
@@ -195,15 +219,23 @@ h2, h3 { margin: 0; }
 .ev-follow, .ev-pop-follow { --c: 248, 113, 113; }
 .ev-paid, .ev-pop-paid { --c: 52, 227, 159; }
 .ev-hypetrain, .ev-pop-hypetrain { --c: 255, 152, 56; }
-/* Twitch's own gifts, Power-ups and Hype Trains wear Twitch purple. */
+/* Twitch's own gifts, Power-ups and Hype Trains get Twitch purple */
 .ev-gift.on-twitch, .ev-powerup.on-twitch, .ev-hypetrain.on-twitch, .ev-pop-gift.on-twitch, .ev-pop-powerup.on-twitch, .ev-pop-hypetrain.on-twitch { --c: 145, 70, 255; }
+/* Tips and BMC aren't tied to a platform, so they use their service's colours. SE is near-black with
+   light text and a light edge so it works on every skin, pale ones included. */
+.ev.from-streamlabs, .ev-pop-slot.from-streamlabs { --c: 128, 245, 210; --pc: 128, 245, 210; }
+.ev.from-buymeacoffee, .ev-pop-slot.from-buymeacoffee { --c: 255, 221, 0; --pc: 255, 221, 0; }
+.ev.from-streamelements, .ev-pop-slot.from-streamelements { --c: 225, 228, 236; --pc: 225, 228, 236; --text: #f4f5f8; --muted: #b4b8c4; }
+.ev.from-streamelements { color: var(--text); background: linear-gradient(90deg, rgba(6, 6, 9, 0.92), rgba(30, 30, 36, 0.8)); border-color: rgba(255, 255, 255, 0.45); }
+.pf[class*='src-'] { display: inline-flex; line-height: 0; }
+.pf[class*='src-'] img { border-radius: 4px; }
 .ev-top { display: flex; align-items: center; gap: 6px; }
 .ev-top .pf { margin: 0; flex: none; }
 .ev-title { flex: 1; min-width: 0; font-weight: 400; color: color-mix(in srgb, var(--text) 88%, var(--muted)); overflow-wrap: anywhere; }
 .ev-title b { font-weight: 700; color: var(--text); }
 .ev-amount { flex: none; font-weight: 700; white-space: nowrap; }
 .ev-badge { --c: 139, 92, 246; flex: none; min-width: 34px; height: 20px; padding: 0 7px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; line-height: 1; color: #fff; border-radius: 6px; background: linear-gradient(135deg, rgba(var(--c), 0.95), rgba(var(--c), 0.5)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 0 8px rgba(var(--c), 0.45); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
-/* Channel points are a coin: a round badge with a bright inner ring. */
+/* channel points badge is a coin: round, with a bright inner ring */
 .badge-redemption { --c: 45, 212, 191; width: 24px; min-width: 24px; height: 24px; padding: 0; border-radius: 50%; font-size: 10px; letter-spacing: 0; background: radial-gradient(circle at 35% 30%, #5eead4, #0f9f8c 70%); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75), 0 0 9px rgba(45, 212, 191, 0.6); }
 .badge-sub { --c: 168, 85, 247; }
 .badge-gift { --c: 236, 72, 153; }
@@ -218,8 +250,8 @@ h2, h3 { margin: 0; }
 .badge-moderation { --c: 200, 70, 90; }
 .ev-msg { margin: 3px 0 0 24px; font-weight: 600; overflow-wrap: anywhere; }
 
-/* Link preview cards: YouTube videos and clips, under the message. A fixed height, so the
-   empty card shown while loading is exactly as tall as the finished one. */
+/* Link preview cards under messages. Fixed height so the placeholder shown while loading is exactly
+   as tall as the real card (no jump). */
 .lp { --pf: var(--twitch); display: flex; gap: 10px; box-sizing: border-box; width: min(100%, 34em); height: calc(5.4em + 14px); margin: 5px 0 2px; padding: 6px; font-size: 0.72em; font-weight: 400; line-height: 1.3; color: var(--text); text-decoration: none; overflow-wrap: normal; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--pf); border-radius: 10px; overflow: hidden; }
 .lp-youtube { --pf: var(--youtube); }
 .lp-kick { --pf: var(--kick); }
@@ -292,7 +324,7 @@ select option { background: var(--solid); }
 .src-tag { flex: none; font: 700 10px/1 'Segoe UI', sans-serif; letter-spacing: 0.04em; padding: 3px 5px; border-radius: 4px; color: #fff; }
 .src-tag.streamelements { background: #2b6cff; }
 .src-tag.streamlabs { background: #31c3a2; color: #062a22; }
-/* Buy Me a Coffee shows its own logo instead of letters. */
+/* BMC shows its logo instead of letters */
 .src-tag.buymeacoffee { padding: 0; background: none; line-height: 0; }
 .bmc-logo { border-radius: 4px; }
 .account.bmc .pf { display: inline-flex; }
@@ -301,11 +333,12 @@ select option { background: var(--solid); }
 .bmc-connect .row-btns { display: flex; gap: 6px; align-items: center; }
 .bmc-connect input { flex: 1; min-width: 0; }
 .bmc-connect .hint { margin: 0; font-size: 12.5px; color: var(--muted); }
-/* Donations are a gold coin with a dollar sign. */
-.badge-donation { --c: 250, 190, 40; width: 24px; min-width: 24px; height: 24px; padding: 0; border-radius: 50%; color: #5a3a00; background: radial-gradient(circle at 35% 30%, #fff1a8, #f5c542 45%, #c98a0b 100%); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7), inset 0 -2px 3px rgba(120, 70, 0, 0.35), 0 0 9px rgba(250, 190, 40, 0.6); text-shadow: none; }
-.badge-donation svg { width: 15px; height: 15px; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.55)); }
+/* tips (donations + Super Chats): TIP next to the logo of whatever the money came through */
+.badge-tip { --c: 30, 190, 130; }
+.badge-tip img { flex: none; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35); }
+.badge-tip svg { flex: none; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
 
-/* Animated pictures in event badges (BadgeIcons.tsx). Each moves briefly, then rests. */
+/* Animated badge icons (BadgeIcons.tsx). Each one moves briefly, then rests. */
 .ev-badge.has-icon { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px 0 5px; }
 .ev-badge .bi { flex: none; overflow: visible; color: #fff; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45)); }
 .ev-badge .bi * { transform-box: fill-box; transform-origin: center; }
@@ -316,7 +349,10 @@ select option { background: var(--solid); }
 .bi-train .bi-smoke circle:nth-child(2) { animation-delay: 0.5s; }
 .bi-train .bi-smoke circle:nth-child(3) { animation-delay: 1s; }
 .bi-gift .bi-lid { transform-origin: 50% 100%; animation: bi-lid 2.4s ease-in-out infinite; }
-.bi-dice { animation: bi-roll 3.2s cubic-bezier(0.3, 1.4, 0.5, 1) infinite; }
+/* Channel points: inner arc sweeps a full turn every few seconds, the coin pulses a little, a glint flashes on the ring. */
+.bi-points { color: #fff; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)); animation: bi-points-pulse 3.2s ease-in-out infinite; }
+.bi-points .bi-points-arc { animation: bi-points-sweep 3.2s cubic-bezier(0.55, 0, 0.25, 1) infinite; }
+.bi-points .bi-points-glint { opacity: 0; animation: bi-glint 3.2s ease-in-out 0.4s infinite; }
 .bi-bits { animation: bi-float 2.4s ease-in-out infinite; }
 .bi-bits .bi-glint { animation: bi-glint 2.4s ease-in-out infinite; }
 .bi-flame .bi-flame-out { transform-origin: 50% 100%; animation: bi-flicker 0.9s ease-in-out infinite alternate; }
@@ -326,13 +362,14 @@ select option { background: var(--solid); }
 @keyframes bi-bob { to { transform: translateY(0.4px); } }
 @keyframes bi-smoke { 0% { opacity: 0; transform: translate(2px, 3px) scale(0.5); } 25% { opacity: 0.9; } 100% { opacity: 0; transform: translate(-2px, -3px) scale(1.4); } }
 @keyframes bi-lid { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-2.5px) rotate(-8deg); } 80% { transform: translateY(-1px) rotate(5deg); } 90% { transform: translateY(-1.5px) rotate(-2deg); } }
-@keyframes bi-roll { 0%, 65% { transform: none; } 85% { transform: rotate(200deg) scale(0.85); } 100% { transform: rotate(360deg); } }
+@keyframes bi-points-sweep { 0%, 55% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes bi-points-pulse { 0%, 55%, 100% { transform: scale(1); } 78% { transform: scale(1.12); } }
 @keyframes bi-float { 0%, 100% { transform: translateY(0.5px); } 50% { transform: translateY(-1px); } }
 @keyframes bi-glint { 0%, 55%, 100% { opacity: 0; transform: scale(0.4); } 70% { opacity: 1; transform: scale(1.3); } }
 @keyframes bi-flicker { 0% { transform: scale(1, 1) skewX(0deg); } 50% { transform: scale(0.94, 1.06) skewX(3deg); } 100% { transform: scale(1.04, 0.95) skewX(-3deg); } }
 @keyframes bi-beat { 0%, 40%, 100% { transform: scale(1); } 10% { transform: scale(1.22); } 20% { transform: scale(1); } 30% { transform: scale(1.14); } }
 @media (prefers-reduced-motion: reduce) { .ev-badge .bi, .ev-badge .bi * { animation: none !important; } .bi-train .bi-smoke circle { opacity: 0.8; } }
-/* Compact account rows: one line each, details only when needed. */
+/* compact account rows, one line each, details only when needed */
 .modal .account { padding: 6px 10px; gap: 4px; margin-bottom: 6px; }
 .modal .account header { gap: 6px; min-height: 30px; }
 .modal .account h3 { font-size: 15px; white-space: nowrap; }
@@ -348,6 +385,11 @@ select option { background: var(--solid); }
 .seg button.soon:hover { color: var(--muted); }
 .seg button.soon small { padding: 1px 6px; border-radius: 999px; font-size: 10.5px; font-weight: 700; color: var(--text); background: rgba(var(--purple-rgb), 0.35); }
 .amount { font-weight: 700; color: var(--text); white-space: nowrap; }
+/* resub months in the Events tab: always on the row, never hidden behind the expand arrow */
+.sub-months { flex: none; padding: 2px 7px; font-size: 12px; white-space: nowrap; color: var(--muted); border-radius: 999px; background: rgba(168, 85, 247, 0.16); box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.45); }
+.sub-months b { color: var(--text); font-weight: 800; }
+/* "SUB ×14" on a pop-up, months in a small inset after the label */
+.badge-months { margin-left: 3px; padding: 1px 4px; border-radius: 4px; background: rgba(0, 0, 0, 0.28); letter-spacing: 0.02em; }
 .event-time { flex: none; min-width: 46px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .event.history .event-text { opacity: 0.85; }
 .badge-off { --c: 110, 110, 140; }
@@ -387,18 +429,58 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .composer textarea { flex: 1; resize: none; border: 0; outline: 0; background: none; padding: 5px 6px; font-size: 16px; max-height: 90px; min-width: 60px; field-sizing: content; }
 .composer textarea:placeholder-shown { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .targets { display: flex; gap: 2px; padding: 3px 2px; }
-/* The row under the chat box: OBS stats in the middle, the PC clock on the right. Hovering shows the date. Every colour
-   comes from the skin, so it changes with it. --clock-room is the height it adds below the box. */
+/* Row under the chat box: support pill left, OBS stats middle, clock right (date on hover). All colours
+   come from the skin. --clock-room is the extra height it adds below the box. */
 :root { --clock-room: 20px; }
 :root[data-clock="off"] { --clock-room: 0px; }
 .composer-wrap.no-clock { padding-bottom: 12px; }
 .clock-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 22px; margin-top: 4px; padding-right: 2px; container-type: inline-size; }
 .stats-cell { grid-column: 2; display: flex; justify-content: center; min-width: 0; }
-/* The clock always keeps the right-hand slot, whatever the middle shows. */
+.support-cell { grid-column: 1; display: flex; justify-content: flex-start; min-width: 0; padding-left: 2px; }
+
+/* "Support the project": same capsule as the clock, tinted with the skin's two accents, with a soft
+   shine every few seconds. Hover fills it with the accents. */
+.support-pill { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 22px; padding: 0 11px 0 4px; border-radius: 999px; overflow: hidden; isolation: isolate; white-space: nowrap;
+  font: 700 12px/1 var(--ui-font), 'Segoe UI', sans-serif; letter-spacing: 0.03em; color: var(--text);
+  background: linear-gradient(90deg, rgba(var(--purple-rgb), 0.2), rgba(var(--blue-rgb), 0.14));
+  box-shadow: 0 0 10px rgba(var(--purple-rgb), 0.18);
+  transition: box-shadow 0.25s, transform 0.2s, color 0.2s; }
+.support-pill::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(90deg, var(--purple), var(--blue)); opacity: 0; transition: opacity 0.25s; }
+/* the shine is a moving background inside the pill's own box, not a moving element, so it can't escape it */
+.support-pill::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.32) 50%, transparent 60%) no-repeat;
+  background-size: 250% 100%; background-position: 150% 0; animation: support-shine 7s ease-in-out 2s infinite; }
+.support-cup { display: grid; place-items: center; flex: none; line-height: 0; animation: support-cup 7s ease-in-out 2s infinite; }
+.support-cup .bmc-logo { border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(255, 221, 0, 0.35); }
+.support-text { overflow: hidden; text-overflow: ellipsis; }
+.support-pill:hover, .support-pill:focus-visible { color: var(--on-accent); transform: translateY(-1px); box-shadow: 0 0 16px rgba(var(--purple-rgb), 0.55), 0 0 22px rgba(var(--blue-rgb), 0.3); outline: none; }
+.support-pill:hover::before, .support-pill:focus-visible::before { opacity: 1; }
+.support-pill:hover .support-cup { animation: support-wiggle 0.6s ease-in-out infinite; }
+.support-pill:active { transform: translateY(0) scale(0.97); }
+/* shine crosses once then rests; the cup tilts as it passes */
+@keyframes support-shine { 0% { background-position: 150% 0; } 18%, 100% { background-position: -50% 0; } }
+@keyframes support-cup { 0%, 4%, 18%, 100% { transform: none; } 8% { transform: rotate(-14deg) scale(1.15); } 12% { transform: rotate(10deg) scale(1.15); } }
+@keyframes support-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+/* tight row: drop the text and keep just the cup, so the OBS stats and clock keep their room */
+@container (max-width: 600px) { .support-pill { padding: 0 4px; } .support-text { display: none; } }
+
+/* Support page version: bigger, centred, with a beating heart */
+.support-pill.big { display: flex; height: 46px; margin: 20px auto 6px; padding: 0 22px 0 12px; gap: 12px; font-size: 16px; letter-spacing: 0.02em;
+  box-shadow: inset 0 0 0 1.5px rgba(var(--purple-rgb), 0.7), 0 0 22px rgba(var(--purple-rgb), 0.3), 0 0 36px rgba(var(--blue-rgb), 0.15); }
+.support-pill.big:hover, .support-pill.big:focus-visible { transform: translateY(-2px); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.3), 0 0 26px rgba(var(--purple-rgb), 0.65), 0 0 40px rgba(var(--blue-rgb), 0.35); }
+.support-pill.big .support-cup .bmc-logo { box-shadow: 0 0 0 2px rgba(255, 221, 0, 0.45), 0 0 12px rgba(255, 221, 0, 0.35); }
+.support-heart { color: #ff4d6d; font-size: 15px; animation: support-beat 1.4s ease-in-out infinite; }
+.support-pill.big:hover .support-heart { color: var(--on-accent); }
+@keyframes support-beat { 0%, 40%, 100% { transform: scale(1); } 15% { transform: scale(1.25); } 30% { transform: scale(1.1); } }
+@media (prefers-reduced-motion: reduce) {
+  .support-pill::after, .support-cup, .support-pill:hover .support-cup, .support-heart { animation: none; }
+  .support-pill::after { display: none; }
+}
+/* clock always keeps the right-hand slot, whatever's in the middle */
 .clock-cell { grid-column: 3; display: flex; justify-content: flex-end; min-width: 0; }
-/* Followers and subscribers of each connected platform, centred in the title bar. Colours
-   follow the skin; the heart and star keep their own. */
-/* Pills that don't fit wrap onto a hidden second line, so only whole pills ever show. */
+/* Follower/sub pills, centred in the title bar. Colours follow the skin; the heart and star keep
+   their own. */
+/* pills that don't fit wrap onto a hidden second line, so you only ever see whole pills */
 .stats-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 6px; height: 22px; min-width: 0; overflow: hidden; }
 .stat-pill { display: inline-flex; align-items: center; gap: 7px; height: 22px; padding: 0 10px 0 7px; border-radius: 999px; font: 600 12px/1 var(--ui-font), 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--text); background: rgba(var(--purple-rgb), 0.12); white-space: nowrap; cursor: default; transition: background 0.2s; }
 .stat-pill:hover { background: rgba(var(--purple-rgb), 0.22); }
@@ -473,7 +555,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .modal-back { position: absolute; inset: 38px 0 0; display: flex; z-index: 50; background: var(--window); }
 .modal { --light-x: 50%; --light-y: 30%; position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 
-/* One faint glow drifts behind the mouse, and rows brighten gently. */
+/* one faint glow follows the mouse, and rows brighten a little on hover */
 .modal::after {
   content: '';
   position: absolute;
@@ -517,23 +599,34 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .about-card span:last-child { color: var(--muted); }
 .about-sign { margin-top: 14px; }
 .support-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px auto 4px; }
-.support-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 200px; padding: 10px 20px; border-radius: 24px; color: #fff; font-weight: 700; transition: background 0.2s; }
+/* all three the same size, with the same skin-coloured outline and glow as the big pill above */
+.support-btn { flex: 1 1 0; min-width: 190px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 14px; border-radius: 24px; color: #fff; font-weight: 700; white-space: nowrap;
+  box-shadow: inset 0 0 0 1.5px rgba(var(--purple-rgb), 0.7), 0 0 22px rgba(var(--purple-rgb), 0.3), 0 0 36px rgba(var(--blue-rgb), 0.15);
+  transition: background 0.2s, box-shadow 0.25s, transform 0.2s; }
+.support-btn:hover, .support-btn:focus-visible { transform: translateY(-2px); outline: none; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.3), 0 0 26px rgba(var(--purple-rgb), 0.65), 0 0 40px rgba(var(--blue-rgb), 0.35); }
+.support-btn:active { transform: translateY(0) scale(0.97); }
 .support-btn.paypal { background: #0070ba; }
 .support-btn.paypal:hover { background: #005ea6; }
 .support-btn.twitch-sub { background: #9146ff; }
 .support-btn.twitch-sub:hover { background: #a970ff; }
 
-/* The dedication: quiet, centred and warm, with nothing competing with the words. */
-.memorial { margin: 26px auto 8px; padding: 34px 28px 30px; text-align: center; border-radius: 16px;
-  background: radial-gradient(circle at 50% 0%, rgba(255, 214, 150, 0.13), transparent 62%), rgba(8, 7, 30, 0.55);
-  border: 1px solid rgba(255, 220, 170, 0.22); box-shadow: inset 0 0 44px rgba(255, 200, 130, 0.05); }
+/* The dedication: quiet, centred and warm. Nothing should compete with the words.
+   Follows the active skin: a soft glow of its accents over its own panel colour. */
+.memorial { --mem-title: var(--purple-2);
+  margin: 26px auto 8px; padding: 34px 28px 30px; text-align: center; border-radius: 16px;
+  background: radial-gradient(circle at 50% 0%, rgba(var(--purple-rgb), 0.16), transparent 62%),
+    radial-gradient(circle at 50% 110%, rgba(var(--blue-rgb), 0.08), transparent 55%),
+    color-mix(in srgb, var(--solid) 60%, transparent);
+  border: 1px solid rgba(var(--purple-rgb), 0.22); box-shadow: inset 0 0 44px rgba(var(--purple-rgb), 0.06); }
+/* the pale accent is too faint on light skins; use the full-strength one there */
+[data-tone='light'] .memorial { --mem-title: var(--purple); }
 .memorial-dove { font-size: 40px; line-height: 1; margin-bottom: 8px; animation: memorial-breathe 6s ease-in-out infinite; }
-.memorial h3 { margin: 0 0 14px; font-size: 20px; font-weight: 600; letter-spacing: 0.06em; color: #ffe9c9; }
-.memorial p { color: #ece8f6; }
+.memorial h3 { margin: 0 0 14px; font-size: 20px; font-weight: 600; letter-spacing: 0.06em; color: var(--mem-title); }
+.memorial p { color: var(--text); }
 .memorial-dedication { font-size: 16.5px; }
-.memorial-line { width: 110px; height: 1px; margin: 16px auto; background: linear-gradient(90deg, transparent, rgba(255, 220, 170, 0.6), transparent); }
-.memorial-always { margin-top: 16px; color: #ffe9c9; }
-.memorial-signature { margin-top: 18px; font-size: 17px; font-style: italic; font-weight: 600; letter-spacing: 0.02em; color: #ffe9c9; }
+.memorial-line { width: 110px; height: 1px; margin: 16px auto; background: linear-gradient(90deg, transparent, rgba(var(--purple-rgb), 0.6), transparent); }
+.memorial-always { margin-top: 16px; color: var(--mem-title); }
+.memorial-signature { margin-top: 18px; font-size: 17px; font-style: italic; font-weight: 600; letter-spacing: 0.02em; color: var(--mem-title); }
 @keyframes memorial-breathe { 50% { opacity: 0.75; transform: translateY(-2px); } }
 .modal-scroll { flex: 1; overflow-y: auto; padding: 4px 26px 18px; }
 .lead { color: var(--blue-2); }
@@ -590,16 +683,16 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .modal .account.alerts .notice:not(.bad) { background: rgba(255, 255, 255, 0.06); color: var(--muted); }
 .sort-arrow { display: inline-grid; transition: transform 0.15s; }
 .sort-arrow.up { transform: rotate(180deg); }
-.support-btn.store { background: #000; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
+.support-btn.store { background: #000; }
 .support-btn.store:hover { background: #1c1c1c; }
 .support-btn.store img { border-radius: 4px; }
 
-/* Connection progress, shown in the tab bar while services connect. */
+/* connection progress bar in the tab bar while services connect */
 
 .connect-bar { --pct: 0%; position: relative; width: 100%; max-width: 280px; min-width: 0; height: 24px; border-radius: 999px; overflow: hidden;
   background: rgba(0, 0, 0, 0.32); box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 3px rgba(0, 0, 0, 0.4); animation: connect-in 0.25s ease-out; }
 .connect-bar.done { animation: connect-out 0.6s ease-in 1.9s forwards; }
-/* The fill: the skin's accents with a soft glow, a glossy top and a light sweeping across while connecting. */
+/* fill: skin accents with a soft glow, a glossy top, and a light sweep while connecting */
 .connect-fill { position: absolute; inset: 0 auto 0 0; width: var(--pct); border-radius: 999px; overflow: hidden;
   background: linear-gradient(90deg, var(--purple), var(--blue)); box-shadow: 0 0 12px rgba(var(--purple-rgb), 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.28);
   transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s; }
@@ -607,19 +700,19 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .connect-bar.progress .connect-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent); animation: connect-shine 1.1s linear infinite; }
 .connect-bar.good .connect-fill { background: linear-gradient(90deg, var(--good), color-mix(in srgb, var(--good) 70%, #fff)); box-shadow: 0 0 14px color-mix(in srgb, var(--good) 60%, transparent); }
 .connect-bar.warn .connect-fill { background: linear-gradient(90deg, var(--orange), color-mix(in srgb, var(--orange) 70%, #fff)); box-shadow: 0 0 14px color-mix(in srgb, var(--orange) 60%, transparent); }
-/* The text, centred inside. A second copy sits over the fill in a contrasting colour, clipped to the fill. */
+/* Label centred inside. A second copy in a contrasting colour sits over the fill, clipped to it. */
 .connect-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
   color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; pointer-events: none; }
 .connect-label.over { color: var(--on-accent); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); clip-path: inset(0 calc(100% - var(--pct)) 0 0); transition: clip-path 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
 .connect-bar.good .connect-label.over, .connect-bar.warn .connect-label.over { color: #0c1220; text-shadow: none; }
 .connect-check { margin-right: 5px; }
-/* One faint notch per service, so you can see how many are left. */
+/* one faint notch per service, so you can see how many are left */
 .connect-ticks i { position: absolute; top: 6px; bottom: 6px; width: 1px; background: rgba(255, 255, 255, 0.18); }
 @keyframes connect-shine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 @keyframes connect-in { from { opacity: 0; } }
 @keyframes connect-out { to { opacity: 0; } }
 
-/* Connections menu, beside the gear. */
+/* Connections menu, next to the gear */
 .conn { position: relative; flex: none; margin-right: 4px; }
 .conn-pill { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text); background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line); white-space: nowrap; }
 .conn-pill:hover, .conn-pill[aria-expanded="true"] { background: var(--surface-2); }
@@ -647,7 +740,7 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
   .connect-bar { max-width: 140px; }
 }
 
-/* Test events and clearing. */
+/* test events + clearing */
 .test-tag { flex: none; font: 700 10px/1 'Segoe UI', sans-serif; letter-spacing: 0.05em; padding: 3px 5px; border-radius: 4px; color: #1b1440; background: #ffd166; }
 .types-btn svg { width: 15px; height: 15px; }
 .clear-menu { right: 0; left: auto; width: 290px; padding: 6px; }
@@ -658,13 +751,13 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .clear-menu small { font-weight: 400; font-size: 12px; color: var(--muted); }
 .event-actions .btn svg { width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px; }
 
-/* Chat history of past streams. */
+/* past streams' chat history */
 .history-divider { display: flex; align-items: center; gap: 10px; padding: 10px 16px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--blue-2); }
 .history-divider::before, .history-divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
 .history-older { display: block; margin: 10px auto 4px; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--blue-2); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); }
 .history-older:hover { background: var(--surface-2); color: var(--text); }
 
-/* Commands list beside the message box. */
+/* command list next to the message box */
 .popover.commands { position: absolute; left: 12px; bottom: calc(100% + 6px); width: 380px; max-width: calc(100vw - 24px); padding: 10px; }
 .popover.commands h3 { margin: 0 0 2px; }
 .commands-hint { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
@@ -673,7 +766,7 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .popover.commands code { font: 700 14px Consolas, 'Cascadia Mono', monospace; color: var(--text); }
 .popover.commands small { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
 
-/* Users in chat. */
+/* Users drawer */
 .users-btn { position: relative; margin-right: 2px; }
 .users-badge { position: absolute; top: -3px; right: -6px; min-width: 18px; padding: 1px 4px; border-radius: 9px; font: 700 10px/14px 'Segoe UI', sans-serif; color: var(--on-accent); background: var(--purple); box-shadow: 0 0 0 2px var(--solid); pointer-events: none; }
 .users-filter { display: flex; align-items: center; gap: 6px; flex: 1; max-width: 260px; height: 30px; padding: 0 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
@@ -700,7 +793,7 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .users-foot { margin: 0; padding: 6px 16px 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); flex: none; }
 .ctx-note { padding: 6px 12px; font-size: 13px; color: var(--muted); }
 
-/* OBS stats strip, in the tab bar where the connection bar was. */
+/* OBS stats strip (base styles; the .clock-row overrides below size it for the row under the message box) */
 .obs { position: relative; display: flex; justify-content: center; min-width: 0; max-width: 100%; }
 .obs-strip { display: flex; align-items: center; gap: 12px; height: 28px; padding: 0 12px; max-width: 100%; overflow: hidden; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; animation: connect-in 0.3s ease-out; }
 button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgba(255, 255, 255, 0.06); }
@@ -725,8 +818,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .obs-details td { padding: 4px 6px 4px 0; color: var(--text); }
 .obs-fields { display: grid; gap: 8px; margin-top: 6px; }
 .obs-fields input[type="number"] { width: 110px; }
-/* The OBS capsule under the message box, the same size as the stats and the clock. */
-/* Same look as the channel stats in the title bar, in every skin. */
+/* OBS pill under the message box: same size and look as the clock and the channel stats, in every skin. */
 .clock-row .obs-strip { height: 22px; padding: 0 10px; gap: 10px; border-radius: 999px; font: 600 12px/1 var(--ui-font), 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--text); background: rgba(var(--purple-rgb), 0.12); transition: background 0.2s; }
 .clock-row .obs-strip.muted { font-weight: 600; }
 .clock-row .obs-item { color: var(--text); }
@@ -736,11 +828,11 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .clock-row .obs-dot { width: 7px; height: 7px; }
 .clock-row .obs-strip.muted.bad { color: var(--orange); }
 .clock-row .obs-strip.muted.bad .obs-dot { background: var(--orange); }
-/* The status capsule in the title bar: centred, with room on both sides. */
+/* title bar status capsule, centred with room on both sides */
 .title-status { min-width: 0; display: flex; justify-content: center; align-items: center; }
 .connect-slot { display: flex; justify-content: center; min-width: 0; padding: 0 12px; }
-/* When space is short, the least important numbers go first: CPU, FPS, dropped frames, bitrate.
-   The middle of the row has the row's width minus room for the clock on both sides. */
+/* Short on space: least important numbers go first (CPU, FPS, dropped frames, bitrate). The middle
+   cell gets the row width minus room for the side cells. */
 @container (max-width: 640px) { .obs-strip .obs-cpu { display: none; } }
 @container (max-width: 560px) { .obs-strip .obs-fps { display: none; } }
 @container (max-width: 470px) { .obs-strip .obs-drop { display: none; } }
@@ -748,7 +840,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 
 .obs-setup .row-btns input { flex: 1; min-width: 0; }
 
-/* User card: who someone is and what they said in this channel. */
+/* User card: who someone is and what they've said in this channel */
 .user-card { position: fixed; width: 420px; max-width: calc(100vw - 24px); display: flex; flex-direction: column; padding: 0; z-index: 60; overflow: hidden; }
 .uc-head { display: flex; align-items: flex-start; gap: 12px; padding: 14px 14px 10px; border-bottom: 1px solid var(--line); flex: none; }
 .uc-avatar { width: 52px; height: 52px; border-radius: 50%; flex: none; object-fit: cover; box-shadow: 0 0 0 2px var(--purple-2); }
@@ -785,7 +877,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .uc-text { flex: 1; }
 .uc-text .gif { width: 140px; max-width: 140px; max-height: 80px; object-fit: cover; }
 
-/* The pinned Twitch message, at the top of chat. */
+/* Twitch pinned message, top of chat */
 .pinned-bar { display: flex; align-items: center; gap: 10px; margin: 8px 12px 4px; padding: 8px 12px; border-radius: var(--radius); background: linear-gradient(135deg, rgba(var(--purple-rgb), 0.28), rgba(var(--blue-rgb), 0.16)); box-shadow: inset 0 0 0 1px rgba(var(--purple-rgb), 0.5); flex: none; }
 .pinned-icon { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(var(--purple-rgb), 0.45); }
 .pinned-icon svg { width: 15px; height: 15px; }
@@ -793,7 +885,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .pinned-head { display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--blue-2); }
 .pinned-left { text-transform: none; font-weight: 600; color: var(--muted); }
 .pinned-text { font-size: calc(15px * var(--chat-scale, 1)); color: var(--text); overflow-wrap: anywhere; }
-/* An outgoing raid during Twitch's countdown, above the pinned message: in the skin's accents, with a filling bar. */
+/* Our outgoing raid during Twitch's countdown, above the pinned message. Skin accents plus a filling bar. */
 .raid-bar { position: relative; flex: none; margin: 8px 12px 4px; border-radius: var(--radius); overflow: hidden; background: linear-gradient(135deg, rgba(var(--purple-rgb), 0.42), rgba(var(--purple-rgb), 0.2) 60%, rgba(var(--blue-rgb), 0.14)); box-shadow: inset 0 0 0 1px rgba(var(--purple-rgb), 0.7), 0 0 18px rgba(var(--purple-rgb), 0.22); animation: raid-in 0.35s ease-out; }
 .raid-bar + .pinned-bar { margin-top: 4px; }
 .raid-main { display: flex; align-items: center; gap: 12px; padding: 10px 12px 9px; }
@@ -808,7 +900,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .raid-now { min-width: 104px; font-variant-numeric: tabular-nums; background: linear-gradient(135deg, var(--purple), var(--blue)); box-shadow: 0 0 12px rgba(var(--purple-rgb), 0.45); }
 .raid-now:hover:not(:disabled) { background: linear-gradient(135deg, var(--purple-2), var(--blue-2)); }
 .raid-now:disabled { background: var(--surface-2); box-shadow: none; color: var(--muted); opacity: 0.85; }
-/* Cancel is red in every skin. */
+/* Cancel is red in every skin */
 .raid-cancel { color: #fff; background: #d6313f; box-shadow: 0 0 10px rgba(214, 49, 63, 0.4); }
 .raid-cancel:hover:not(:disabled) { background: #ec4250; }
 .raid-cancel:disabled { box-shadow: none; }
@@ -839,7 +931,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .cmd-group-note { margin: 2px 10px 6px; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
 .chip.bad { white-space: normal; }
 
-/* Settings: categories on the left, a big title per category, and labelled sections in panels. */
+/* Settings: categories on the left, a big title per category, labelled sections in panels */
 .modal.settings { flex-direction: row; }
 .set-side { width: 214px; flex: none; display: flex; flex-direction: column; padding: 18px 12px 12px; border-right: 1px solid var(--line); background: rgba(0, 0, 0, 0.18); position: relative; z-index: 4; }
 .set-side-title { padding: 0 12px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
@@ -866,7 +958,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .sec-body > .account:first-child { margin-top: 6px; }
 .modal.settings .fine { margin-top: 18px; }
 
-/* Skin cards: a little picture of the app in that skin, framed by the edge every skin keeps. */
+/* Skin cards: a mini version of the app in that skin, framed by the edge every skin shares */
 .skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; padding: 10px 0; }
 .skin { display: flex; flex-direction: column; gap: 2px; padding: 8px 8px 10px; border-radius: 13px; text-align: left; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); transition: transform 0.15s ease, box-shadow 0.2s, border-color 0.2s; }
 .skin:hover { transform: translateY(-2px); border-color: rgba(var(--blue-rgb), 0.6); }
@@ -896,7 +988,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 }
 @media (prefers-reduced-motion: reduce) { .skin { transition: none; } .skin:hover { transform: none; } }
 
-/* The close question, asked when closing is set to Ask every time. */
+/* close prompt, when closing is set to "Ask every time" */
 .close-back { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.45); }
 .close-prompt { width: 440px; max-width: 100%; padding: 18px 20px 16px; }
 .close-prompt h2 { margin: 0 0 6px; font-size: 17px; font-weight: 700; }
@@ -905,7 +997,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .close-remember input { accent-color: var(--purple); width: 16px; height: 16px; }
 .close-buttons { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 
-/* "What's new": shown once after an update. Colours come from the skin. */
+/* What's New, shown once after an update. Colours from the skin. */
 .whats-new { width: 500px; max-width: 100%; max-height: calc(100vh - 32px); display: flex; flex-direction: column; padding: 18px 20px 16px; box-shadow: 0 0 0 1px rgba(var(--purple-rgb), 0.5), 0 0 40px rgba(var(--purple-rgb), 0.35), 0 18px 48px rgba(0, 0, 0, 0.5); }
 .whats-new header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .whats-new h2 { margin: 0; font-size: 18px; font-weight: 700; }
@@ -920,60 +1012,136 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .wn-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
 .wn-foot .btn { min-width: 110px; font-size: 15px; padding: 8px 20px; }
 .wn-foot { gap: 10px; }
-/* The one-time OBS tip uses the "What's new" card, so it follows every skin. */
+/* the one-time OBS tip reuses the What's New card, so it follows every skin */
 .obs-tip { width: 460px; }
 .obs-tip-logo { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 10px; background: linear-gradient(135deg, rgba(var(--purple-rgb), 0.85), rgba(var(--blue-rgb), 0.85)); box-shadow: 0 0 12px rgba(var(--purple-rgb), 0.45); }
 .obs-tip p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
 .obs-tip ol { margin: 0; padding: 10px 12px 10px 30px; display: grid; gap: 6px; font-size: 13.5px; line-height: 1.4; border-radius: 10px; background: rgba(var(--purple-rgb), 0.12); box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), 0.25); }
+/* Note before the YouTube login about Google's "unverified app" warning. Reuses the What's New card. */
+.yt-notice-back { z-index: 90; }
+.yt-notice { width: 560px; overflow-y: auto; }
+.yt-notice header .pf { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 10px; color: #fff; background: #ff0033; box-shadow: 0 0 12px rgba(255, 0, 51, 0.4); }
+.yt-lead { margin: 0 0 12px; font-size: 14px; line-height: 1.45; }
+.yt-notice .yt-why { overflow: visible; }
+.yt-notice .yt-why li { grid-template-columns: 36px 1fr; align-items: start; }
+.yt-why p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.yt-why p b { color: var(--text); }
+.yt-why .linkish { font-size: inherit; }
+/* where to click on Google's page, drawn like Google's own links and buttons */
+.yt-steps { list-style: none; margin: 12px 0 0; padding: 10px 12px; display: grid; gap: 8px; font-size: 13.5px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.yt-notice .yt-steps li { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.yt-num { display: grid; place-items: center; width: 20px; height: 20px; flex: none; border-radius: 50%; font-size: 11.5px; font-weight: 800; color: var(--on-accent); background: linear-gradient(135deg, var(--purple), var(--blue)); }
+.yt-g { padding: 2px 8px; border-radius: 4px; font: 600 12.5px 'Segoe UI', Roboto, Arial, sans-serif; color: #1a73e8; background: #fff; box-shadow: 0 0 0 1px #dadce0; }
+.yt-g.link { text-decoration: underline; }
+.yt-foot { margin: 12px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.yt-foot b { color: var(--text); }
+.yt-buttons { align-items: center; }
+.yt-buttons .close-remember { margin: 0 auto 0 0; font-size: 13px; }
 .obs-tip li { display: list-item; padding: 0; border-radius: 0; background: none; box-shadow: none; }
 .obs-tip li::marker { color: var(--blue-2); font-weight: 700; }
-/* OBS's own logo always leads the stats row; only the LIVE dot blinks. */
+/* OBS logo always leads the row; only the LIVE dot blinks */
 .obs-strip .logo-img { flex: none; display: block; }
 
-/* Event pop-ups: they rise out of the message box, stay a while, then sink back into it. */
-.ev-pops { position: absolute; left: 18px; right: 18px; bottom: 14px; z-index: 24; display: flex; flex-direction: column; justify-content: flex-end; pointer-events: none; font: 600 calc(18px * var(--chat-scale))/1.4 var(--chat-font), 'Segoe UI', sans-serif; }
-/* Each slot opens and closes its own height, so the cards above glide instead of jumping. */
-.ev-pop-slot { --c: 139, 92, 246; display: grid; grid-template-rows: 1fr; animation: evpop-grow 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.ev-pop-slot.leaving { animation: evpop-shrink 0.32s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both; }
-.ev-pop-inner { position: relative; min-height: 0; padding-top: 8px; }
-/* A ring of the event's colour bursts out as the card lands. */
-.ev-pop-inner::after { content: ''; position: absolute; inset: 8px 0 0; border-radius: var(--radius); pointer-events: none; animation: evpop-ring 0.9s ease-out 0.4s both; }
+/* Event pop-ups, one at a time at the top of chat (below the raid, Hype Train and pinned bars). They open
+   like a beam of light: a glowing line in the platform colour stands up, unfolds into the capsule, and
+   the text slides in. Leaving is the same in reverse: text blurs off, capsule folds to a line, line switches off. */
+.ev-pops { position: absolute; left: 18px; right: 18px; top: 6px; z-index: 19; transition: opacity 0.2s ease, visibility 0.2s; display: flex; flex-direction: column; justify-content: flex-start; pointer-events: none; font: 600 calc(18px * var(--chat-scale))/1.4 var(--chat-font), 'Segoe UI', sans-serif; }
+/* pop-up uses the platform colour (--pc); the event-type colour (--c) stays on the icon and badge inside */
+.ev-pop-slot { --pc: 169, 112, 255; display: grid; grid-template-rows: 1fr; animation: evpop-grow 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.ev-pop-slot.on-youtube { --pc: 255, 77, 77; }
+.ev-pop-slot.on-kick { --pc: 83, 252, 24; }
+/* hidden with timers paused while a panel is open over chat. Also below the drawers (z-index 20), just in case. */
+.ev-pops.covered { opacity: 0; visibility: hidden; }
+.ev-pops.covered .ev-pop { pointer-events: none; }
+/* each slot animates its own height, so the ones below glide instead of jumping */
+.ev-pop-slot.leaving { animation: evpop-shrink 0.45s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both; }
+.ev-pop-inner { position: relative; min-height: 0; padding-bottom: 8px; }
+/* ring in the platform colour bursts out as the card lands */
+.ev-pop-inner::after { content: ''; position: absolute; inset: 0 0 8px; border-radius: 26px; pointer-events: none; animation: evpop-ring 1.2s ease-out 0.55s both; }
+/* capsule shape, so it's never mistaken for one of the event cards in chat */
 .ev-pop {
-  position: relative; overflow: hidden; pointer-events: auto; cursor: pointer; border-radius: var(--radius); background: var(--solid-2);
-  transform-origin: 50% 100%;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(var(--c), 0.45), 0 0 28px rgba(var(--c), 0.4);
-  animation: evpop-in 0.72s cubic-bezier(0.2, 0.9, 0.3, 1) backwards;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative; overflow: hidden; pointer-events: auto; cursor: pointer; border-radius: 26px;
+  background: linear-gradient(90deg, rgba(var(--pc), 0.42), rgba(var(--pc), 0.12)), var(--solid-2);
+  transform-origin: 50% 50%;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(var(--pc), 0.45), 0 0 28px rgba(var(--pc), 0.4);
+  animation: evpop-in 0.95s cubic-bezier(0.3, 0.7, 0.3, 1) backwards;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-.ev-pop:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(var(--c), 0.7), 0 0 38px rgba(var(--c), 0.6); }
-.ev-pop .ev { border-radius: inherit; background: linear-gradient(90deg, rgba(var(--c), 0.42), rgba(var(--c), 0.12)); }
-/* A light sweep across the card once it's up. */
-.ev-pop::before { content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%; z-index: 2; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.24), transparent); animation: evpop-sheen 1.1s ease-out 0.35s both; }
+/* SE tips: near-black capsule with a light edge and glow, works on dark and pale skins alike */
+.ev-pop-slot.from-streamelements .ev-pop { color: var(--text); background: linear-gradient(90deg, rgba(0, 0, 0, 0.94), rgba(26, 26, 32, 0.9)); }
+.ev-pop:hover { transform: translateY(2px); box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(var(--pc), 0.7), 0 0 38px rgba(var(--pc), 0.6); }
+/* text sits above the time-left fill; its colour lives on .ev-pop so the fill shows through */
+.ev-pop .ev { position: relative; z-index: 1; border: 0; border-radius: inherit; padding: 8px 22px; background: transparent; box-shadow: none; }
+/* light sweep across the card once it's up */
+.ev-pop::before { content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%; z-index: 2; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.24), transparent); animation: evpop-sheen 1.6s ease-out 0.7s both; }
 .ev-pop-slot.big .ev-pop::before { animation-iteration-count: 2; }
-/* Time left: drains along the bottom edge, and waits while the mouse is on the card. */
-.ev-pop-time { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; z-index: 3; transform-origin: left; background: linear-gradient(90deg, rgb(var(--c)), rgba(255, 255, 255, 0.9)); box-shadow: 0 0 8px rgba(var(--c), 0.9); animation: evpop-time var(--pop-ms, 6s) linear both; }
+/* big moments (gift bombs, raids, Hype Trains, big donations/cheers): taller card, bigger text, stronger glow */
+.ev-pop-slot.big .ev-pop .ev { padding: 13px 26px; font-size: 1.12em; }
+.ev-pop-slot.big .ev-pop { box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 0 0 2px rgba(var(--pc), 0.65), 0 0 44px rgba(var(--pc), 0.6); }
+.ev-pop-slot.big .ev-pop-inner::after { animation-iteration-count: 2; }
+/* merged waves: the card bumps and the count badge pops every time someone joins */
+/* text comes in once the capsule has opened, and leaves first when it closes */
+.ev-pop-card { position: relative; z-index: 1; animation: evpop-words 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) 0.45s backwards; }
+.ev-pop-slot.leaving .ev-pop-card { animation: evpop-words-out 0.22s ease-in both; }
+.ev-pop-card.bump { animation: evpop-bump 0.5s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.ev-pop-count { position: absolute; top: -7px; right: 16px; z-index: 4; min-width: 26px; padding: 1px 8px; box-sizing: border-box; text-align: center; font: 800 12.5px/1.5 var(--ui-font), 'Segoe UI', sans-serif; color: #fff; border-radius: 999px; background: rgb(var(--pc)); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 12px rgba(var(--pc), 0.8); pointer-events: none; animation: evpop-count 0.45s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.ev-pop-slot.on-kick .ev-pop-count { color: #0b1a05; }
+.ev-pop-slot.leaving .ev-pop-count { opacity: 0; transition: opacity 0.3s; }
+@keyframes evpop-bump { 40% { transform: scale(1.025); } }
+@keyframes evpop-count { from { transform: scale(0.4); opacity: 0; } }
+/* time left: a 30% fill that drains as the seconds run out, paused while hovered */
+.ev-pop-time { position: absolute; inset: 0; z-index: 0; pointer-events: none; transform-origin: left; opacity: 0.3; background: linear-gradient(90deg, rgb(var(--pc)), rgba(255, 255, 255, 0.85)); animation: evpop-time var(--pop-ms, 6s) linear both; }
 .ev-pop-time.held { animation-play-state: paused; }
-.ev-pop-slot.leaving .ev-pop { pointer-events: none; animation: evpop-out 0.62s cubic-bezier(0.55, 0, 0.7, 0.2) both; }
+.ev-pop-slot.leaving .ev-pop { pointer-events: none; animation: evpop-out 0.75s cubic-bezier(0.5, 0, 0.6, 1) both; }
 @keyframes evpop-grow { from { grid-template-rows: 0fr; } to { grid-template-rows: 1fr; } }
 @keyframes evpop-shrink { from { grid-template-rows: 1fr; } to { grid-template-rows: 0fr; } }
 @keyframes evpop-in {
-  0% { opacity: 0; transform: perspective(800px) translateY(125%) scale(0.88) rotateX(30deg); filter: blur(6px) saturate(1.8); }
-  55% { opacity: 1; transform: perspective(800px) translateY(-8%) scale(1.03) rotateX(-5deg); filter: blur(0) saturate(1.3); }
-  78% { transform: perspective(800px) translateY(2%) scale(0.995) rotateX(1.5deg); filter: none; }
+  0% { opacity: 0; transform: scaleX(0.015) scaleY(0.15); filter: brightness(3) blur(2px); }
+  20% { opacity: 1; transform: scaleX(0.015) scaleY(1.12); filter: brightness(3) blur(1px); }
+  62% { transform: scaleX(1.035) scaleY(0.97); filter: brightness(1.5) saturate(1.4); }
+  80% { transform: scaleX(0.992) scaleY(1.01); filter: brightness(1.1); }
   100% { opacity: 1; transform: none; filter: none; }
 }
 @keyframes evpop-out {
   0% { opacity: 1; transform: none; filter: none; }
-  24% { opacity: 1; transform: perspective(800px) translateY(-7%) scale(1.025) rotateX(-4deg); filter: saturate(1.3); }
-  100% { opacity: 0; transform: perspective(800px) translateY(130%) scale(0.88) rotateX(28deg); filter: blur(5px); }
+  16% { transform: scaleX(1.025) scaleY(1.02); filter: brightness(1.3); }
+  66% { opacity: 1; transform: scaleX(0.015) scaleY(1.05); filter: brightness(3) blur(1px); }
+  100% { opacity: 0; transform: scaleX(0.015) scaleY(0); filter: brightness(3) blur(2px); }
 }
-@keyframes evpop-ring { from { box-shadow: 0 0 0 0 rgba(var(--c), 0.8); } to { box-shadow: 0 0 0 16px rgba(var(--c), 0); } }
+@keyframes evpop-words { from { opacity: 0; transform: translateX(-16px); filter: blur(6px); } }
+@keyframes evpop-words-out { to { opacity: 0; transform: translateX(14px); filter: blur(5px); } }
+@keyframes evpop-ring { from { box-shadow: 0 0 0 0 rgba(var(--pc), 0.8); } to { box-shadow: 0 0 0 16px rgba(var(--pc), 0); } }
 @keyframes evpop-sheen { to { left: 130%; } }
 @keyframes evpop-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) {
   .ev-pop-slot, .ev-pop-slot.leaving { animation-duration: 0.01s; animation-delay: 0s; }
-  .ev-pop { animation: evpop-fade 0.2s backwards; }
-  .ev-pop-slot.leaving .ev-pop { animation: evpop-fade 0.2s reverse both; }
-  .ev-pop::before, .ev-pop-inner::after { animation: none; }
+  .ev-pop { animation: evpop-fade 0.3s backwards; }
+  .ev-pop-slot.leaving .ev-pop { animation: evpop-fade 0.3s reverse both; }
+  .ev-pop::before, .ev-pop-inner::after, .ev-pop-card, .ev-pop-card.bump, .ev-pop-slot.leaving .ev-pop-card, .ev-pop-count { animation: none; }
 }
 @keyframes evpop-fade { from { opacity: 0; } }
+
+/* Light skins (Butterfly): the app was designed for dark windows, so the dark translucent fills, white
+   hairlines and white slider get swapped for ones that work on a pale window. */
+:root[data-tone='light'] { color-scheme: light; }
+[data-tone='light'] select, [data-tone='light'] input[type='text'], [data-tone='light'] input[type='number'], [data-tone='light'] input[type='password'],
+[data-tone='light'] input:not([type]), [data-tone='light'] textarea, [data-tone='light'] .composer, [data-tone='light'] .seg, [data-tone='light'] .types-btn,
+[data-tone='light'] .conn-pill, [data-tone='light'] .users-filter, [data-tone='light'] .skin, [data-tone='light'] .update-notes { background: rgba(255, 255, 255, 0.55); }
+[data-tone='light'] .set-side { background: rgba(255, 255, 255, 0.3); }
+[data-tone='light'] .sec-body { background: rgba(255, 255, 255, 0.4); }
+[data-tone='light'] .sec-body > .set-row + .set-row, [data-tone='light'] .event, [data-tone='light'] .uc-history li { border-color: var(--line); }
+[data-tone='light'] .set-row:hover, [data-tone='light'] .account:hover, [data-tone='light'] .about:hover, [data-tone='light'] button.obs-strip:hover,
+[data-tone='light'] button.obs-strip[aria-expanded="true"], [data-tone='light'] .btn.ghost:hover:not(:disabled) { background: rgba(var(--purple-rgb), 0.1); }
+[data-tone='light'] .about-card, [data-tone='light'] .uc-chip, [data-tone='light'] .history-older,
+[data-tone='light'] .modal .account.alerts .notice:not(.bad) { background: rgba(255, 255, 255, 0.5); }
+[data-tone='light'] .hype-level, [data-tone='light'] .ev .lp { background: rgba(255, 255, 255, 0.5); }
+[data-tone='light'] .hype-bar, [data-tone='light'] .update-bar, [data-tone='light'] .raid-progress, [data-tone='light'] .connect-bar { background: rgba(var(--purple-rgb), 0.14); }
+[data-tone='light'] .connect-ticks i { background: rgba(var(--purple-rgb), 0.22); }
+[data-tone='light'] input[type='range'] { background: rgba(var(--purple-rgb), 0.35); }
+[data-tone='light'] input[type='range']::-webkit-slider-thumb { border-color: var(--purple); }
+[data-tone='light'] .pf-toggle { color: var(--muted); }
+[data-tone='light'] .popover, [data-tone='light'] .drawer, [data-tone='light'] .clock-date { box-shadow: 0 10px 28px rgba(110, 40, 95, 0.22); }
+[data-tone='light'] .close-back { background: rgba(80, 30, 70, 0.3); }
+/* Viewers pick name colours for dark chats, and pale ones (yellow, lime, white) disappear on a pastel
+   window, so every name gets darkened a bit. Dark names stay readable. */
+[data-tone='light'] .row .name, [data-tone='light'] .drawer button[style], [data-tone='light'] .uc-who h2 { filter: brightness(0.68) saturate(1.25); }

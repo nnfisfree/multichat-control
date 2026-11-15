@@ -1,45 +1,65 @@
 import type { JSX } from 'react'
-import { eventBadge } from '../../shared/events'
-import { ALERT_SOURCE_LABEL, type StreamEvent } from '../../shared/types'
+import { eventBadge, standaloneSource, subMonths } from '../../shared/events'
+import { ALERT_SOURCE_LABEL, PLATFORM_LABEL, type StreamEvent } from '../../shared/types'
 import { BadgeIcon } from './BadgeIcons'
-import { BmcLogo, DollarIcon, PlatformIcon } from './Icons'
+import { BmcLogo, DollarIcon, PlatformIcon, StreamElementsLogo, StreamlabsLogo } from './Icons'
 import { PreviewCard } from './LinkPreview'
 
-/** Short label marking an event's type. Channel points use a round coin. */
-export function EventBadge({ e }: { e: Pick<StreamEvent, 'type' | 'text'> & Partial<Pick<StreamEvent, 'platform'>> }): JSX.Element {
+/** Short type label. Channel points get a round coin. With `months`, a resub reads "SUB ×14". */
+export function EventBadge({ e, months }: { e: Pick<StreamEvent, 'type' | 'text'> & Partial<Pick<StreamEvent, 'platform' | 'source'>>; months?: number }): JSX.Element {
   const label = eventBadge(e)
-  // Donations (Streamlabs, StreamElements) get a gold coin with a dollar sign.
-  if (e.type === 'donation') return <span className="ev-badge badge-donation" title="Donation" aria-label="Donation"><DollarIcon /></span>
+  // Tips say TIP next to the logo of whatever the money came through: SE, SL, BMC, or the platform
+  // itself (YouTube Super Chat).
+  if (e.type === 'donation' || e.type === 'paid') {
+    const from = e.source ? ALERT_SOURCE_LABEL[e.source] : e.type === 'paid' && e.platform ? PLATFORM_LABEL[e.platform] : undefined
+    const logo = e.source === 'streamelements' ? <StreamElementsLogo size={14} />
+      : e.source === 'streamlabs' ? <StreamlabsLogo size={14} />
+      : e.source === 'buymeacoffee' ? <BmcLogo size={14} />
+      : e.type === 'paid' && e.platform ? <PlatformIcon platform={e.platform} size={13} />
+      : <DollarIcon size={13} />
+    return <span className={`ev-badge badge-tip has-icon${e.source ? ` from-${e.source}` : e.platform ? ` from-${e.platform}` : ''}`} title={from ? `Tip via ${from}` : 'Tip'}>{logo}TIP</span>
+  }
   const cls = `ev-badge badge-${e.type}${e.platform ? ` on-${e.platform}` : ''}${label === 'OFF' ? ' badge-off' : ''}`
-  // The channel points coin holds just a die.
+  // the channel points coin just holds Twitch's glyph
   if (e.type === 'redemption') return <span className={cls} title="Channel points" aria-label="Channel points"><BadgeIcon type="redemption" /></span>
   const icon = BadgeIcon({ type: e.type })
+  if (months) return <span className={`${cls} has-icon has-months`} title={`${label === 'MEM' ? 'Member' : 'Subscribed'} for ${months} months`}>{icon}{label}<span className="badge-months">×{months}</span></span>
   return <span className={icon ? `${cls} has-icon` : cls}>{icon}{label}</span>
 }
 
-/** A small SE or SL tag, or Buy Me a Coffee's logo, on events that came from an alert service. */
-export function SourceTag({ e }: { e: Pick<StreamEvent, 'source'> }): JSX.Element | null {
-  if (!e.source) return null
+/** SE / SL tag, or the BMC logo, on events that came through an alert service. */
+export function SourceTag({ e }: { e: Pick<StreamEvent, 'source' | 'type'> }): JSX.Element | null {
+  // tips already show the service logo in their TIP badge
+  if (!e.source || e.type === 'donation') return null
   if (e.source === 'buymeacoffee') return <span className="src-tag buymeacoffee" title={`From ${ALERT_SOURCE_LABEL[e.source]}`}><BmcLogo size={16} /></span>
   return <span className={`src-tag ${e.source}`} title={`From ${ALERT_SOURCE_LABEL[e.source]}`}>{e.source === 'streamelements' ? 'SE' : 'SL'}</span>
 }
 
-/** Marks a test alert, which disappears when the app restarts. */
+/** Test alerts disappear on restart. */
 export function TestTag({ e }: { e: Pick<StreamEvent, 'test'> }): JSX.Element | null {
   return e.test ? <span className="test-tag" title="A test alert. It goes away when the app restarts">TEST</span> : null
 }
 
-/** One event inside the chat stream, so subs, gifts and raids can't be missed. */
-export function EventCard({ e }: { e: StreamEvent }): JSX.Element {
+/** Platform icon, or for tips and BMC, the service's own logo. */
+export function EventIcon({ e, size }: { e: StreamEvent; size: number }): JSX.Element {
+  const from = standaloneSource(e)
+  if (!from) return <span className={`pf ${e.platform}`}><PlatformIcon platform={e.platform} size={size} /></span>
+  const logo = from === 'streamelements' ? <StreamElementsLogo size={size} /> : from === 'streamlabs' ? <StreamlabsLogo size={size} /> : <BmcLogo size={size} />
+  return <span className={`pf src-${from}`} title={ALERT_SOURCE_LABEL[from]}>{logo}</span>
+}
+
+/** An event inline in chat, so subs, gifts and raids can't be missed. In a pop-up the badge also shows resub months. */
+export function EventCard({ e, popup }: { e: StreamEvent; popup?: boolean }): JSX.Element {
   return (
-    <div className={`ev ev-${e.type} on-${e.platform}${e.big ? ' ev-big' : ''}`}>
+    <div className={`ev ev-${e.type} on-${e.platform}${standaloneSource(e) ? ` from-${standaloneSource(e)}` : ''}${e.big ? ' ev-big' : ''}${e.type === 'powerup' && /celebration/i.test(e.subject ?? '') ? ' ev-celebration' : ''}`}>
       <div className="ev-top">
-        <span className={`pf ${e.platform}`}><PlatformIcon platform={e.platform} size={18} /></span>
+        <EventIcon e={e} size={18} />
         <span className="ev-title">{e.actor && <b>{e.actor} </b>}{e.text}{e.subject && <b> {e.subject}</b>}</span>
         <SourceTag e={e} />
         <TestTag e={e} />
-        {e.amount && <span className="ev-amount">{e.amount}</span>}
-        <EventBadge e={e} />
+        {/* the BITS badge already says bits, so the pop-up shows just the number */}
+        {e.amount && <span className="ev-amount">{popup && e.type === 'cheer' ? e.amount.replace(/\s*bits?$/i, '') : e.amount}</span>}
+        <EventBadge e={e} months={popup ? subMonths(e) : undefined} />
       </div>
       {e.message && <div className="ev-msg">{e.message}</div>}
       {e.preview && <PreviewCard p={e.preview} />}

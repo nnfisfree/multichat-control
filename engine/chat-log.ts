@@ -1,10 +1,11 @@
 import type { ChatMessage, HistorySession, Platform } from '../shared/types'
 import { core } from './core'
+import { cleanBmc } from './event-log'
 
-/** Chat after a quiet gap this long belongs to a new stream. */
+// After a gap this long with no chat, assume it's a new stream.
 const GAP_MS = 2 * 60 * 60 * 1000
 const KEEP_STREAMS = 5
-/** Each stream keeps at most this many messages, so files stay light. */
+// per-stream cap so the files stay small
 const MAX_PER_STREAM = 5000
 const FLUSH_MS = 3000
 
@@ -15,7 +16,7 @@ type Line =
 
 const fileOf = (id: string): string => `chat-history/${id}.jsonl`
 
-/** Keeps only what's needed to show a message again. Deleted text is never stored. */
+/** Strips a message down to what's needed to show it again. Deleted text is never written. */
 function compact(m: ChatMessage): ChatMessage {
   const { event, ...rest } = m
   return {
@@ -37,10 +38,10 @@ function parse(text: string | null): Line[] {
 }
 
 /**
- * Records chat to one small file per stream in user-data/chat-history, and keeps the last five
- * streams. Deletions and bans are recorded too, so removed messages never come back readable.
- * The saved streams are read once at start and kept in memory, so reading them is instant;
- * new lines are appended to the files every few seconds. Same format as the Electron version.
+ * Writes chat to one small file per stream under user-data/chat-history and keeps the last five
+ * streams. Deletions and bans get logged too, so removed messages don't come back when history
+ * loads. Everything is read once at startup and kept in memory; new lines are appended every few
+ * seconds. The file format matches the old Electron build so upgrading keeps people's history.
  */
 export class ChatLog {
   private streams = new Map<string, Line[]>()
@@ -50,7 +51,7 @@ export class ChatLog {
 
   constructor(private enabled: () => boolean) {}
 
-  /** Loads the saved streams, and continues the latest one if chat stopped only a short while ago. */
+  /** Loads saved streams and picks the latest one back up if chat only stopped a little while ago. */
   async init(): Promise<void> {
     const names = await core.listFolder('chat-history').catch((): string[] => [])
     for (const name of names) {
@@ -102,9 +103,9 @@ export class ChatLog {
     const id = this.current.id
     const text = this.buffer.join('\n') + '\n'
     this.buffer = []
-    // History is a convenience: chat keeps working even if a write fails.
+    // history is nice to have, chat keeps working if a write fails
     void core.appendFile(fileOf(id), text).catch(() => {})
-    // A very busy stream is trimmed to its most recent messages now and then.
+    // busy streams get trimmed back to the newest messages now and then
     if (this.current.count > MAX_PER_STREAM * 1.2) this.trim(id)
   }
 
@@ -123,7 +124,7 @@ export class ChatLog {
     }
   }
 
-  /** Applies recorded deletions and bans to the stored messages. */
+  /** Replays logged deletions and bans over the stored messages. */
   private messages(lines: Line[]): ChatMessage[] {
     const out: ChatMessage[] = []
     const byId = new Map<string, ChatMessage>()
@@ -144,7 +145,7 @@ export class ChatLog {
     return out
   }
 
-  /** One user's messages across the saved streams, and in how many streams they chatted. */
+  /** One user's messages across all saved streams, plus how many streams they showed up in. */
   messagesBy(platform: Platform, userId: string): { messages: ChatMessage[]; streams: Set<string>; total: number } {
     const streams = new Set<string>()
     const messages: ChatMessage[] = []
@@ -156,7 +157,7 @@ export class ChatLog {
     return { messages, streams, total: messages.length }
   }
 
-  /** The saved streams, newest last. */
+  /** Newest last. */
   sessions(): HistorySession[] {
     return this.ids().flatMap((id) => {
       const msgs = this.messages(this.streams.get(id)!)
@@ -167,10 +168,9 @@ export class ChatLog {
 
   load(id: string): ChatMessage[] {
     if (!/^stream-\d+$/.test(id)) return []
-    return this.messages(this.streams.get(id) ?? []).map((m) => ({ ...m, history: true }))
+    return this.messages(this.streams.get(id) ?? []).map((m) => ({ ...m, ...(m.event ? { event: cleanBmc(m.event) } : {}), history: true }))
   }
 
-  /** Deletes every saved stream. */
   clear(): void {
     if (this.timer) clearTimeout(this.timer)
     this.timer = null

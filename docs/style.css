@@ -1,4 +1,4 @@
-/* Pages for multichat.nonamefound.lol, in the app's POS Club colours. */
+/* Site styles for multichat.nonamefound.lol, in the app's POS Club colours. */
 :root {
   --bg: #090b3f;
   --panel: #100c50;
@@ -105,8 +105,8 @@ section[id] { scroll-margin-top: 20px; }
   .btn.big { display: block; padding: 14px 18px; font-size: 17px; }
 }
 
-/* The glow that follows the mouse, as in the app's settings: one soft light on the page, and a
-   brighter one inside the card under the mouse. */
+/* Mouse-follow glow like in the app's Settings: one soft light on the page, a brighter one inside
+   the card under the cursor. */
 body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0; background: radial-gradient(600px circle at var(--mx, 50%) var(--my, 30%), rgba(141, 31, 200, 0.14), transparent 70%); transition: opacity 0.6s ease; }
 html.glow body::before { opacity: 1; }
 .wrap { position: relative; z-index: 1; }

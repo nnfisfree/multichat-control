@@ -10,7 +10,7 @@ const clock = (ms: number): string => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
-/** Pinned above chat while a train runs, and gone when its timer ends. */
+/** Pinned above chat while a train is running, gone when its timer runs out. */
 export function HypeBanner({ tab }: { tab: Tab }): JSX.Element | null {
   const train = useStore((s) => s.hype)
   const [now, setNow] = useState(Date.now())

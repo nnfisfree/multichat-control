@@ -4,7 +4,7 @@ import { CLOSE_ASK_EVENT } from '../../engine'
 interface CloseActions { tray(remember: boolean): void; exit(remember: boolean): void }
 const actions = (): CloseActions => (window as unknown as { nnfClose: CloseActions }).nnfClose
 
-/** "Close the app or keep it running in the tray?", asked when closing is set to Ask every time. */
+/** "Close or keep running in the tray?", when closing is set to "Ask every time". */
 export function ClosePrompt(): JSX.Element | null {
   const [open, setOpen] = useState(false)
   const [remember, setRemember] = useState(false)

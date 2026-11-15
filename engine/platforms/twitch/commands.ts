@@ -2,12 +2,12 @@ import type { ActionResult, RaidInfo, UserEntry } from '../../../shared/types'
 import type { Helix } from './connector'
 import { startRaid } from './raid'
 
-/** What a command returns: a message for the streamer, and sometimes something to open. */
+/** Message for the streamer, plus anything the UI should open afterwards. */
 export type CommandResult = ActionResult & { openUser?: UserEntry; pinned?: boolean; raid?: RaidInfo | null }
 
 const UNITS: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400, w: 604800, mo: 2592000 }
 
-/** "90", "90s", "10m", "1h", "2d", "1w" or "1mo" in seconds; a bare number uses the given unit. */
+/** "90", "90s", "10m", "1h", "2d", "1w", "1mo" -> seconds. A bare number uses `bareUnit`. */
 export function parseDuration(text: string | undefined, bareUnit: keyof typeof UNITS = 's'): number | null {
   const m = /^(\d+)\s*(mo|s|m|h|d|w)?$/i.exec(text?.trim() ?? '')
   return m ? Number(m[1]) * UNITS[(m[2] ?? bareUnit).toLowerCase()] : null
@@ -24,8 +24,8 @@ const ok = (message: string): CommandResult => ({ ok: true, message })
 const fail = (message: string): CommandResult => ({ ok: false, message })
 
 /**
- * Twitch's chat commands, done through Twitch's API: typing "/raid x" into chat through the API
- * would only post the text, so each command calls the matching endpoint instead.
+ * Twitch's slash commands. Sending "/raid x" as a chat message through the API just posts the text,
+ * so every command maps to its own Helix endpoint instead.
  */
 export async function runTwitchCommand(helix: Helix, me: string, input: string, send: (text: string) => Promise<string | undefined>): Promise<CommandResult | null> {
   const [head, ...rest] = input.trim().split(/\s+/)
@@ -171,8 +171,8 @@ export async function runTwitchCommand(helix: Helix, me: string, input: string, 
       return { ok: true, openUser: { id: u.id, name: u.name, login: u.login } }
     }
     case 'pin': {
-      // "/pin message" pins until the stream ends; "/pin 5m message" for 30 seconds to 30 minutes.
-      // The time needs its unit (30s, 5m), so a message starting with a number stays a message.
+      // "/pin msg" pins until the stream ends, "/pin 5m msg" pins for 30s-30m. The duration needs
+      // a unit, otherwise a message that starts with a number would get eaten.
       const d = /^\d+(s|m|h)$/i.test(rest[0] ?? '') ? parseDuration(rest[0]) : null
       const text = (d ? rest.slice(1) : rest).join(' ')
       if (!text) return fail('Add the message, like /pin Welcome! or /pin 10m Giveaway at 9pm.')

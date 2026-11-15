@@ -1,8 +1,8 @@
-// Builds the release exe without any trace of the build machine.
+// Release build without any trace of the build machine.
 //
-// Rust keeps source file paths for error messages, and those include the folder of whoever built
-// it (for example C:\Users\<name>\.cargo\...). This rewrites them to neutral names at build time.
-// The paths are worked out here, never written into a committed file.
+// Rust embeds source paths in panic messages, and those include whoever built it
+// (C:\Users\<name>\.cargo\...). This remaps them to neutral names at build time. The paths are
+// worked out here and never written to a committed file.
 import { spawnSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'

@@ -6,7 +6,7 @@ import type {
 import type { Connector, ConnectorContext } from './platforms/connector'
 import { store } from './store'
 
-/** A made-up video picture: a sky, hills and a sun, in the given colours. */
+// Fake video thumbnail: sky, hills and a sun in the given colours.
 const demoThumb = (sky: string, hill: string, sun: string): string =>
   'data:image/svg+xml,' + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky}"/><stop offset="1" stop-color="#140c2c"/></linearGradient></defs>` +
@@ -20,7 +20,6 @@ const DEMO_PREVIEWS: Record<PreviewTarget['kind'], LinkPreview> = {
   'kick-clip': { url: 'https://kick.com/', platform: 'kick', kind: 'clip', title: 'Clutch 1v3 on stream', channel: 'DemoStreamer', clippedBy: 'kickfan99', seconds: 45, views: 213, thumbnail: demoThumb('#1fbf6a', '#145a33', '#e6ff7a') }
 }
 
-/** The demo's answer for a link card. */
 export const demoPreview = (t: PreviewTarget): LinkPreview => ({ ...DEMO_PREVIEWS[t.kind] })
 
 const emoteUrl = (bg: string, face: string): string =>
@@ -67,12 +66,12 @@ const LINES = [
 ]
 const COLORS = ['#4fd1ff', '#ff7ad9', '#7dff9b', '#ffb454', '#b794ff', '#ff6b6b']
 
-const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean; source?: StreamEvent['source']; preview?: LinkPreview }[]> = {
+const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean; months?: number; streak?: number; source?: StreamEvent['source']; preview?: LinkPreview }[]> = {
   twitch: [
     { type: 'follow', text: 'followed' },
     { type: 'redemption', text: 'redeemed', subject: 'Daily Check-in', amount: '1', details: { Reward: 'KEKW! [MP3]', Status: 'Unfulfilled' } },
-    { type: 'sub', text: 'resubscribed to the channel (5 months)', amount: 'Prime', message: 'u deserve' },
-    { type: 'sub', text: 'resubscribed to the channel (14 months)', amount: 'Tier 1', message: 'Over a year already, still the comfiest stream around 💜' },
+    { type: 'sub', text: 'resubscribed to the channel (5 months)', amount: 'Prime', message: 'u deserve', months: 5 },
+    { type: 'sub', text: 'resubscribed to the channel (14 months)', amount: 'Tier 1', message: 'Over a year already, still the comfiest stream around 💜', months: 14, streak: 9 },
     { type: 'cheer', text: 'cheered', amount: '500 bits', message: 'Take my bits, legend! That clutch was unreal' },
     { type: 'sub', text: 'subscribed to the channel', amount: 'Tier 1' },
     { type: 'gift', text: 'gifted a sub to PixelNomad', amount: 'Tier 1' },
@@ -94,7 +93,7 @@ const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string
     { type: 'gift', text: 'gifted 2 memberships', amount: '2' }
   ],
   kick: [
-    { type: 'sub', text: 'subscribed', amount: '1 month' },
+    { type: 'sub', text: 'resubscribed (7 months)', months: 7 },
     { type: 'gift', text: 'gifted 3 subs', amount: '3' },
     { type: 'follow', text: 'followed' },
     { type: 'redemption', text: 'redeemed', subject: 'Hydrate!', amount: '250' }
@@ -107,13 +106,13 @@ const DEMO_GIF = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://
 
 const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)]
 
-/**
- * Simulated platform for UI work and automated tests. Runs through the same interface as the
- * real connectors, so `--demo` exercises everything except the network.
- */
-/** A made-up channel picture for the demo raid. */
+// fake channel avatar for the demo raid
 const DEMO_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a59"/><stop offset="1" stop-color="#9146ff"/></linearGradient></defs>' + '<rect width="64" height="64" fill="url(#g)"/><circle cx="32" cy="26" r="12" fill="#ffe3c7"/><path d="M10 64c2-14 12-20 22-20s20 6 22 20z" fill="#1b1440"/><path d="M19 24c0-10 6-15 13-15s13 5 13 15c-3-5-8-7-13-7s-10 2-13 7z" fill="#3a1f12"/></svg>')
 
+/**
+ * Fake platform for UI work and testing. Implements the same interface as the real connectors,
+ * so `--demo` runs everything except the network.
+ */
 export class DemoConnector implements Connector {
   private raidTimer: ReturnType<typeof setTimeout> | undefined
   private timers: ReturnType<typeof setTimeout>[] = []
@@ -160,7 +159,16 @@ export class DemoConnector implements Connector {
       this.ctx.message(this.msg(pick(CHATTERS.twitch), '', { parts: [{ type: 'gif', url: DEMO_GIF, alt: 'Dancing cat' }] }))
       return
     }
-    // Links bring big preview cards, so they come up only now and then.
+    // Twitch's built-in Power-ups that change a message
+    if (this.platform === 'twitch' && r < 0.085) {
+      const who = pick(CHATTERS.twitch)
+      const kind = pick(['effect', 'giant', 'highlight'] as const)
+      if (kind === 'effect') this.ctx.message(this.msg(who, pick(['this stream is too good', 'GG everyone, what a run', 'hello chat, rainbow time']), { effect: 'message-effect', effectId: 'demo' }))
+      else if (kind === 'giant') this.ctx.message(this.msg(who, 'look at this', { effect: 'giant', parts: [{ type: 'text', text: 'look at this ' }, { type: 'emote', name: 'nnfHype', url: emoteUrl('#e91e63', 'H'), giant: true }] }))
+      else this.ctx.message(this.msg(who, pick(LINES), { kind: 'highlight', label: 'HIGHLIGHTED MESSAGE' }))
+      return
+    }
+    // links come with big preview cards, so keep them rare
     let line = pick(LINES)
     if (line.includes('https://') && Math.random() > 0.2) line = pick(LINES.filter((l) => !l.includes('https://')))
     this.ctx.message(this.msg(pick(CHATTERS[this.platform]), line, {
@@ -185,11 +193,11 @@ export class DemoConnector implements Connector {
   }
 
   async start(): Promise<void> {
-    // Platforms connect one after another, as they do for real, so the progress bar shows.
+    // connect one after the other like the real thing, so the progress bar has something to show
     this.ctx.status({ status: 'connecting' })
     const order = ['twitch', 'youtube', 'kick'].indexOf(this.platform)
     this.timers.push(setTimeout(() => this.ctx.status({ status: 'connected', account: 'DemoStreamer', mentions: ['DemoStreamer'] }), 2500 + order * 1800))
-    // A Streamer.bot test trigger, so the TEST tag and Clear menu have something to show.
+    // a Streamer.bot test trigger, so the TEST tag and the Clear menu have something to work with
     if (this.platform === 'twitch') {
       this.timers.push(setTimeout(() => this.ctx.event({
         id: `twitch-test-${Date.now()}`, platform: 'twitch', ts: Date.now(), type: 'redemption', actor: 'DemoStreamer',
@@ -201,16 +209,26 @@ export class DemoConnector implements Connector {
     if (this.platform === 'twitch') this.startHype()
     for (let i = 0; i < 12; i++) this.tickChat()
     for (let i = 0; i < 4; i++) this.tickEvent()
-    // One of each moderator warning soon after start, then now and then.
+    // one of each mod warning shortly after start, then every so often
     const soon = (ms: number, run: () => void): void => { this.timers.push(setTimeout(run, ms)) }
     if (this.platform === 'twitch') {
-      // Close together, so all three can be seen at once.
+      // close together so you can see all three at once
       soon(6000, () => this.tickModeration('held'))
       soon(6600, () => this.tickModeration('suspicious'))
       soon(7200, () => this.tickModeration('spam'))
       this.timers.push(setInterval(() => this.tickModeration(pick(['held', 'suspicious'] as const)), 75000))
     } else soon(30000 + Math.random() * 30000, () => this.tickModeration('spam'))
     this.timers.push(setInterval(() => this.tickModeration('spam'), 120000 + Math.random() * 60000))
+    // burst of Kick follows to show off the grouped pop-up ("X and 5 others followed")
+    if (this.platform === 'kick') {
+      const wave = (): void => { for (let i = 0; i < 6; i++) soon(i * 450, () => this.tickFollow()) }
+      soon(15000, wave)
+      this.timers.push(setInterval(wave, 90000))
+    }
+  }
+
+  private tickFollow(): void {
+    this.ctx.event({ id: `${this.platform}-ev-${++this.seq}`, platform: this.platform, ts: Date.now(), type: 'follow', actor: pick(CHATTERS[this.platform]), text: 'followed', details: {} })
   }
 
   private startHype(): void {
@@ -221,7 +239,7 @@ export class DemoConnector implements Connector {
     this.ctx.hype(train)
     let ticks = 0
     this.timers.push(setInterval(() => {
-      // Like a real one, the train ends after a while (40 s here) and another starts 40 s later.
+      // like a real one, the train ends after a while (40s here) and a new one starts 40s later
       ticks = (ticks + 1) % 40
       if (ticks === 20) return this.ctx.hype(null)
       if (ticks > 20) return
@@ -247,7 +265,7 @@ export class DemoConnector implements Connector {
     this.ctx.message(this.msg('DemoStreamer', text, { author: { id: 'me', name: 'DemoStreamer', color: '#ffb454', badges: [{ id: 'broadcaster', title: 'Broadcaster' }], isBroadcaster: true } }))
   }
 
-  /** Invented account details for the user card. */
+  /** Fake account details for the user card. */
   async profile(user: UserEntry): Promise<UserProfile> {
     const day = 86400000
     const fresh = user.name === 'TurboTaco'
@@ -262,12 +280,11 @@ export class DemoConnector implements Connector {
     }
   }
 
-  /** Invented audience counts. */
   async stats(): Promise<ChannelStats> {
     return { twitch: { followers: 4343, subscribers: 261 }, youtube: { subscribers: 12300, rounded: true }, kick: { followers: 1874, subscribers: 57, gifted: 12 } }[this.platform]
   }
 
-  /** Invented viewers: Twitch gets a full list, as it would for real; the others report a count. */
+  /** Twitch gets a full chatter list like the real thing, the others just a count. */
   async users(): Promise<UsersInfo> {
     const viewers = { twitch: 142, youtube: 37, kick: 58 }[this.platform]
     if (this.platform !== 'twitch') return { live: true, viewers }
@@ -285,7 +302,7 @@ export class DemoConnector implements Connector {
     }
   }
 
-  /** Demo Twitch commands: pins show in the app, everything else just says it worked. */
+  /** Pins show up in the app, everything else just reports success. */
   async command(text: string): Promise<CommandOutcome | null> {
     if (this.platform !== 'twitch') return null
     const [head, ...rest] = text.trim().split(/\s+/)
@@ -315,7 +332,7 @@ export class DemoConnector implements Connector {
     return { ok: true, message: `Demo: ${name} done.` }
   }
 
-  /** Allow shows the held message in chat, as Twitch does; Deny keeps it out. */
+  /** Allow puts the held message in chat like Twitch does, Deny keeps it out. */
   async automod(rowId: string, allow: boolean): Promise<ActionResult> {
     let held: ChatMessage | undefined
     const found = this.ctx.patch(rowId, (m) => {
@@ -327,7 +344,7 @@ export class DemoConnector implements Connector {
     return { ok: true }
   }
 
-  /** The moderator warnings: a message AutoMod held, a suspicious user, and a "buy followers" bot. */
+  /** Mod warnings: an AutoMod hold, a suspicious user, and a "buy followers" bot. */
   private tickModeration(which: 'held' | 'suspicious' | 'spam'): void {
     if (which === 'held') {
       const text = pick(['this streamer is so bad lmao', 'go touch grass you absolute clown', 'check my channel twitch.tv/notabot'])
@@ -341,7 +358,7 @@ export class DemoConnector implements Connector {
         flag: { kind: 'suspicious', label: 'Suspicious user', notes: ['Likely ban evader', 'Banned in 2 channels that share ban info with you'] }
       }))
     } else {
-      // No flag here: the hub's spam check finds it, as it would in real chat.
+      // no flag here on purpose, the hub's spam check should catch it like it would in real chat
       const bot = this.platform === 'kick' ? 'promo_kick_42' : this.platform === 'youtube' ? 'Grow Your Stream' : 'streampromo_88'
       this.ctx.message(this.msg(bot, 'Wanna become famous? Buy followers, primes and viewers on streamb00st . com', {
         author: { id: bot, name: bot, login: bot.toLowerCase(), color: '#9aa0a6', badges: [] }
@@ -377,7 +394,7 @@ export class DemoConnector implements Connector {
   }
 }
 
-/** Two invented past streams, so demo mode can show the chat history. */
+/** Two fake past streams, so the chat history has something to show. */
 export const demoHistory = (() => {
   let cleared = false
   const day = 24 * 60 * 60 * 1000
@@ -404,7 +421,7 @@ export const demoHistory = (() => {
   }
 })()
 
-/** Invented OBS stats for demo mode: ready at first, then live a few seconds later. */
+/** Fake OBS stats: "ready" at first, then live a few seconds later. */
 export function startDemoObs(send: (s: ObsState) => void): void {
   const started = Date.now()
   let bytes = 0
@@ -427,7 +444,6 @@ export function startDemoObs(send: (s: ObsState) => void): void {
   }, 2000)
 }
 
-/** Invented Streamer.bot actions and commands for demo mode. */
 export const DEMO_STREAMERBOT: StreamerbotState = {
   status: 'connected',
   version: '1.0.7',

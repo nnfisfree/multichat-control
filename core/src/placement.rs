@@ -1,9 +1,9 @@
-//! Remembers where the main window was: its position, size, whether it was maximized, and on
-//! which monitor. The next start puts it back exactly there. Only when that monitor is gone
-//! (unplugged, switched off) does the window open on Windows' main monitor instead.
+//! Remembers where the main window was: position, size, maximized or not, and which monitor.
+//! Next start puts it back exactly there. Only if that monitor is gone (unplugged, turned off)
+//! does it open on the primary monitor instead.
 //!
-//! Everything is kept in physical pixels, as Windows reports them, together with the monitor's
-//! own rectangle and scale, so the monitor can be recognised and sizes converted when needed.
+//! Everything is stored in physical pixels as Windows reports them, along with the monitor's own
+//! rect and scale, so we can recognise the monitor later and convert sizes if needed.
 
 use crate::paths;
 use crate::storage::{log, write_atomic};
@@ -14,9 +14,9 @@ use std::time::Duration;
 use tauri::{Monitor, PhysicalPosition, PhysicalSize, WebviewWindow};
 
 const FILE: &str = "window.json";
-/// Moving or resizing sends many events: the file is written once things settle.
+/// Moves/resizes fire lots of events; only write the file once things settle.
 const SAVE_DELAY: Duration = Duration::from_millis(600);
-/// How much of the window's top edge must be on a screen for it to count as reachable.
+/// How much of the top edge has to be on a screen for the window to count as reachable.
 const MIN_VISIBLE: i32 = 48;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -27,7 +27,7 @@ pub struct Placement {
     width: u32,
     height: u32,
     maximized: bool,
-    /// The monitor the window was on, as Windows names it (\\.\DISPLAY2).
+    /// Monitor name as Windows reports it (\\.\DISPLAY2).
     monitor: Option<String>,
     monitor_x: i32,
     monitor_y: i32,
@@ -53,7 +53,7 @@ fn write(p: &Placement) {
     }
 }
 
-/// Writes a change still waiting for its delay. Called when the app exits.
+/// Writes out a pending change. Called on exit.
 pub fn flush() {
     GENERATION.fetch_add(1, Ordering::SeqCst);
     if let Some(p) = PENDING.lock().ok().and_then(|mut g| g.take()) {
@@ -61,8 +61,8 @@ pub fn flush() {
     }
 }
 
-/// Minimized and maximized, asked of Windows itself: Tauri's own record is updated only after
-/// the move that maximizing causes, which would save the maximized size as the normal one.
+/// Asks Windows directly. Tauri only updates its own state after the move that maximizing
+/// triggers, which would save the maximized size as the normal one.
 fn window_state(w: &WebviewWindow) -> (bool, bool) {
     #[cfg(windows)]
     if let Ok(hwnd) = w.hwnd() {
@@ -73,8 +73,8 @@ fn window_state(w: &WebviewWindow) -> (bool, bool) {
     (w.is_minimized().unwrap_or(true), w.is_maximized().unwrap_or(false))
 }
 
-/// Reads the window as it is now. Minimized or hidden windows have no useful place to keep;
-/// a maximized one keeps its normal size and position and only records being maximized.
+/// Current placement. Minimized/hidden windows have nothing worth saving; a maximized one keeps
+/// its normal size and position and just records that it was maximized.
 fn current(w: &WebviewWindow, last: Option<&Placement>) -> Option<Placement> {
     let (minimized, maximized) = window_state(w);
     if minimized || !w.is_visible().unwrap_or(false) {
@@ -87,7 +87,7 @@ fn current(w: &WebviewWindow, last: Option<&Placement>) -> Option<Placement> {
     }
     let pos = w.outer_position().ok()?;
     let size = w.inner_size().ok()?;
-    // Windows parks minimized windows far off screen; never keep that place.
+    // Windows parks minimized windows way off screen, never save that
     if pos.x <= -30000 || pos.y <= -30000 || size.width < 100 || size.height < 100 {
         return None;
     }
@@ -108,10 +108,10 @@ fn current(w: &WebviewWindow, last: Option<&Placement>) -> Option<Placement> {
     })
 }
 
-/// The last place written or waiting to be written.
+/// Last placement written, or waiting to be written.
 static LAST: Mutex<Option<Placement>> = Mutex::new(None);
 
-/// Called on every move, resize and maximize: keeps the newest place, written after a pause.
+/// Called on every move/resize/maximize. Keeps the newest placement and writes it after a pause.
 pub fn changed(w: &WebviewWindow) {
     let Ok(mut last) = LAST.lock() else { return };
     let Some(p) = current(w, last.as_ref()) else { return };
@@ -137,7 +137,7 @@ fn same_rect(m: &Monitor, p: &Placement) -> bool {
     pos.x == p.monitor_x && pos.y == p.monitor_y && size.width == p.monitor_width && size.height == p.monitor_height
 }
 
-/// True when the window's top strip (where it is dragged from) lies on some screen.
+/// True if the window's top strip (where you drag it) is on some screen.
 fn reachable(monitors: &[Monitor], x: i32, y: i32, width: u32) -> bool {
     let (left, right, top) = (x, x + width as i32, y);
     monitors.iter().any(|m| {
@@ -149,8 +149,7 @@ fn reachable(monitors: &[Monitor], x: i32, y: i32, width: u32) -> bool {
     })
 }
 
-/// Size and position centred on a monitor, the saved size converted to its scale and kept
-/// inside its work area.
+/// Centred on a monitor, with the saved size converted to its scale and kept inside its work area.
 fn centred_on(m: &Monitor, p: &Placement) -> (i32, i32, u32, u32) {
     let ratio = if p.scale > 0.0 { m.scale_factor() / p.scale } else { 1.0 };
     let area = m.work_area();
@@ -161,7 +160,7 @@ fn centred_on(m: &Monitor, p: &Placement) -> (i32, i32, u32, u32) {
     (x, y, width, height)
 }
 
-/// Works out where the saved window goes on the screens there are now.
+/// Where the saved placement should go, given the screens we have now.
 fn target(w: &WebviewWindow, p: &Placement) -> Option<(i32, i32, u32, u32)> {
     let monitors = w.available_monitors().ok()?;
     if monitors.is_empty() {
@@ -170,11 +169,11 @@ fn target(w: &WebviewWindow, p: &Placement) -> Option<(i32, i32, u32, u32)> {
     let named = monitors.iter().find(|m| p.monitor.is_some() && m.name() == p.monitor.as_ref());
     let exact = named.filter(|m| same_rect(m, p)).or_else(|| monitors.iter().find(|m| same_rect(m, p)));
     let wanted = if exact.is_some() {
-        // The same monitor, where it was: exactly the saved place.
+        // same monitor, same spot: use it as is
         Some((p.x, p.y, p.width, p.height))
     } else if let Some(m) = named {
-        // The same monitor, moved in the screen layout or set to another resolution:
-        // the same spot on it, kept inside it.
+        // Same monitor, but moved in the layout or running a different resolution:
+        // same spot on it, clamped inside.
         let area = m.work_area();
         let width = p.width.min(area.size.width);
         let height = p.height.min(area.size.height);
@@ -191,18 +190,18 @@ fn target(w: &WebviewWindow, p: &Placement) -> Option<(i32, i32, u32, u32)> {
             return Some((x, y, width, height));
         }
     }
-    // That monitor is gone: Windows' main monitor (or the first there is) instead.
+    // that monitor is gone, use the primary (or whatever's first)
     let main = w.primary_monitor().ok().flatten().or_else(|| monitors.into_iter().next())?;
     log("window", "the saved monitor is not connected, so the window opens on the main monitor");
     Some(centred_on(&main, p))
 }
 
-/// Puts the window back where it was last time. Runs before the window is first shown.
+/// Restores last session's placement. Runs before the window is first shown.
 pub fn restore(w: &WebviewWindow) {
     let Some(p) = load() else { return };
     if let Some((x, y, width, height)) = target(w, &p) {
-        // Moving first lets Windows switch the window to that monitor's scale; the size is
-        // set after, and the position again, so neither is rescaled afterwards.
+        // Move first so Windows switches the window to that monitor's DPI, then set the size, then
+        // the position again, so neither one gets rescaled afterwards.
         let _ = w.set_position(PhysicalPosition::new(x, y));
         let _ = w.set_size(PhysicalSize::new(width, height));
         let _ = w.set_position(PhysicalPosition::new(x, y));
@@ -216,7 +215,7 @@ pub fn restore(w: &WebviewWindow) {
     }
 }
 
-/// The window's normal place, for a window that starts maximized (screen pixels).
+/// Normal (restored) placement for a window that starts maximized, in screen pixels.
 #[cfg(windows)]
 static NORMAL_RECT: Mutex<Option<[i32; 4]>> = Mutex::new(None);
 
@@ -236,17 +235,17 @@ fn remember_normal_rect(w: &WebviewWindow) {
 #[cfg(not(windows))]
 fn remember_normal_rect(_: &WebviewWindow) {}
 
-/// Called right after the window is first shown. A window shown maximized would otherwise be
-/// restored (un-maximized) to the default size: Windows ignores sizes given to a hidden window
-/// when it remembers the normal place, so that place is handed to Windows here.
+/// Called right after the window is first shown. Without this a window shown maximized would
+/// un-maximize to the default size: Windows ignores sizes set on a hidden window when it records
+/// the normal placement, so we hand it the placement here.
 pub fn shown(w: &WebviewWindow) {
     #[cfg(windows)]
     {
         use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowPlacement, SetWindowPlacement, WINDOWPLACEMENT};
         let Some([left, top, right, bottom]) = NORMAL_RECT.lock().ok().and_then(|mut n| n.take()) else { return };
         let Ok(hwnd) = w.hwnd() else { return };
-        // Windows keeps the normal place in work-area coordinates of the window's monitor:
-        // they differ from screen pixels when the taskbar sits at the top or the left.
+        // Windows stores the normal placement in work-area coordinates of the window's monitor,
+        // which differ from screen pixels when the taskbar is at the top or left.
         let (dx, dy) = w
             .current_monitor()
             .ok()

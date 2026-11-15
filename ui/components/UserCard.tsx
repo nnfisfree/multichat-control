@@ -8,7 +8,7 @@ const DAY = 86400000
 const date = (ts: number): string => new Date(ts).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
 const stamp = (ts: number): string => new Date(ts).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
-/** "3 years", "5 months", "12 days" or "today". */
+// "3 years", "5 months", "12 days" or "today"
 function age(ts: number): string {
   const days = Math.floor((Date.now() - ts) / DAY)
   if (days >= 365) { const y = Math.floor(days / 365); return `${y} year${y === 1 ? '' : 's'}` }
@@ -20,7 +20,7 @@ function age(ts: number): string {
 interface Props {
   platform: Platform
   user: UserEntry
-  /** Where the click was; the card opens beside it, kept inside the window. */
+  /** Click position. The card opens next to it, kept inside the window. */
   x: number
   y: number
   onClose(): void
@@ -28,15 +28,15 @@ interface Props {
   onResult(r: ActionResult): void
 }
 
-/** A viewer card: who someone is, and everything they said in this channel. */
 const WIDTH = 420
 const MIN_HEIGHT = 380
 const GAP = 12
 
+/** Viewer card: who they are, plus everything they've said in this channel. */
 export function UserCardPanel({ platform, user, x, y, onClose, onReply, onResult }: Props): JSX.Element {
   const box = useRef<HTMLElement>(null)
   const [place, setPlace] = useState<{ left: number; top: number; maxHeight: number }>({ left: x + GAP, top: y, maxHeight: 600 })
-  // Beside the pointer, flipping left or up when there isn't room, and never outside the window.
+  // next to the pointer, flipping left/up when there's no room, never outside the window
   useLayoutEffect(() => {
     const vw = window.innerWidth
     const vh = window.innerHeight
@@ -74,8 +74,8 @@ export function UserCardPanel({ platform, user, x, y, onClose, onReply, onResult
   const self = card?.roles?.includes('Broadcaster')
   const latestLive = card?.messages.find((m) => !m.history && !m.deleted)
   const fresh = card?.createdAt !== undefined && Date.now() - card.createdAt < 30 * DAY
-  // The badges they show in chat (VIP, moderator, artist, subscriber, event badges...), from
-  // their newest message. Roles already shown as a badge aren't repeated as a chip.
+  // Badges from their newest message (VIP, mod, artist, sub, event badges...). Roles that already
+  // show as a badge aren't repeated as a chip.
   const badges = useMemo(() => {
     const m = card?.messages.find((x) => x.author.badges.length > 0)
     const seen = new Set<string>()

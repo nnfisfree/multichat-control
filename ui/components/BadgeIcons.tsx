@@ -1,13 +1,12 @@
 import type { JSX, ReactNode } from 'react'
 import type { EventType } from '../../shared/types'
 
-/* Small animated pictures inside event badges. Each part that moves has a class styled in theme.css (.bi-*). */
+/* Little animated icons inside event badges. The moving parts are styled in theme.css (.bi-*). */
 
 const Svg = ({ children, cls }: { children: ReactNode; cls: string }): JSX.Element => (
   <svg className={`bi ${cls}`} viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{children}</svg>
 )
 
-/** A steam locomotive with puffs of smoke. */
 const Train = (): JSX.Element => (
   <Svg cls="bi-train">
     <g className="bi-smoke" fill="#fff">
@@ -32,7 +31,6 @@ const Train = (): JSX.Element => (
   </Svg>
 )
 
-/** A present whose lid hops. */
 const Gift = (): JSX.Element => (
   <Svg cls="bi-gift">
     <g fill="currentColor">
@@ -47,21 +45,24 @@ const Gift = (): JSX.Element => (
   </Svg>
 )
 
-/** A die that rolls over now and then. */
-const Dice = (): JSX.Element => (
-  <Svg cls="bi-dice">
-    <rect x="3" y="3" width="18" height="18" rx="4.5" fill="#fff" />
-    <g fill="#0b6f62">
-      <circle cx="8" cy="8" r="1.7" />
-      <circle cx="16" cy="8" r="1.7" />
-      <circle cx="12" cy="12" r="1.7" />
-      <circle cx="8" cy="16" r="1.7" />
-      <circle cx="16" cy="16" r="1.7" />
+/**
+ * Twitch's Channel Points glyph (ring with a quarter arc inside, like Twitch draws it). The arc
+ * sweeps round like the points charging up, and a glint crosses the ring every so often.
+ */
+const Points = (): JSX.Element => (
+  <Svg cls="bi-points">
+    <g transform="translate(2 2)" fill="currentColor">
+      <path fillRule="evenodd" clipRule="evenodd" d="M2 10a8 8 0 1 1 16 0 8 8 0 0 1-16 0zm8 6a6 6 0 1 1 0-12 6 6 0 0 1 0 12z" />
+      {/* invisible full circle so the group is ring-sized and the arc spins around the centre */}
+      <g className="bi-points-arc">
+        <circle cx="10" cy="10" r="8" fill="none" />
+        <path d="M10 6a4 4 0 0 1 4 4h-2a2 2 0 0 0-2-2V6z" />
+      </g>
     </g>
+    <circle className="bi-points-glint" cx="7" cy="6.2" r="1.3" fill="#fff" />
   </Svg>
 )
 
-/** A faceted Bits gem with a glint passing over it. */
 const Bits = (): JSX.Element => (
   <Svg cls="bi-bits">
     <path d="M12 1.5 21 13l-9 9.5L3 13z" fill="#c9a7ff" />
@@ -73,7 +74,6 @@ const Bits = (): JSX.Element => (
   </Svg>
 )
 
-/** A flickering flame. */
 const Flame = (): JSX.Element => (
   <Svg cls="bi-flame">
     <path className="bi-flame-out" d="M12 1.5c.6 3.4 5.9 6.2 5.9 12.3A5.9 5.9 0 0 1 12 22.5a5.9 5.9 0 0 1-5.9-6.2c0-2.6 1.3-4.4 2.6-5.6.1 1.7.9 2.9 2 3.3C10 10.1 10.8 5.1 12 1.5z" fill="#ffb02e" />
@@ -81,7 +81,6 @@ const Flame = (): JSX.Element => (
   </Svg>
 )
 
-/** A beating heart. */
 const Heart = (): JSX.Element => (
   <Svg cls="bi-heart">
     <path d="M12 21.2 10.6 20C5.4 15.3 2 12.2 2 8.4 2 5.3 4.4 3 7.4 3c1.8 0 3.5.8 4.6 2.1C13.1 3.8 14.8 3 16.6 3 19.6 3 22 5.3 22 8.4c0 3.8-3.4 6.9-8.6 11.6z" fill="currentColor" />
@@ -90,10 +89,9 @@ const Heart = (): JSX.Element => (
 )
 
 const ICONS: Partial<Record<EventType, () => JSX.Element>> = {
-  hypetrain: Train, gift: Gift, redemption: Dice, cheer: Bits, bits: Bits, powerup: Flame, follow: Heart
+  hypetrain: Train, gift: Gift, redemption: Points, cheer: Bits, bits: Bits, powerup: Flame, follow: Heart
 }
 
-/** The animated picture for this event type, or null when it has none. */
 export function BadgeIcon({ type }: { type: EventType }): JSX.Element | null {
   const I = ICONS[type]
   return I ? <I /> : null

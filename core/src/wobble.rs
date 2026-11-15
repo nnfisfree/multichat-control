@@ -1,12 +1,11 @@
-//! Wobbly window: while the window is dragged by its title bar it bends like jelly and settles
-//! when let go, in the style of KDE's effect.
+//! Wobbly window: while you drag it by the title bar it bends like jelly, then settles when you let
+//! go. Same idea as KDE's effect.
 //!
-//! Windows doesn't let an app bend its own window, so the effect is drawn on top of it: when a
-//! move starts, the window's picture is taken and the real window is cloaked (hidden from view
-//! but still being moved by Windows, so snapping, monitors and the saved place all keep working).
-//! The picture is drawn onto a 4x4 Bezier patch whose control points hang on springs, in a
-//! click-through layered window that follows along. Once the jelly settles the real window is
-//! shown again, exactly where the picture ended.
+//! Windows has no way to bend a real window, so we fake it on top: when a move starts we snapshot
+//! the window and cloak the real one (invisible, but Windows keeps moving it, so snapping, monitors
+//! and the saved placement all keep working). The snapshot is drawn onto a 4x4 Bezier patch whose
+//! control points hang on springs, in a click-through layered window that follows along. Once the
+//! jelly settles the real window is uncloaked exactly where the snapshot ended up.
 
 use crate::storage::log;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
@@ -15,10 +14,10 @@ use std::time::{Duration, Instant};
 use tauri::WebviewWindow;
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
-/// 0 to 100.
+/// 0-100
 static INTENSITY: AtomicU8 = AtomicU8::new(50);
 
-/// Turns the effect on or off and sets how much it wobbles (0 to 100).
+/// On/off and how much it wobbles (0-100).
 #[tauri::command]
 pub fn window_wobble(enabled: bool, intensity: f64) {
     ENABLED.store(enabled, Ordering::Relaxed);
@@ -35,33 +34,31 @@ pub fn install(w: &WebviewWindow) {
 #[cfg(not(windows))]
 pub fn install(_: &WebviewWindow) {}
 
-/// The window's picture: premultiplied BGRA, top row first.
+/// Window snapshot: premultiplied BGRA, top row first.
 struct Snapshot {
     w: i32,
     h: i32,
     px: Vec<u32>,
-    /// Where the visible window starts inside its full rectangle, which also holds Windows'
-    /// invisible resize borders.
+    /// Where the visible window starts inside the full rect (which includes Windows' invisible
+    /// resize borders).
     ox: i32,
     oy: i32,
-    /// The full rectangle's size, to notice when the window is resized or snapped.
+    /// Full rect size, so we notice if the window got resized or snapped.
     full: (i32, i32),
 }
 
-/// Taken when a move or resize starts; used only if it turns out to be a move.
+/// Taken when a move/resize starts; only used if it turns out to be a move.
 static PENDING: Mutex<Option<Snapshot>> = Mutex::new(None);
-/// Where the mouse held the window when the move started, from the full rectangle's corner.
+/// Where the mouse grabbed the window when the move started, relative to the full rect's corner.
 static CURSOR: Mutex<(i32, i32)> = Mutex::new((0, 0));
-/// The running picture's offset inside the full rectangle (see Snapshot).
+/// Current snapshot's offset inside the full rect (see Snapshot).
 static OFFSET: Mutex<(i32, i32)> = Mutex::new((0, 0));
-/// An animation thread is running.
 static RUNNING: AtomicBool = AtomicBool::new(false);
-/// The title bar is held.
 static DRAGGING: AtomicBool = AtomicBool::new(false);
-/// Where the window was grabbed, from its top-left corner, in pixels.
+/// Grab point relative to the window's top-left, in pixels.
 static GRAB: Mutex<(f32, f32)> = Mutex::new((0.0, 0.0));
 
-/// The jelly: 4x4 control points on springs, each pulled toward its place on the real window.
+/// 4x4 control points on springs, each pulled towards its spot on the real window.
 struct Jelly {
     w: f32,
     h: f32,
@@ -101,7 +98,7 @@ impl Jelly {
         (x + self.w * c as f32 / 3.0, y + self.h * r as f32 / 3.0)
     }
 
-    /// One fixed step. (x, y) is the real window's top-left corner.
+    /// One fixed timestep. (x, y) is the real window's top-left.
     fn step(&mut self, dt: f32, x: f32, y: f32, held: Option<(f32, f32)>) {
         let old = self.pos;
         for r in 0..4 {
@@ -110,8 +107,8 @@ impl Jelly {
                 let (px, py) = old[r][c];
                 let mut fx = self.k * (tx - px) - self.damp * self.vel[r][c].0;
                 let mut fy = self.k * (ty - py) - self.damp * self.vel[r][c].1;
-                // Neighbours pull each other back to their usual spacing, which makes it jelly.
-                // The diagonal ones keep it from shearing apart, so it moves as one piece.
+                // Neighbours pull each other back to their rest spacing, that's what makes it jelly.
+                // The diagonals stop it from shearing apart so it moves as one piece.
                 for (dr, dc, f) in NEIGHBOURS {
                     let (nr, nc) = (r as i32 + dr, c as i32 + dc);
                     if !(0..4).contains(&nr) || !(0..4).contains(&nc) {
@@ -127,7 +124,7 @@ impl Jelly {
                 let p = &mut self.pos[r][c];
                 p.0 += v.0 * dt;
                 p.1 += v.1 * dt;
-                // The part under the mouse sticks to it; the further away, the more it trails.
+                // the bit under the mouse sticks to it, the further away the more it lags behind
                 if let Some((gx, gy)) = held {
                     let dx = (c as f32 / 3.0) - gx / self.w;
                     let dy = (r as f32 / 3.0) - gy / self.h;
@@ -166,7 +163,7 @@ impl Jelly {
         }
     }
 
-    /// The surface point at (u, v), both 0 to 1.
+    /// Surface point at (u, v), both 0-1.
     fn at(&self, u: f32, v: f32) -> (f32, f32) {
         let b = |t: f32| {
             let m = 1.0 - t;
@@ -185,13 +182,13 @@ impl Jelly {
     }
 }
 
-/// Each control point's neighbours, and how strongly each pulls.
+/// Each control point's neighbours and how hard each one pulls.
 const NEIGHBOURS: [(i32, i32, f32); 8] = [(-1, 0, 1.0), (1, 0, 1.0), (0, -1, 1.0), (0, 1, 1.0), (-1, -1, 0.5), (-1, 1, 0.5), (1, -1, 0.5), (1, 1, 0.5)];
 
-/// How finely the surface is cut into triangles for drawing.
+/// How finely the surface gets cut into triangles.
 const GRID: usize = 20;
 
-/// Draws the picture onto the bent surface. `ox, oy` is the canvas's top-left on screen.
+/// Draws the snapshot onto the bent surface. `ox, oy` = canvas top-left on screen.
 fn render(j: &Jelly, snap: &Snapshot, out: &mut [u32], cw: i32, ch: i32, ox: f32, oy: f32) {
     out.fill(0);
     let mut verts = vec![(0.0f32, 0.0f32); (GRID + 1) * (GRID + 1)];
@@ -215,7 +212,7 @@ fn render(j: &Jelly, snap: &Snapshot, out: &mut [u32], cw: i32, ch: i32, ox: f32
     }
 }
 
-/// Fills one triangle with the picture, mapped flatly across it and sampled smoothly.
+/// Fills one triangle: affine texture mapping with bilinear sampling.
 fn triangle(p: [(f32, f32); 3], t: [(f32, f32); 3], snap: &Snapshot, out: &mut [u32], cw: i32, ch: i32) {
     let area = (p[1].0 - p[0].0) * (p[2].1 - p[0].1) - (p[2].0 - p[0].0) * (p[1].1 - p[0].1);
     if area.abs() < 1e-3 {
@@ -226,13 +223,13 @@ fn triangle(p: [(f32, f32); 3], t: [(f32, f32); 3], snap: &Snapshot, out: &mut [
     let x1 = p.iter().map(|q| q.0).fold(f32::MIN, f32::max).ceil().min(cw as f32 - 1.0) as i32;
     let y0 = p.iter().map(|q| q.1).fold(f32::MAX, f32::min).floor().max(0.0) as i32;
     let y1 = p.iter().map(|q| q.1).fold(f32::MIN, f32::max).ceil().min(ch as f32 - 1.0) as i32;
-    // Edge functions, as planes: w_i(x, y) = a_i x + b_i y + c_i, scaled so they add up to 1.
+    // edge functions as planes: w_i(x, y) = a_i x + b_i y + c_i, normalised so they sum to 1
     let edge = |a: (f32, f32), b: (f32, f32)| {
         let (ea, eb) = ((a.1 - b.1) * inv, (b.0 - a.0) * inv);
         (ea, eb, (a.0 * b.1 - a.1 * b.0) * inv)
     };
     let e = [edge(p[1], p[2]), edge(p[2], p[0]), edge(p[0], p[1])];
-    // The picture's coordinates as planes over the screen.
+    // texture coords as planes over the screen
     let plane = |f: fn((f32, f32)) -> f32| {
         let (a, b, c) = (f(t[0]), f(t[1]), f(t[2]));
         (a * e[0].0 + b * e[1].0 + c * e[2].0, a * e[0].1 + b * e[1].1 + c * e[2].1, a * e[0].2 + b * e[1].2 + c * e[2].2)
@@ -255,7 +252,7 @@ fn triangle(p: [(f32, f32); 3], t: [(f32, f32); 3], snap: &Snapshot, out: &mut [
     }
 }
 
-/// The picture's colour between pixels, blended from the four around it.
+/// Bilinear sample from the four surrounding pixels.
 #[inline]
 fn sample(s: &Snapshot, u: f32, v: f32) -> u32 {
     let u = u.clamp(0.0, (s.w - 1) as f32);
@@ -298,7 +295,7 @@ mod win {
         WM_SIZING, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
     };
 
-    /// Draws the window's full content, including the web page, into the picture.
+    /// Includes the webview content (plain PrintWindow gives a black page).
     const PW_RENDERFULLCONTENT: u32 = 2;
 
     pub unsafe fn install(h: isize) {
@@ -319,7 +316,7 @@ mod win {
                 let mut c = POINT { x: 0, y: 0 };
                 GetCursorPos(&mut c);
                 *CURSOR.lock().unwrap() = (c.x - r.left, c.y - r.top);
-                // Grabbed again while it still settles: the picture on screen is reused.
+                // grabbed again while it's still settling: keep using the snapshot that's on screen
                 if ENABLED.load(Ordering::Relaxed) && !RUNNING.load(Ordering::Acquire) && IsZoomed(h) == 0 && IsIconic(h) == 0 {
                     let t = Instant::now();
                     if let Some(s) = capture(h) {
@@ -331,7 +328,7 @@ mod win {
                     }
                 }
             }
-            // A resize, not a move.
+            // resize, not a move
             WM_SIZING => *PENDING.lock().unwrap() = None,
             WM_MOVING => {
                 let (gx, gy) = *CURSOR.lock().unwrap();
@@ -394,12 +391,11 @@ mod win {
         DeleteObject(c.bmp);
     }
 
-    /// Takes the window's picture, rounded like a Windows 11 window and as see-through as the
-    /// window is set to be.
+    /// Snapshots the window, with Windows 11 rounded corners and the window's current opacity.
     unsafe fn capture(h: HWND) -> Option<Snapshot> {
         let r = rect(h);
         let (fw, fh) = (r.right - r.left, r.bottom - r.top);
-        // Only the part that shows on screen.
+        // only the part that's actually visible on screen
         let mut v = RECT { left: 0, top: 0, right: 0, bottom: 0 };
         if DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS as _, &mut v as *mut RECT as *mut c_void, std::mem::size_of::<RECT>() as u32) < 0 || v.right <= v.left {
             v = r;
@@ -413,7 +409,7 @@ mod win {
         let n = (fw * fh) as usize;
         let mut ok = PrintWindow(h, c.dc, PW_RENDERFULLCONTENT) != 0;
         let px = std::slice::from_raw_parts(c.bits, n);
-        // Some setups give back an empty picture; then it's copied from the screen instead.
+        // some setups hand back an empty bitmap; copy from the screen instead
         if !ok || px.iter().step_by(97).all(|p| p & 0x00ff_ffff == 0) {
             let screen = GetDC(null_mut());
             ok = BitBlt(c.dc, 0, 0, fw, fh, screen, r.left, r.top, SRCCOPY) != 0;
@@ -433,7 +429,7 @@ mod win {
         for y in 0..hh {
             for x in 0..w {
                 let mut a = alpha;
-                // Rounded corners.
+                // rounded corners
                 let cx = if (x as f32) < radius { radius - x as f32 - 0.5 } else if (x as f32) >= w as f32 - radius { x as f32 + 0.5 - (w as f32 - radius) } else { 0.0 };
                 let cy = if (y as f32) < radius { radius - y as f32 - 0.5 } else if (y as f32) >= hh as f32 - radius { y as f32 + 0.5 - (hh as f32 - radius) } else { 0.0 };
                 if cx > 0.0 && cy > 0.0 {
@@ -475,7 +471,7 @@ mod win {
             lpszClassName: class.as_ptr(),
             ..std::mem::zeroed()
         };
-        // Already registered after the first drag: that's fine.
+        // fails harmlessly if it's already registered from an earlier drag
         RegisterClassExW(&wc);
         let r = rect(main);
         let mut jelly = Jelly::new(snap.w, snap.h, (r.left + snap.ox) as f32, (r.top + snap.oy) as f32, INTENSITY.load(Ordering::Relaxed));
@@ -490,7 +486,7 @@ mod win {
             r.top + snap.oy - margin,
             cw,
             ch,
-            // Not owned by the main window: cloaking the window would hide it too.
+            // no owner: if the main window owned it, cloaking the main window would hide this too
             null_mut(),
             null_mut(),
             module,
@@ -526,7 +522,7 @@ mod win {
             carry = (carry + (now - last).as_secs_f32()).min(0.1);
             last = now;
             let r = rect(main);
-            // Snapped, maximized or moved to a screen with another scale: the picture no longer fits.
+            // snapped, maximized or moved to a monitor with a different scale: the snapshot doesn't fit anymore
             if (r.right - r.left, r.bottom - r.top) != snap.full || IsIconic(main) != 0 {
                 break;
             }
@@ -535,8 +531,8 @@ mod win {
             let dragging = DRAGGING.load(Ordering::Relaxed);
             if !dragging && released.is_none() {
                 released = Some(now);
-                // Let go: the real window comes back at once under the picture, almost fully
-                // see-through, so it can be clicked, scrolled and typed in while the jelly settles.
+                // Released: the real window comes back right away underneath, almost fully
+                // transparent, so it can be clicked, scrolled and typed in while the jelly settles.
                 if cloaked {
                     crate::window::veil(main as isize, true);
                     cloak(main, false);
@@ -578,7 +574,7 @@ mod win {
                 std::thread::sleep(Duration::from_millis(8));
             }
         }
-        // The real window comes back before the picture goes, so nothing flickers.
+        // real window back before the overlay goes, so nothing flickers
         if cloaked {
             cloak(main, false);
         }

@@ -1,6 +1,6 @@
-//! Official builds can include the app's own developer logins, so people just log in to YouTube,
-//! Kick and the alert services. The values come from the private `.env.local` at the project root
-//! (never committed) and are baked into the exe, as the Electron version did.
+//! Official builds can bake in our own developer app credentials, so people can just log in to
+//! YouTube, Kick and the alert services. Values come from the private `.env.local` in the project
+//! root (never committed), same as the Electron build did.
 
 fn main() {
     let env_file = std::path::Path::new("../.env.local");
@@ -12,7 +12,7 @@ fn main() {
                 continue;
             }
             let Some((key, value)) = line.split_once('=') else { continue };
-            // Names from the Electron version (MAIN_VITE_...) work unchanged.
+            // the Electron build's MAIN_VITE_... names still work
             let name = key.trim().trim_start_matches("MAIN_VITE_");
             let value = value.trim().trim_matches('"');
             if !value.is_empty() && name.chars().all(|c| c.is_ascii_uppercase() || c == '_') {

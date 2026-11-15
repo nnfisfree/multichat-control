@@ -2,14 +2,14 @@ import type { Platform, StreamEvent } from '../shared/types'
 import { money, text, tier } from './integrations/alerts'
 
 /**
- * Streamer.bot's test triggers (right-click a trigger → Test, or an action run with a test
- * trigger) fire the same events as the real thing, marked isTest. Real events already reach the
- * app straight from the platforms, so only the tests are turned into events here.
+ * Streamer.bot test triggers (right-click a trigger > Test, or running an action with a test
+ * trigger) fire the same events as the real thing, marked isTest. Real events already reach us
+ * directly from the platforms, so only the test ones get turned into events here.
  */
 
 const PLATFORM: Record<string, Platform> = { twitch: 'twitch', youtube: 'youtube', kick: 'kick' }
 
-/** The events asked for from each Streamer.bot category. */
+// events we subscribe to in each SB category
 export const SB_TEST_EVENTS: Record<string, string[]> = {
   Twitch: ['Follow', 'Cheer', 'Sub', 'ReSub', 'GiftSub', 'GiftBomb', 'Raid', 'RewardRedemption'],
   Kick: ['Follow', 'Subscription', 'Resubscription', 'GiftSubscription', 'MassGiftSubscription', 'RewardRedemption', 'KicksGifted'],
@@ -24,7 +24,7 @@ const num = (...vs: unknown[]): number => {
   return 0
 }
 
-/** A user's shown name, wherever this event keeps it. */
+/** Display name, wherever this particular event keeps it. */
 function who(...us: any[]): string {
   for (const u of us) {
     if (!u) continue
@@ -38,7 +38,7 @@ const isTest = (d: any): boolean => d?.isTest === true || d?.meta?.isTest === tr
 
 let seq = 0
 
-/** One Streamer.bot event as a test event, or null when it's real or not one the app shows. */
+/** null for real events, or ones we don't show. */
 export function sbTestEvent(source: string, type: string, d: any): StreamEvent | null {
   const platform = PLATFORM[source.toLowerCase()]
   if (!platform || !d || !isTest(d)) return null
@@ -60,7 +60,7 @@ export function sbTestEvent(source: string, type: string, d: any): StreamEvent |
       return { ...base, type: 'sub', actor: who(user), text: 'subscribed', amount: subTier }
     case 'twitch.resub':
     case 'kick.resubscription':
-      return { ...base, type: 'sub', actor: who(user), text: months > 1 ? `resubscribed (${months} months)` : 'resubscribed', amount: subTier, message: text(d.text) }
+      return { ...base, type: 'sub', actor: who(user), text: months > 1 ? `resubscribed (${months} months)` : 'resubscribed', amount: subTier, message: text(d.text), months: months || undefined }
     case 'twitch.giftsub':
     case 'kick.giftsubscription': {
       const to = d.recipient ?? d.recipients?.[0] ?? d.giftee
@@ -88,7 +88,7 @@ export function sbTestEvent(source: string, type: string, d: any): StreamEvent |
     case 'youtube.newsponsor':
       return { ...base, type: 'sub', actor: who(user), text: 'became a member', amount: text(d.levelName) }
     case 'youtube.membermilestone':
-      return { ...base, type: 'sub', actor: who(user), text: months > 1 ? `is a member (${months} months)` : 'is a member', amount: text(d.levelName), message: text(d.message) }
+      return { ...base, type: 'sub', actor: who(user), text: months > 1 ? `is a member (${months} months)` : 'is a member', amount: text(d.levelName), message: text(d.message), months: months || undefined }
     case 'youtube.membershipgift': {
       const n = num(d.count, d.total, d.giftCount)
       return { ...base, type: 'gift', big: n >= 5, actor: who(user), text: `gifted ${n || 'some'} memberships` }

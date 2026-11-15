@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState, type JSX } from 'react'
+import type { ObsStats } from '../../shared/types'
+import { useStore } from '../lib/store'
+import { ObsLogo } from './Icons'
 
-/** A clock that ticks every second while something is live or recording. */
+/** Ticks every second while we're live or recording. */
 function useSecondTick(on: boolean): number {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     if (!on) return
-    // Ticks on the second boundary of the uptime, so it never skips or stalls.
+    // poll at 250ms so the display flips right on the second boundary, never skips or stalls
     const t = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(t)
   }, [on])
   return now
 }
 
-/** OBS reports the uptime every 2 seconds; between reports it keeps counting here. */
-/**
- * A fresh report can be a fraction behind the local count, so the shown uptime never steps
- * back; a big drop means a new stream started, and then it resets.
- */
+// OBS reports uptime every 2s and we keep counting locally in between. A fresh report can be a hair
+// behind our local count, so never step backwards; a big drop means a new stream, so reset then.
 let lastUptime = 0
 const running = (durationMs: number, at: number, now: number): number => {
   const t = durationMs + Math.max(0, Math.min(now - at, 10000))
@@ -24,9 +24,6 @@ const running = (durationMs: number, at: number, now: number): number => {
   lastUptime = t
   return t
 }
-import type { ObsStats } from '../../shared/types'
-import { useStore } from '../lib/store'
-import { ObsLogo } from './Icons'
 
 const clock = (ms: number): string => {
   const s = Math.floor(ms / 1000)
@@ -38,7 +35,7 @@ const pct = (part: number, total: number): string => (total ? `${((part / total)
 const mib = (bytes: number): string => `${(bytes / 1048576).toLocaleString(undefined, { maximumFractionDigits: 1 })} MiB`
 const kbps = (n?: number): string => (n === undefined ? '…' : `${n.toLocaleString()} kb/s`)
 
-/** Dropped frames above 1% are worth a look, above 5% the stream is struggling. */
+// >1% dropped is worth a look, >5% means the stream is struggling
 const dropTone = (s: ObsStats): string => {
   const r = s.stream.total ? s.stream.dropped / s.stream.total : 0
   return s.stream.reconnecting || r > 0.05 ? 'bad' : r > 0.01 ? 'warn' : ''
@@ -46,7 +43,7 @@ const dropTone = (s: ObsStats): string => {
 
 const size = (r: { width: number; height: number }): string => `${r.width}×${r.height}`
 
-/** Canvas, scaled output and, if the encoder rescales again, what actually reaches the stream. */
+/** Canvas, scaled output, and what actually goes to the stream if the encoder rescales again. */
 function resolutionRows(s: ObsStats): [string, string][] {
   const o = s.output
   if (!o) return []
@@ -96,7 +93,7 @@ function Details({ s, now }: { s: ObsStats; now: number }): JSX.Element {
   )
 }
 
-/** A one-line summary of OBS's stats, shown where the connection bar was. Click for everything. */
+/** One-line OBS summary under the message box. Click for the full stats. */
 export function ObsStrip({ onFix }: { onFix?(): void }): JSX.Element | null {
   const obs = useStore((s) => s.obs)
   const enabled = useStore((s) => s.settings?.obsEnabled ?? false)
@@ -114,7 +111,7 @@ export function ObsStrip({ onFix }: { onFix?(): void }): JSX.Element | null {
   if ((!enabled && !demo) || obs.status === 'off') return null
   const s = obs.stats
   if (obs.status !== 'connected' || !s) {
-    // Not connected yet: one click opens the OBS settings to fix it.
+    // not connected yet; clicking opens the OBS settings
     return (
       <button className={obs.status === 'error' ? 'obs-strip muted bad' : 'obs-strip muted'} title={`${obs.detail ?? 'Waiting for OBS'}. Click to open the OBS settings.`} onClick={onFix}>
         <ObsLogo size={13} /><span className="obs-dot" /> {obs.status === 'error' ? 'OBS: check password' : 'Waiting for OBS…'}

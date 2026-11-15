@@ -10,8 +10,8 @@ const HELD_DONE: Record<Exclude<HeldInfo['status'], 'pending'>, string> = {
 }
 
 /**
- * The moderator's strip above a held or flagged message: why it stands out, and the buttons to
- * deal with it. Held messages get Allow and Deny; flagged ones get Delete and Ban.
+ * Mod strip above a held or flagged message: why it's flagged and what you can do about it. Held
+ * messages get Allow/Deny, flagged ones get Delete/Ban.
  */
 export function ModBar({ m }: { m: ChatMessage }): JSX.Element | null {
   const confirm = useStore((s) => s.settings?.confirmActions ?? true)

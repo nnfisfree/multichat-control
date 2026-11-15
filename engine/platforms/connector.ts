@@ -2,12 +2,12 @@ import type {
   ActionDef, ActionResult, ChannelStats, ChatMessage, ConnectionState, Emote, HypeTrain, CommandOutcome, ModerationRequest, PinnedMessage, Platform, RaidInfo, StreamEvent, UserEntry, UserProfile, UsersInfo
 } from '../../shared/types'
 
-/** How a connector reports to the hub. */
+/** What a connector gets from the hub. */
 export interface ConnectorContext {
   message(m: ChatMessage): void
   /**
-   * Changes a message already in chat, such as a held message being allowed. Returns false when
-   * no message has that id (yet).
+   * Updates a message that's already in chat (e.g. a held message got allowed). false if there's
+   * no message with that id (yet).
    */
   patch(messageId: string, change: (m: ChatMessage) => Partial<ChatMessage>): boolean
   event(e: StreamEvent): void
@@ -15,21 +15,19 @@ export interface ConnectorContext {
   purged(userId?: string): void
   pronoun(login: string, label: string): void
   hype(train: HypeTrain | null): void
-  /** Quick actions changed, such as a reward being turned on or off. */
+  /** Quick actions changed, e.g. a reward got turned on or off. */
   actionsChanged(): void
-  /** The pinned chat message changed. */
   pinned?(p: PinnedMessage | null): void
-  /** An outgoing raid started, or went, or was cancelled. */
+  /** Our raid started, went out, or got cancelled. */
   raid?(r: RaidInfo | null): void
   status(s: Omit<ConnectionState, 'platform'>): void
 }
 
 export interface Connector {
   readonly platform: Platform
-  /** Connects using stored credentials, or reports what is missing. */
+  /** Connects with stored credentials, or reports what's missing. */
   start(): Promise<void>
   stop(): Promise<void>
-  /** Runs the interactive login. */
   login(): Promise<void>
   logout(): Promise<void>
   send(text: string, replyTo?: string): Promise<void>
@@ -37,16 +35,16 @@ export interface Connector {
   emotes(): Promise<Emote[]>
   actions(): Promise<ActionDef[]>
   runAction(actionId: string, args: Record<string, string>): Promise<ActionResult>
-  /** Reloads emotes after the provider settings change. */
+  /** Reload emotes after the provider settings changed. */
   refreshEmotes(): Promise<void>
-  /** Live state, viewer count and, where the platform has one, its list of users in chat. */
+  /** Live state, viewer count, and the platform's chatter list where it has one. */
   users?(): Promise<UsersInfo>
-  /** The channel's followers and subscribers, as far as the platform shares them. */
+  /** Whatever follower/sub counts the platform shares. */
   stats?(): Promise<ChannelStats>
-  /** Account details for the user card, as far as the platform shares them. */
+  /** Whatever account info the platform shares, for the user card. */
   profile?(user: UserEntry): Promise<UserProfile>
-  /** Runs a typed chat command; null when the command is not one this platform knows. */
+  /** Typed chat command. null if this platform doesn't know it. */
   command?(text: string): Promise<CommandOutcome | null>
-  /** Allows or denies a message the platform's AutoMod held (Twitch). */
+  /** Allow/deny an AutoMod hold (Twitch only). */
   automod?(messageId: string, allow: boolean): Promise<ActionResult>
 }

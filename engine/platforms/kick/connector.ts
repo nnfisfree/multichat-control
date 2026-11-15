@@ -11,7 +11,7 @@ import { KickSocket } from './socket'
 
 const API = 'https://api.kick.com/public/v1'
 
-/** A non-negative whole number from Kick's API, or undefined. */
+// Kick's numbers are sometimes strings or junk; only accept non-negative integers.
 const count = (v: unknown): number | undefined => {
   const n = typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : v
   return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : undefined
@@ -31,13 +31,13 @@ export class KickConnector implements Connector {
   private run = 0
   constructor(private ctx: ConnectorContext) {}
 
-  /** A request as the user's Kick account; the core adds and renews the token. */
+  /** Authenticated call to Kick's public API. Rust adds and refreshes the token. */
   private async api(method: string, path: string, body?: unknown): Promise<any> {
     if (!this.loggedIn) throw new Error('Not logged in to Kick.')
     return api('kick', method, API + path, body)
   }
 
-  /** The core found the login gone (revoked or expired): stop and ask for a new one. */
+  /** Rust found the token revoked or expired: stop and ask for a new login. */
   async loginEnded(): Promise<void> {
     if (!this.loggedIn) return
     this.loggedIn = false
@@ -85,7 +85,7 @@ export class KickConnector implements Connector {
     }
   }
 
-  /** Kick's official API keeps no event history, but the channel page lists past streams. */
+  /** The public API has no event history, but the channel page lists past streams. */
   private loadPast(d: KickChannel): void {
     for (const v of d.past) {
       this.ctx.event({ id: `kick-stream-${v.id}-on`, platform: 'kick', ts: v.start, type: 'stream', text: 'Stream went live', subject: v.title || undefined, details: {}, history: true })
@@ -115,8 +115,8 @@ export class KickConnector implements Connector {
   private viewerCache: { at: number; info: UsersInfo } | null = null
 
   /**
-   * Picture from Kick's official API; follow and sub details from the data Kick's own website
-   * uses, when Kick lets it through. Either part can be missing.
+   * Avatar from the official API; follow/sub info from the internal endpoints kick.com itself uses,
+   * when Cloudflare lets us through. Either half can be missing.
    */
   async profile(user: UserEntry): Promise<UserProfile> {
     const official = (await this.api('GET', `/users?id=${encodeURIComponent(user.id)}`).catch(() => null))?.data?.[0]
@@ -134,13 +134,12 @@ export class KickConnector implements Connector {
     }
   }
 
-  /** Kick lists no viewers, only how many are watching. */
-  /** Followers last read from Kick's channel page, which changes slowly and is read sparingly. */
+  // Follower count from the channel page. Changes slowly, so it's only re-read every few minutes.
   private followers: { at: number; n?: number } = { at: 0 }
 
   /**
-   * Subscribers come from Kick's API. Kick's API has no follower count, so that comes from the same
-   * public channel page the chat connection reads.
+   * Subs come from the API. The API has no follower count at all, so that one comes from the same
+   * public channel page the chat socket uses.
    */
   async stats(): Promise<ChannelStats> {
     if (!this.loggedIn) return {}
@@ -162,6 +161,7 @@ export class KickConnector implements Connector {
     return this.followers.n
   }
 
+  /** Kick doesn't list who's watching, only how many. */
   async users(): Promise<UsersInfo> {
     if (!this.loggedIn) return { live: false }
     if (this.viewerCache && Date.now() - this.viewerCache.at < 30000) return this.viewerCache.info

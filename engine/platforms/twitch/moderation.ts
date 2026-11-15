@@ -2,10 +2,10 @@ import type { EmoteLookup } from '../../../shared/parts'
 import type { ChatMessage, HeldInfo, MessageFlag } from '../../../shared/types'
 import { fragmentsToParts, type CheerMap } from './normalize'
 
-/** The row id of a held message, kept apart from the id it gets in chat once it is allowed. */
+/** Held messages get their own row id; once allowed, the real chat message arrives with its own. */
 export const heldRowId = (messageId: string): string => `held:${messageId}`
 
-/** AutoMod's category names, in plain words. Unknown ones are tidied up and shown as they are. */
+// AutoMod category names, made readable. Anything unknown gets tidied up and shown as is.
 const CATEGORY: Record<string, string> = {
   aggressive: 'Aggression', aggression: 'Aggression', bullying: 'Bullying', disability: 'Disability',
   sexuality: 'Sexuality or gender', sexuality_sex_or_gender: 'Sexuality or gender', misogyny: 'Misogyny',
@@ -18,7 +18,7 @@ const category = (c: unknown): string => {
   return CATEGORY[key] ?? (key ? key.replace(/_/g, ' ').replace(/^./, (x) => x.toUpperCase()) : 'Unknown')
 }
 
-/** Why a message was held, from automod.message.hold (version 2). */
+/** Reason for the hold, from automod.message.hold v2. */
 function heldReason(e: any): string {
   if (e.reason === 'blocked_link') return 'Blocked link'
   if (e.reason === 'blocked_term') {
@@ -29,7 +29,7 @@ function heldReason(e: any): string {
   return `AutoMod: ${category(e.automod?.category ?? e.category)}${level ? ` (level ${level})` : ''}`
 }
 
-/** A held message as a chat row that only the moderator sees, waiting for Allow or Deny. */
+/** Held message as a mod-only chat row with Allow/Deny. */
 export function heldMessage(e: any, third: EmoteLookup, cheers: CheerMap): ChatMessage {
   return {
     id: heldRowId(String(e.message_id)),
@@ -42,7 +42,7 @@ export function heldMessage(e: any, third: EmoteLookup, cheers: CheerMap): ChatM
   }
 }
 
-/** The outcome in automod.message.update. Twitch's docs write it both "Approved" and "approved". */
+/** Status from automod.message.update. Twitch writes it as both "Approved" and "approved". */
 export function heldStatus(status: unknown): HeldInfo['status'] | null {
   switch (String(status ?? '').toLowerCase()) {
     case 'approved': case 'allowed': return 'allowed'
@@ -52,7 +52,7 @@ export function heldStatus(status: unknown): HeldInfo['status'] | null {
   }
 }
 
-/** Twitch's warning for a message from a suspicious user (channel.suspicious_user.message). */
+/** channel.suspicious_user.message -> flag for the chat row. */
 export function suspiciousFlag(e: any): MessageFlag | null {
   const types: string[] = Array.isArray(e.types) ? e.types : []
   const status = String(e.low_trust_status ?? '')
@@ -73,8 +73,8 @@ export function suspiciousFlag(e: any): MessageFlag | null {
 }
 
 /**
- * A suspicious user's message built from the warning itself, for when Twitch doesn't also send it
- * as a normal chat message (restricted users' messages reach only moderators).
+ * Builds the chat row from the warning itself, for when the normal chat message never comes
+ * (restricted users' messages only reach mods).
  */
 export function suspiciousMessage(e: any, flag: MessageFlag, third: EmoteLookup, cheers: CheerMap): ChatMessage {
   return {
