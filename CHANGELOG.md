@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+**Fixed**
+
+- Switching from a light skin (Butterfly, Catppuccin Latte, Everforest Light) back to a dark one left menus, cards and panels white. Dark skins get their dark fills back now.
+
 ## 0.3.2
 
 **New**

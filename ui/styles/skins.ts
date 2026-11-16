@@ -211,7 +211,10 @@ export const skinById = (id: string | undefined): Skin => SKINS.find((s) => s.id
 /** Applies a skin's colours to the page. Leaves the edge gradient alone. */
 export function applySkin(id: string | undefined): void {
   const root = document.documentElement
-  for (const [k, v] of Object.entries(skinById(id).vars)) root.style.setProperty(k, v)
+  const vars = skinById(id).vars
+  // drop extras a previous skin set (light skins add --surface etc.) so the stylesheet defaults come back
+  for (const s of SKINS) for (const k of Object.keys(s.vars)) if (!(k in vars)) root.style.removeProperty(k)
+  for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
   root.dataset.skin = skinById(id).id
   root.dataset.tone = skinById(id).light ? 'light' : 'dark'
 }

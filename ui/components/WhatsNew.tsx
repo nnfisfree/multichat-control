@@ -1,6 +1,6 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { updateSettings, useStore } from '../lib/store'
-import { BmcLogo, Icon } from './Icons'
+import { Icon } from './Icons'
 import type { SettingsFocus } from './Settings'
 
 /**
@@ -21,35 +21,9 @@ interface NewThing {
 const NEW_THINGS: NewThing[] = [
   {
     icon: <Icon.palette />,
-    title: 'Three light skins',
-    text: 'Butterfly, Catppuccin Latte and Everforest Light: dark text on a pale window, for bright rooms and daytime streams. New installs now start on Sweet; your current skin stays as it is.',
-    show: { cat: 'appearance', target: 'skins-settings' }
-  },
-  {
-    icon: <Icon.events />,
-    title: 'Calmer event pop-ups',
-    text: 'One pop-up at a time, at the top of chat. A wave of follows becomes one card ("Sam and 5 others" ×6), big cheers stay a little longer, and pop-ups wait while a panel is open over chat.',
-    show: { cat: 'chat', target: 'popup-settings' }
-  },
-  {
-    icon: <Icon.gem />,
-    title: 'Resub months and tips at a glance',
-    text: 'Resubs and memberships show their months (SUB ×14) and streak. Tips get a TIP badge with the logo of the service they came through: StreamElements, Streamlabs, Buy Me a Coffee or the platform itself.'
-  },
-  {
-    icon: <BmcLogo size={20} />,
-    title: 'Support the project',
-    text: 'A small Buy Me a Coffee button now sits under the message box. It is entirely optional, and it keeps the app free.'
-  },
-  {
-    icon: <Icon.bolt />,
-    title: "Twitch's Power-ups, as on Twitch",
-    text: 'Message Effects get their animated RGB outline, Gigantify an Emote pops the emote in big, and On-Screen Celebrations sparkle. Highlight My Message shows once, without an extra card.'
-  },
-  {
-    icon: <Icon.check />,
-    title: 'Fixes',
-    text: 'Tips from StreamElements, Streamlabs and Buy Me a Coffee now show on every tab, Buy Me a Coffee messages no longer end in "<br>" and a name, and pop-ups stay clear of the raid bar and Hype Train.',
+    title: 'Dark skins after a light one',
+    text: 'Switching from a light skin back to a dark one left menus and cards white. They go back to their dark colours now.',
+    show: { cat: 'appearance', target: 'skins-settings' },
     fixed: true
   }
 ]
