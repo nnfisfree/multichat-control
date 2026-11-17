@@ -584,6 +584,14 @@ pub fn sb_auth(salt: String, challenge: String) -> String {
     challenge_answer("streamerbot.password", &salt, &challenge)
 }
 
+/// Streamlabs Desktop has no challenge: its Remote Control API wants the token itself. Rust builds
+/// the whole auth request, so the webview only ever passes it straight to the socket.
+#[tauri::command]
+pub fn slobs_auth(id: u32) -> Option<String> {
+    let token = secrets::get("streamlabs.token")?;
+    Some(serde_json::json!({ "jsonrpc": "2.0", "id": id, "method": "auth", "params": { "resource": "TcpServerService", "args": [token] } }).to_string())
+}
+
 // ---- for the rest of the Rust side (YouTube's gRPC stream) ----
 
 /// A token that's valid right now, refreshed first if it's about to expire. Never leaves Rust.

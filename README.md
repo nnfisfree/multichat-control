@@ -19,7 +19,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/chat.png" width="760" alt="NoName's Multichat Control: Twitch, YouTube and Kick chat merged in one window in the Sweet skin, with subs, a Super Chat and tips as event cards, an event pop-up at the top of chat, and the support button, OBS stats and clock under the message box" />
+<img src="docs/media/chat.png" width="760" alt="NoName's Multichat Control: Twitch, YouTube and Kick chat merged in one window in the Sweet skin, with event cards in their platform's colour, a raid pop-up at the top of chat, moderation warnings, and the live bitrate graph opened from the stream stats under the message box" />
 
 <sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -64,7 +64,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td width="50%" valign="top">
 
 ### ⚡ Events and history
-- Subs, gifts, raids, redemptions, follows and donations as coloured cards in chat
+- Subs, gifts, raids, redemptions, follows and donations as cards in chat, **in the official colour of their platform**: purple for Twitch, red for YouTube, green for Kick. Tips keep the colour of the service they came through
 - **Event pop-ups** at the top of chat, one at a time, gone after the time you pick (on by default, 6 seconds). Hover to keep one, click to close it
 - **A wave of follows becomes one pop-up** ("Sam and 5 others" ×6), big cheers stay longer, and pop-ups wait while a panel covers chat
 - **Resub months at a glance**: SUB ×14 on the pop-up, months and streak in Recent events
@@ -118,7 +118,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td valign="top">
 
 ### 🎨 Skins and emotes
-- **12 skins**: Sweet (the default), POS Club, Myst Bourne, Dracula, Catppuccin Mocha, Tokyo Night, Kanagawa, Rosé Pine and OLED Black, plus three light ones: Butterfly, Catppuccin Latte and Everforest Light
+- **12 skins** in a compact picker, split into dark and light, with a big preview of the one you point at: Sweet (the default), POS Club, Myst Bourne, Dracula, Catppuccin Mocha, Tokyo Night, Kanagawa, Rosé Pine and OLED Black, plus three light ones: Butterfly, Catppuccin Latte and Everforest Light
 - **Wobbly window**, inspired by KDE Plasma on Linux: it bends like jelly while you drag it (optional, with an intensity slider)
 - **Remembers its size and place**, monitor included
 - Picker that follows the active tab, with search
@@ -130,12 +130,14 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td valign="top">
 
 ### 📈 Stream health and updates
-- **OBS stats under the message box**: live, uptime, bitrate, dropped frames, FPS and CPU
-- Click for everything: encoder, canvas and output resolution, render and encoding lag
+- **Stream stats under the message box** from **OBS Studio, Streamlabs Desktop (SLOBS) or Meld Studio**: live, uptime, bitrate, dropped frames, FPS and CPU
+- **Point at them for a live graph** of the last 60 seconds, like a system monitor: bitrate, FPS, CPU or dropped frames, one click to switch
+- Click for everything: encoder, canvas and output resolution, render and encoding lag, graph included
+- The app's icon comes alive while you're live: the OBS logo spins, SLOBS hops and Meld wobbles
 - A status menu for every connection, with reconnect and log in
 - **Followers and subscribers** of every connected platform, in the title bar
 - **A clock** beside the OBS stats: point at it for the date. Everything follows the skin and can be hidden.
-- A small, optional **Support the project** button (Buy Me a Coffee) under the message box
+- A small, optional **Support the project** button (Buy Me a Coffee) under the message box, and a **Wall of Supporters** on the Support page that updates on its own
 - Installs new versions in one click, checked against GitHub's checksum, and shows **what's new** after each update
 
 </td>
@@ -146,7 +148,7 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 
 <table>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/popups.gif" alt="Event pop-ups appearing one at a time at the top of chat: a Super Chat with its TIP badge, a Power-up, a resub marked ×7, a follow, a Buy Me a Coffee membership, and two new members grouped into one card marked ×2, each with a bar that drains" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
+<td align="center" colspan="2"><img src="docs/media/popups.gif" alt="Event pop-ups appearing one at a time at the top of chat, each in the colour of where it came from: YouTube memberships and Super Chats in red, Kick subs in green, Twitch gifts in purple and Buy Me a Coffee tips in yellow, each with a bar that drains" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/media/moderation.png" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and a spam bot offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots, one click away</b></td>
@@ -157,7 +159,8 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td align="center"><img src="docs/media/streamerbot.png" alt="Typing /sb S suggests the Streamer.bot actions that match, in the commands list" /><br /><b>Run Streamer.bot actions from the message box</b></td>
 </tr>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/skins.png" width="50%" alt="Settings, Appearance: twelve skin cards, from Sweet and POS Club to the light Butterfly, Catppuccin Latte and Everforest Light skins" /><br /><b>Twelve skins, three of them light, one click each</b></td>
+<td align="center"><img src="docs/media/stats.png" alt="The full stream stats: encoder, canvas and output resolution, CPU, memory, FPS, render and encoding lag, and stream and recording status, with a live bitrate graph of the last 60 seconds and tabs for FPS, CPU and dropped frames" /><br /><b>Stream stats with a live graph, from OBS, Streamlabs Desktop or Meld</b></td>
+<td align="center"><img src="docs/media/skins.png" alt="Settings, Appearance: a big preview of the Butterfly skin above compact skin chips split into Dark and Light, from Sweet and POS Club to Catppuccin Latte and Everforest Light" /><br /><b>Twelve skins, three of them light, one click each</b></td>
 </tr>
 </table>
 
@@ -186,7 +189,10 @@ Open the gear icon and click **Log in** beside each platform you stream on. You 
 - **The status menu** next to the gear shows every connection. Click a row to reconnect or log in.
 - **Users in Chat, held messages, suspicious users and some commands** need a newer Twitch login. If the app asks, click **Log in again** once.
 - **Held messages:** these appear only if AutoMod is on for your channel (Twitch's Creator Dashboard → Settings → Moderation). To catch spam bots' links, also turn on **Block hyperlinks** there.
-- **OBS stats (optional):** in OBS, open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info**. Then paste it in **Settings → Connections → OBS Studio** (Show OBS Stats is on by default). The app only reads from OBS and never changes anything there.
+- **Stream stats (optional):** pick your app in **Settings → Connections → Streaming app** (Show Stream Stats is on by default). The app only reads from it and never changes anything there.
+  - **OBS Studio:** open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info** into the app.
+  - **Streamlabs Desktop (SLOBS):** open **Settings → Remote Control**, click the QR code, then **Show details**, and copy the **API Token** into the app. Streamlabs shares CPU, FPS, bitrate and dropped frames, but not the encoder or render times.
+  - **Meld Studio:** nothing to set up, just keep Meld open. Meld only shares whether you're live or recording, so there's a live timer but no graph.
 - **Streamer.bot (optional):** in Streamer.bot, open **Servers/Clients → WebSocket Server**, tick **Auto Start** and click **Start Server** (address `127.0.0.1`, port `8080`, endpoint `/`). Then turn on **Settings → Connections → Streamer.bot → Use Streamer.bot**. If Authentication is on in Streamer.bot, paste its password there too.
 - **Skins:** **Settings → Appearance**. The window edge keeps its glow in every skin.
 - **Wobbly window:** **Settings → Appearance → Window**, with a slider for how much it wobbles.
@@ -349,9 +355,9 @@ The [privacy policy](https://multichat.nonamefound.lol/privacy/) has every detai
 
 - **Privacy policy:** [multichat.nonamefound.lol/privacy](https://multichat.nonamefound.lol/privacy/), with exactly what the app does with your YouTube data.
 - **Your data stays with you.** Settings, logins, saved events and chat history live in a `user-data` folder beside the exe, and the app has no server of its own. **Keep that folder private, because it holds your logins.**
-- **Logins are encrypted** with Windows' own protection for your Windows user, so moving to another PC means logging in again. The OBS and Streamer.bot WebSocket passwords are stored the same way.
+- **Logins are encrypted** with Windows' own protection for your Windows user, so moving to another PC means logging in again. The OBS and Streamer.bot passwords and the Streamlabs Desktop token are stored the same way.
 - **Logins never reach the app's window.** The part of the app written in Rust keeps them, adds them to each request itself, and only ever sends each one to that service's own servers.
-- **OBS is read-only.** The app only reads stats from OBS on this PC; it never switches scenes or starts or stops anything.
+- **Your streaming app is read-only.** The app only reads stats from OBS, Streamlabs Desktop or Meld Studio on this PC; it never switches scenes or starts or stops anything.
 - **Streamer.bot only runs what you ask.** The app reads its list of actions and commands, listens for its test triggers, and runs an action only when you send `/sb`.
 - **Chat history stays on your PC.** The last 5 streams are kept in `user-data`, with deleted messages saved only as deleted. Turn it off under Settings → Chat, or type `/clearhistory` to delete it.
 - **Coming from version 0.1?** Everything carries over: the app reads 0.1's files and logins on first start. From 0.1.2 or earlier, the `nnf-data` folder is renamed to `user-data` too.
@@ -359,7 +365,7 @@ The [privacy policy](https://multichat.nonamefound.lol/privacy/) has every detai
 - **Twitch's panel is isolated.** It's Twitch's own page and can't reach the app or its logins; links to other sites open in your browser.
 - **Chat can't run code.** Messages are displayed as plain text, and links open only in your browser.
 - **Link previews ask the site.** To show a video or clip card, the app asks YouTube, Twitch or Kick for its title and picture, the same way it loads emotes. Turn it off under Settings → Chat → Link Previews. Held and flagged messages never get a preview.
-- **Third parties:** the app contacts the platforms and alert service you connect, GitHub to check for updates, plus BetterTTV, 7TV, FrankerFaceZ and pronouns.alejo.io for the features you leave on. Each can be turned off in Settings.
+- **Third parties:** the app contacts the platforms and alert service you connect, GitHub to check for updates, plus BetterTTV, 7TV, FrankerFaceZ and pronouns.alejo.io for the features you leave on. Each can be turned off in Settings. The Support page loads the supporters list from GitHub and their pictures from GitHub or unavatar.io.
 
 ## Support the project
 
@@ -373,6 +379,8 @@ NoName's Multichat Control is free and open source, and it always will be. It's 
 [![Gadgets Store](https://img.shields.io/badge/Gadgets%20Store-000000?style=for-the-badge&logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd%2BUAAADzUlEQVR4nLxWTUxTQRD%2B%2BnivLXAgAi0aBBRjRSJqNEq9eAATjWev%2Fh80MSbe1HgUjVeNUaOeNDF6lpD4gz9J1RZti1BIpCRUBBL%2BKX9aCu%2B5M3TJo7RNRGCSl327OzvfzDe7s6s6HOteWhQcNQwYABSLEKygGEKoIauGjgaLsyjfkBMrDWYGlbZV8a%2BLlvqW1QCVNmWkymqCIWHcZNuiSpDVotNsm1olk%2BI8C6y48Mmx5YqaCSwrKwtzc3OIxWLQdR2KosBms%2FHccglR04GR8ampKdjtdpRvLodm1RCfiaOntwf%2Fw76SCowii8X%2BYM%2BevWhs%2FAifzw%2Bf148bN25hcnISmqotREm69JkdpT61qehXk8HIyOzsLMZGp1B3%2FSaqdlQh3BlG49s3aGiox%2B%2FpOMbVceTk5GBmZgbT09O8Njc3F5qmYWJigterqspjyfQvAqQJyhkZO3fuGKqqdnK%2FqcmH5y%2BewekswqnTxzEwMACPx4Oy0lJmgaTpaxP6%2BnpRU1OL%2FPx8DAodr8%2FLwIswZKVhfpUsDA8P4vz5C7hz%2By6DETXSQ6%2F3C9zuA%2Bju7kb5lk24cvkK6upu8tylSxfx6PFD%2FIz0orCwEE%2BfPsGZsyfhcDjYThpKdRFdLlpavuP1m1eorTkkcjaB%2Bw%2FuIRgIiAid2LdvPwoKClBcvAFlZWULeSoR0ZaUlCIvL48B3n94lzKPiwBp6xPvHz94cOL4L05%2BR0cHrl27itk4UFN7kKMlne3bK%2BFybUN%2Ffz%2FnbpurApWVlfxPuW1vDy0cobSAZCwej8PhXIfqajcrt7e3sRGnGAuHw5yn4uKNcFcfEIAuQfNnZIucV1RUcPS0pqurS3yRlIBLjgV5t2H9PF3kQPP3Zt519D80NIQ24QDJ4cNHUFS0Ht%2F83xAMBoT%2BJk4BSSjUgmh0lDdMRkDinKrK1q0uziXlIhRq5UNPQtEHA36mfteu3TxGDJAO0b9DHCFd7AO%2FcIJ0ZDnMSClFU%2B12M3g0GkVnZydsVhsbII%2F9fj8bp6NDEolERE5zWF%2BOBUTEmmblNcmStGkMWK1WriTNzUH2fGRkmMco2uxsO0JtrfhCebNnYyw6Js5kP89%2F%2BuThzTQ%2BHhUb7QeXxFSVZtE5lFWBjMuzQxtG3hLUktdEraSK5iXdCSscnXlNRkplLZ2vjxY2IBfKWim9N19X5luE2nQ3StrrSXqbaqEEMVOWaiyVLAFMNm7u%2F8u1lE5XwRqLknhNyffjqogZQ0m05qfcioOZn4mqfEit1TNRMXSjnh%2FhiUixwpKwqROGoev1fwEAAP%2F%2FYS96FAAAAAZJREFUAwDZbiCuC53RGgAAAABJRU5ErkJggg%3D%3D)](https://nonamefound.lol/en-eur)
 
 </div>
+
+Everyone who chips in shows up on the **Wall of Supporters** in the app (About → Support), which updates on its own within about half an hour. Names and messages go through a word filter first.
 
 Donations are optional, and everyone gets the same features. Sharing the app, reporting bugs, suggesting features or contributing code helps just as much. ❤️
 
@@ -390,13 +398,15 @@ Donations are optional, and everyone gets the same features. Sharing the app, re
 ```text
 ui/            The interface (React): components, skins and styles
 engine/        The app's logic (TypeScript): the hub that merges chats, one connector per
-  platforms/   platform behind a shared interface, alert services, OBS, Streamer.bot, demo mode
+  platforms/   platform behind a shared interface, alert services, OBS / Streamlabs Desktop /
+               Meld Studio stats, Streamer.bot, demo mode
 core/          The Rust side (Tauri): window, logins and tokens, encrypted secrets, files,
   src/         YouTube's live chat, Twitch's rewards panel and Raid Now, updater, tray
-shared/        Types and message parsing used by the interface and the engine
+shared/        Types, message parsing, the name filter and the supporters list
+.github/       The Action that rebuilds the supporters list from Buy Me a Coffee
 assets/        Icon and logos
 proto/         YouTube's live chat definition
-scripts/       The build and release commands
+scripts/       The build, release and supporters-list commands
 docs/media/    README images
 ```
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.5
+
+**New**
+
+- **Live stream graph.** Point at the stream stats under the message box for a graph of the last 60 seconds, updated every second like a system monitor. Switch between bitrate, FPS, CPU and dropped frames. Clicking still opens the full stats, now with the graph beside them.
+- **Streamlabs Desktop (SLOBS) and Meld Studio.** Stream stats work with OBS Studio, Streamlabs Desktop or Meld Studio. Pick yours in Settings → Connections → Streaming app; each has its own setup steps. Streamlabs shares CPU, FPS, bitrate and dropped frames. Meld only shares whether you're live or recording.
+- **The app's icon goes live with you.** OBS's logo spins, SLOBS hops and Meld wobbles with a ripple of light, from the moment the stream starts until it stops.
+- **Stats every second.** OBS is read once a second instead of every two, for a smoother graph.
+- **Wall of Supporters.** The Support page thanks everyone who supported the project, biggest first, with their picture and a top-supporter crown. It updates on its own from Buy Me a Coffee, and names and messages go through a word filter (English and Italian). Private supports show as anonymous.
+- **Confetti.** Point at the Support the project button.
+- **A smaller skin picker.** Skins are compact chips split into dark and light, with a big preview of the one you point at.
+
+**Fixed**
+
+- Subs, gifts, Bits, Super Chats, Power-ups, Hype Trains, raids and follows in chat used one colour per event type. They now use the official colour of their platform (purple for Twitch, red for YouTube, green for Kick), badges included. Tips and memberships from Buy Me a Coffee, Streamlabs and StreamElements keep their service's colour, including the MEM badge.
+
 ## 0.3.3
 
 **Fixed**

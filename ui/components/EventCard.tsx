@@ -19,7 +19,7 @@ export function EventBadge({ e, months }: { e: Pick<StreamEvent, 'type' | 'text'
       : <DollarIcon size={13} />
     return <span className={`ev-badge badge-tip has-icon${e.source ? ` from-${e.source}` : e.platform ? ` from-${e.platform}` : ''}`} title={from ? `Tip via ${from}` : 'Tip'}>{logo}TIP</span>
   }
-  const cls = `ev-badge badge-${e.type}${e.platform ? ` on-${e.platform}` : ''}${label === 'OFF' ? ' badge-off' : ''}`
+  const cls = `ev-badge badge-${e.type}${e.platform ? ` on-${e.platform}` : ''}${e.source ? ` from-${e.source}` : ''}${label === 'OFF' ? ' badge-off' : ''}`
   // the channel points coin just holds Twitch's glyph
   if (e.type === 'redemption') return <span className={cls} title="Channel points" aria-label="Channel points"><BadgeIcon type="redemption" /></span>
   const icon = BadgeIcon({ type: e.type })

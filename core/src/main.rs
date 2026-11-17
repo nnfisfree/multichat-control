@@ -113,6 +113,7 @@ fn main() {
             auth::socket_token,
             auth::obs_auth,
             auth::sb_auth,
+            auth::slobs_auth,
             kick::kick_via_page,
             kick::kick_json_via_page,
             youtube::youtube_stream_start,

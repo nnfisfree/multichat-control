@@ -20,10 +20,32 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
+    icon: <Icon.bolt />,
+    title: 'Live stream graph',
+    text: 'Hover the OBS stats under the message box for a 60-second graph of bitrate, FPS, CPU and dropped frames, updated every second. Click for the full stats, graph included.'
+  },
+  {
+    icon: <Icon.plug />,
+    title: 'Streamlabs Desktop and Meld Studio',
+    text: 'Stream stats now also work with Streamlabs Desktop (SLOBS) and Meld Studio. Pick yours in Settings; the icon spins, hops or wobbles while you are live.',
+    show: { cat: 'connections', target: 'obs-settings' }
+  },
+  {
     icon: <Icon.palette />,
-    title: 'Dark skins after a light one',
-    text: 'Switching from a light skin back to a dark one left menus and cards white. They go back to their dark colours now.',
-    show: { cat: 'appearance', target: 'skins-settings' },
+    title: 'A smaller skin picker',
+    text: 'Skins are now compact chips split into dark and light, with a big preview of the one you hover.',
+    show: { cat: 'appearance', target: 'skins-settings' }
+  },
+  {
+    icon: <Icon.gem />,
+    title: 'Wall of Supporters',
+    text: 'The Support page thanks everyone who supported the project, updated on its own. Hover the support button for a surprise.',
+    show: { cat: 'about', target: 'support' }
+  },
+  {
+    icon: <Icon.events />,
+    title: 'Event colours',
+    text: 'Subs, gifts, Bits, Super Chats, raids and follows in chat now use the colour of their platform, and tips the colour of their service.',
     fixed: true
   }
 ]

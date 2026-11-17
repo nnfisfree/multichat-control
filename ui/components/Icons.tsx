@@ -6,6 +6,8 @@ import appLogo from '../../assets/icon.png'
 import bmcLogo from '../../assets/buymeacoffee.png'
 import seLogo from '../../assets/streamelements.png'
 import slLogo from '../../assets/streamlabs.png'
+import meldLogo from '../../assets/meld.png'
+import type { StreamApp } from '../../shared/types'
 
 function Svg({ children, size = 18 }: { children: ReactNode; size?: number }): JSX.Element {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{children}</svg>
@@ -19,6 +21,11 @@ export const PlatformIcon = ({ platform, size }: { platform: Platform; size?: nu
 
 export const ObsLogo = ({ size = 18 }: { size?: number }): JSX.Element => (
   <img className="logo-img" src={obsLogo} width={size} height={size} alt="" draggable={false} />
+)
+
+/** Official icon of the streaming app the stats come from. */
+export const StreamAppLogo = ({ app, size = 18 }: { app: StreamApp; size?: number }): JSX.Element => (
+  <img className={`logo-img app-${app}-logo`} src={app === 'meld' ? meldLogo : app === 'streamlabs' ? slLogo : obsLogo} width={size} height={size} alt="" draggable={false} />
 )
 
 export const StreamerbotLogo = ({ size = 18 }: { size?: number }): JSX.Element => (

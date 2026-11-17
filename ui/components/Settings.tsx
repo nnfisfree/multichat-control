@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
 import { ALERTS_READY, KICK_REDIRECT_URI } from '../../shared/app-config'
-import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform } from '../../shared/types'
-import { BmcLogo, Icon, ObsLogo, PlatformIcon, StreamerbotLogo } from './Icons'
+import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform, STREAM_APPS, type StreamApp } from '../../shared/types'
+import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamerbotLogo } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
 import { login as startLogin } from '../lib/login'
 import { About } from './About'
@@ -222,11 +222,41 @@ function BmcRow(): JSX.Element {
   )
 }
 
-/** OBS WebSocket connection, for the stream stats under the message box. */
+const APP_SETUP: Record<StreamApp, { steps: ReactNode[]; note?: string }> = {
+  obs: {
+    steps: [
+      <>In OBS (version 28 or newer), open <b>Tools → WebSocket Server Settings</b>.</>,
+      <>Tick <b>Enable WebSocket server</b>. Leave the port at 4455 unless you changed it.</>,
+      <>If <b>Enable Authentication</b> is ticked, click <b>Show Connect Info</b>, copy the <b>Server Password</b> and paste it below. If it isn't ticked, no password is needed.</>
+    ]
+  },
+  streamlabs: {
+    steps: [
+      <>In Streamlabs Desktop, open <b>Settings → Remote Control</b>.</>,
+      <>Click the <b>QR code</b> to turn Remote Control on, then click <b>Show details</b>.</>,
+      <>Copy the <b>API Token</b> and paste it below. Leave the port at 59650 unless you changed it.</>
+    ],
+    note: 'Streamlabs shares CPU, FPS, bitrate and dropped frames, but not memory, disk, render times or the encoder. Keep the token private: Remote Control also lets devices on your network connect with it.'
+  },
+  meld: {
+    steps: [
+      <>Open Meld Studio. It answers on port 13376 by itself, there's nothing to turn on.</>,
+      <>If it doesn't connect, check <b>Settings → Advanced → WebChannel Server</b> in Meld, and that no firewall blocks Meld.</>
+    ],
+    note: "Meld Studio only shares whether you're live or recording, so you'll see the live timer but no graph, bitrate, FPS or CPU."
+  }
+}
+
+/** Connection to the streaming app (OBS Studio, Streamlabs Desktop or Meld Studio), for the stream stats under the message box. */
 function ObsSettings(): JSX.Element {
   const s = useStore((x) => x.settings!)
-  const saved = useStore((x) => x.secrets.obsPassword)
+  const secrets = useStore((x) => x.secrets)
   const obs = useStore((x) => x.obs)
+  const app = s.streamApp ?? 'obs'
+  const name = STREAM_APPS[app]
+  const saved = app === 'streamlabs' ? secrets.slToken : secrets.obsPassword
+  const port = app === 'streamlabs' ? s.slPort : app === 'meld' ? s.meldPort : s.obsPort
+  const portKey = app === 'streamlabs' ? 'slPort' : app === 'meld' ? 'meldPort' : 'obsPort'
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   // set right after saving, so the result of that attempt shows under the field
@@ -235,70 +265,88 @@ function ObsSettings(): JSX.Element {
 
   useEffect(() => {
     if (checking === null) return
-    if (obs.status === 'connected') { setResult({ ok: true, text: 'Connected to OBS. Your stats are under the message box.' }); setChecking(null) }
-    else if (obs.status === 'error') { setResult({ ok: false, text: obs.detail ?? 'OBS refused the connection.' }); setChecking(null) }
-  }, [obs.status, obs.detail, checking])
-  // if OBS never answers it's usually closed, or its WebSocket server is off
+    if (obs.status === 'connected') { setResult({ ok: true, text: `Connected to ${name}. Your stats are under the message box.` }); setChecking(null) }
+    else if (obs.status === 'error') { setResult({ ok: false, text: obs.detail ?? `${name} refused the connection.` }); setChecking(null) }
+  }, [obs.status, obs.detail, checking, name])
+  // if the app never answers it's usually closed, or its server is off
   useEffect(() => {
     if (checking === null) return
     const t = setTimeout(() => {
-      setResult({ ok: false, text: `OBS didn't answer on port ${s.obsPort}. Is OBS open, with Enable WebSocket server ticked?` })
+      const why = app === 'obs' ? 'Is OBS open, with Enable WebSocket server ticked?' : app === 'streamlabs' ? 'Is Streamlabs Desktop open, with Remote Control turned on?' : 'Is Meld Studio open?'
+      setResult({ ok: false, text: `${name} didn't answer on port ${port}. ${why}` })
       setChecking(null)
     }, 8000)
     return () => clearTimeout(t)
-  }, [checking, s.obsPort])
+  }, [checking, port, app, name])
 
   const save = async (value: string): Promise<void> => {
     setResult(null)
-    setSecrets(await window.nnf.obs.setPassword(value))
+    setSecrets(await (app === 'streamlabs' ? window.nnf.obs.setStreamlabsToken(value) : window.nnf.obs.setPassword(value)))
     setPassword('')
     setShow(false)
     setChecking(Date.now())
   }
-  const state = !s.obsEnabled ? 'Off' : obs.status === 'connected' ? 'Connected' : obs.status === 'error' ? 'Needs attention' : 'Waiting for OBS…'
+  const pick = (next: StreamApp): void => {
+    if (next === app) return
+    setResult(null)
+    setPassword('')
+    void updateSettings({ streamApp: next })
+    if (s.obsEnabled) setChecking(Date.now())
+  }
+  const state = !s.obsEnabled ? 'Off' : obs.status === 'connected' ? 'Connected' : obs.status === 'error' ? 'Needs attention' : `Waiting for ${name}…`
+  const setup = APP_SETUP[app]
+  const secretLabel = app === 'streamlabs' ? 'API token' : 'Server password'
   return (
     <div id="obs-settings">
-      <Row title="Show OBS Stats" desc="Bitrate, dropped frames, FPS, CPU and your encoder from OBS, in the row under the message box. Only reads: the app never changes anything in OBS.">
-        <Toggle label="Show OBS stats" on={s.obsEnabled} onChange={(v) => { void updateSettings({ obsEnabled: v }); if (v) setChecking(Date.now()) }} />
+      <Row title="Show Stream Stats" desc="Bitrate, dropped frames, FPS and CPU from your streaming app, in the row under the message box. Only reads: the app never changes anything there.">
+        <Toggle label="Show stream stats" on={s.obsEnabled} onChange={(v) => { void updateSettings({ obsEnabled: v }); if (v) setChecking(Date.now()) }} />
       </Row>
-      {s.obsEnabled && (
+      {s.obsEnabled && <>
+        <Row title="Streaming app" desc="The one you go live with.">
+          <div className="seg stream-apps" role="radiogroup" aria-label="Streaming app">
+            {(Object.keys(STREAM_APPS) as StreamApp[]).map((a) => (
+              <button key={a} role="radio" aria-checked={a === app} className={a === app ? 'on' : ''} title={STREAM_APPS[a]} onClick={() => pick(a)}>
+                <StreamAppLogo app={a} size={16} /> {a === 'obs' ? 'OBS' : a === 'streamlabs' ? 'SLOBS' : 'Meld'}
+              </button>
+            ))}
+          </div>
+        </Row>
         <article className="account obs-setup">
           <header>
-            <ObsLogo size={20} />
-            <h3>OBS Studio</h3>
+            <StreamAppLogo app={app} size={20} />
+            <h3>{name}</h3>
             <span className="state">{state}</span>
             {obs.status !== 'off' && <div className="row-btns"><button className="btn ghost sm" onClick={() => { setResult(null); setChecking(Date.now()); void window.nnf.obs.reconnect() }}>Test connection</button></div>}
           </header>
           {result
             ? <div className={result.ok ? 'notice good' : 'notice bad'} role="status">{result.ok ? '✓ ' : '✗ '}{result.text}</div>
             : checking !== null
-              ? <div className="notice" role="status">Connecting to OBS…</div>
+              ? <div className="notice" role="status">Connecting to {name}…</div>
               : obs.detail && obs.status !== 'connected' && <div className={obs.status === 'error' ? 'notice bad' : 'notice'}>{obs.detail}</div>}
           <details className="advanced" open={obs.status !== 'connected'}>
             <summary>How to connect</summary>
-            <ol>
-              <li>In OBS (version 28 or newer), open <b>Tools → WebSocket Server Settings</b>.</li>
-              <li>Tick <b>Enable WebSocket server</b>. Leave the port at 4455 unless you changed it.</li>
-              <li>If <b>Enable Authentication</b> is ticked, click <b>Show Connect Info</b>, copy the <b>Server Password</b> and paste it below. If it isn't ticked, no password is needed.</li>
-            </ol>
+            <ol>{setup.steps.map((step, i) => <li key={i}>{step}</li>)}</ol>
+            {setup.note && <p className="obs-note">{setup.note}</p>}
             <div className="obs-fields">
               <label>Port
-                <input type="number" min={1} max={65535} defaultValue={s.obsPort} onBlur={(e) => { const v = Number(e.target.value); if (v && v !== s.obsPort) { void updateSettings({ obsPort: v }); setResult(null); setChecking(Date.now()) } }} />
+                <input key={app} type="number" min={1} max={65535} defaultValue={port} onBlur={(e) => { const v = Number(e.target.value); if (v && v !== port) { void updateSettings({ [portKey]: v }); setResult(null); setChecking(Date.now()) } }} />
               </label>
-              <label>Server password {saved ? <em>(saved, encrypted on this PC)</em> : <em>(none saved)</em>}
-                <div className="row-btns">
-                  <input type={show ? 'text' : 'password'} autoComplete="off" spellCheck={false} value={password} onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && password.trim()) void save(password.trim()) }}
-                    placeholder={saved ? 'Paste a new one to replace it' : 'Paste the Server Password from OBS'} />
-                  <button className="btn ghost sm" type="button" aria-pressed={show} title={show ? 'Hide password' : 'Show password'} onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
-                  <button className="btn" disabled={!password.trim()} onClick={() => void save(password.trim())}>Save</button>
-                  {saved && <button className="btn ghost" title="For OBS without a password" onClick={() => void save('')}>Remove</button>}
-                </div>
-              </label>
+              {app !== 'meld' && (
+                <label>{secretLabel} {saved ? <em>(saved, encrypted on this PC)</em> : <em>(none saved)</em>}
+                  <div className="row-btns">
+                    <input type={show ? 'text' : 'password'} autoComplete="off" spellCheck={false} value={password} onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && password.trim()) void save(password.trim()) }}
+                      placeholder={saved ? 'Paste a new one to replace it' : app === 'streamlabs' ? 'Paste the API Token from Streamlabs' : 'Paste the Server Password from OBS'} />
+                    <button className="btn ghost sm" type="button" aria-pressed={show} title={show ? `Hide ${secretLabel.toLowerCase()}` : `Show ${secretLabel.toLowerCase()}`} onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
+                    <button className="btn" disabled={!password.trim()} onClick={() => void save(password.trim())}>Save</button>
+                    {saved && <button className="btn ghost" title={app === 'obs' ? 'For OBS without a password' : 'Forget the saved token'} onClick={() => void save('')}>Remove</button>}
+                  </div>
+                </label>
+              )}
             </div>
           </details>
         </article>
-      )}
+      </>}
     </div>
   )
 }
@@ -457,27 +505,64 @@ function Section({ title, desc, children, id }: { title: string; desc?: string; 
 }
 
 /** A small preview of each skin, one click to switch. The window border never changes. */
-function SkinPicker(): JSX.Element {
-  const current = skinById(useStore((s) => s.settings!.theme)).id
+/** Mini version of the app in a skin's colours, framed by the edge every skin shares. */
+function SkinShot({ skin }: { skin: (typeof SKINS)[number] }): JSX.Element {
+  const [bg, panel, a, b] = skin.swatch
   return (
-    <div className="skins" role="radiogroup" aria-label="Skin">
-      {SKINS.map((k) => {
-        const [bg, panel, a, b] = k.swatch
-        const on = k.id === current
-        return (
-          <button key={k.id} role="radio" aria-checked={on} className={on ? 'skin on' : 'skin'} onClick={() => void updateSettings({ theme: k.id })}>
-            <span className="skin-shot" style={{ background: bg }} aria-hidden="true">
-              <span className="skin-bar" style={{ background: panel }}><i style={{ background: a }} /><i style={{ background: b }} /></span>
-              <span className="skin-line" style={{ background: panel, width: '72%' }} />
-              <span className="skin-line" style={{ background: panel, width: '54%' }} />
-              <span className="skin-line accent" style={{ background: `linear-gradient(90deg, ${a}, ${b})`, width: '40%' }} />
-              <span className="skin-box" style={{ background: panel }}><i style={{ background: b }} /></span>
-            </span>
-            <span className="skin-name">{k.name}{on && <span className="skin-check"><Icon.check /></span>}</span>
-            <span className="skin-by">{k.by}</span>
-          </button>
-        )
-      })}
+    <span className="skin-shot" style={{ background: bg }} aria-hidden="true">
+      <span className="skin-bar" style={{ background: panel }}><i style={{ background: a }} /><i style={{ background: b }} /></span>
+      <span className="skin-line" style={{ background: panel, width: '72%' }} />
+      <span className="skin-line" style={{ background: panel, width: '54%' }} />
+      <span className="skin-line accent" style={{ background: `linear-gradient(90deg, ${a}, ${b})`, width: '40%' }} />
+      <span className="skin-box" style={{ background: panel }}><i style={{ background: b }} /></span>
+    </span>
+  )
+}
+
+/**
+ * One big preview on top, and every skin as a small swatch chip below, split into dark and light.
+ * Hovering (or tabbing to) a chip previews it up top; clicking applies it.
+ */
+function SkinPicker(): JSX.Element {
+  const current = skinById(useStore((s) => s.settings!.theme))
+  const [hover, setHover] = useState<string | null>(null)
+  const shown = hover ? skinById(hover) : current
+  const groups: [string, typeof SKINS][] = [['Dark', SKINS.filter((k) => !k.light)], ['Light', SKINS.filter((k) => k.light)]]
+  return (
+    <div className="skin-picker">
+      <div className="skin-hero" aria-live="polite">
+        <SkinShot skin={shown} />
+        <div className="skin-hero-info">
+          <span className="skin-hero-tag">{shown.id === current.id ? 'Current skin' : 'Preview'}</span>
+          <strong className="skin-hero-name">{shown.name}</strong>
+          <span className="skin-by">{shown.by}</span>
+          <span className="skin-hero-dots" aria-hidden="true">{shown.swatch.map((c, i) => <i key={i} style={{ background: c }} />)}</span>
+        </div>
+      </div>
+      <div className="skin-groups" role="radiogroup" aria-label="Skin" onMouseLeave={() => setHover(null)}>
+        {groups.filter(([, list]) => list.length).map(([label, list]) => (
+          <div key={label} className="skin-group">
+            <span className="skin-group-label">{label}</span>
+            <div className="skin-chips">
+              {list.map((k) => {
+                const [bg, panel, a, b] = k.swatch
+                const on = k.id === current.id
+                return (
+                  <button key={k.id} role="radio" aria-checked={on} className={on ? 'skin-chip on' : 'skin-chip'} title={k.by}
+                    onMouseEnter={() => setHover(k.id)} onFocus={() => setHover(k.id)} onBlur={() => setHover(null)}
+                    onClick={() => void updateSettings({ theme: k.id })}>
+                    <span className="skin-dot" style={{ background: bg, boxShadow: `inset 0 0 0 2px ${panel}` }} aria-hidden="true">
+                      <i style={{ background: `linear-gradient(135deg, ${a}, ${b})` }} />
+                    </span>
+                    <span className="skin-chip-name">{k.name}</span>
+                    {on && <span className="skin-check" aria-hidden="true"><Icon.check /></span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -538,7 +623,7 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
 
         <div className="set-main">
           <button className="icon-btn set-close" aria-label="Close settings" onClick={() => { void updateSettings({ setupDismissed: true }); onClose() }}><Icon.close /></button>
-          {cat === 'about' ? <About /> : (
+          {cat === 'about' ? <About chapter={focus?.cat === 'about' ? focus.target : undefined} /> : (
             <div className="modal-scroll" ref={scroll}>
               <header className="cat-head">
                 <h2>{info.label}</h2>
@@ -556,7 +641,7 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                 <Section title="Buy Me a Coffee" desc="Tips, memberships (with every month they've supported you) and shop sales, live in chat and in Recent events. Works next to the service above.">
                   <BmcRow />
                 </Section>
-                <Section title="OBS Studio" desc="See your stream's health at a glance, like OBS's Stats dock">
+                <Section title="Streaming app" desc="See your stream's health at a glance, from OBS Studio, Streamlabs Desktop or Meld Studio">
                   <ObsSettings />
                 </Section>
                 <Section title="Streamer.bot" desc="Run your Streamer.bot actions from the message box">

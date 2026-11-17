@@ -1,5 +1,5 @@
 import { parseText, type PreviewTarget } from '../shared/parts'
-import { PLATFORMS, type HistorySession, type ObsState, type StreamerbotState, type UserEntry, type UserProfile, type UsersInfo } from '../shared/types'
+import { PLATFORMS, type HistorySession, type ObsState, type ObsStats, type StreamerbotState, type UserEntry, type UserProfile, type UsersInfo } from '../shared/types'
 import type {
   ActionDef, ActionResult, ChannelStats, ChatMessage, CommandOutcome, Emote, EventType, HypeTrain, LinkPreview, ModerationRequest, Platform, StreamEvent
 } from '../shared/types'
@@ -421,27 +421,47 @@ export const demoHistory = (() => {
   }
 })()
 
-/** Fake OBS stats: "ready" at first, then live a few seconds later. */
+/** Fake stats from the streaming app picked in Settings: "ready" at first, then live a few seconds later. */
 export function startDemoObs(send: (s: ObsState) => void): void {
-  const started = Date.now()
+  let started = Date.now()
   let bytes = 0
+  let dropped = 3
+  let kbps = 6000
+  let shown = store.settings.streamApp
   setTimeout(() => send({ status: 'connecting' }), 300)
   setInterval(() => {
+    const app = store.settings.streamApp
+    // picking another app in Settings replays "ready, then live", so its go-live animation shows
+    if (app !== shown) { shown = app; started = Date.now(); bytes = 0; dropped = 3 }
     const t = Date.now() - started
     const live = t > 9000
-    const kbps = 5800 + Math.round(Math.random() * 400)
-    if (live) bytes += (kbps * 1000 / 8) * 2
-    send({
-      status: 'connected',
-      stats: {
-        at: Date.now(), cpu: 1 + Math.random() * 2, memoryMb: 2562.9, diskMb: 386.6 * 1024, fps: 60, renderMs: 1.2,
-        encoder: 'NVIDIA NVENC H.264', output: { width: 1920, height: 1080, fps: 60, canvas: { width: 2560, height: 1440 } },
-        renderMissed: 0, renderTotal: Math.round(t / 16.7), encodeSkipped: 0, encodeTotal: live ? Math.round((t - 9000) / 16.7) : 0,
-        stream: { active: live, reconnecting: false, durationMs: live ? t - 9000 + 6130000 : 0, dropped: live ? 3 : 0, total: live ? Math.round((t - 9000) / 16.7) + 368000 : 0, bytes, kbps: live ? kbps : undefined },
-        record: { active: false, paused: false, durationMs: 0, bytes: 0 }
-      }
-    })
-  }, 2000)
+    // wander around 6 Mb/s with the odd dip, like a real encoder on a busy scene
+    kbps = Math.max(3500, Math.min(7500, kbps + (6000 - kbps) * 0.2 + (Math.random() - 0.5) * 900 - (Math.random() < 0.05 ? 1500 : 0)))
+    const fps = Math.random() < 0.06 ? 52 + Math.random() * 6 : 59.6 + Math.random() * 0.4
+    if (live && Math.random() < 0.04) dropped += 1 + Math.floor(Math.random() * 12)
+    if (live) bytes += (kbps * 1000) / 8
+    const total = live ? Math.round((t - 9000) / 16.7) + 368000 : 0
+    const stats: ObsStats = app === 'meld'
+      ? {
+          app, at: Date.now(), cpu: 0, memoryMb: 0, diskMb: 0, fps: 0, renderMs: 0, renderMissed: 0, renderTotal: 0, encodeSkipped: 0, encodeTotal: 0,
+          stream: { active: live, reconnecting: false, durationMs: live ? t - 9000 : 0, durationKnown: true, dropped: 0, total: 0, bytes: 0 },
+          record: { active: false, paused: false, durationMs: 0, bytes: 0 }
+        }
+      : app === 'streamlabs'
+        ? {
+            app, at: Date.now(), cpu: 3 + Math.random() * 4 + (live ? 3 : 0), memoryMb: 0, diskMb: 0, fps, renderMs: 0, renderMissed: 0, renderTotal: 0, encodeSkipped: 0, encodeTotal: 0,
+            stream: { active: live, reconnecting: false, durationMs: live ? t - 9000 + 6130000 : 0, dropped: live ? dropped : 0, total: 0, droppedPct: live ? Math.round((dropped / total) * 1000) / 10 : 0, bytes: 0, kbps: live ? Math.round(kbps) : undefined },
+            record: { active: false, paused: false, durationMs: 0, bytes: 0 }
+          }
+        : {
+            app, at: Date.now(), cpu: 1 + Math.random() * 2 + (live ? 2 : 0), memoryMb: 2562.9, diskMb: 386.6 * 1024, fps, renderMs: 1.2,
+            encoder: 'NVIDIA NVENC H.264', output: { width: 1920, height: 1080, fps: 60, canvas: { width: 2560, height: 1440 } },
+            renderMissed: 0, renderTotal: Math.round(t / 16.7), encodeSkipped: 0, encodeTotal: live ? Math.round((t - 9000) / 16.7) : 0,
+            stream: { active: live, reconnecting: false, durationMs: live ? t - 9000 + 6130000 : 0, dropped: live ? dropped : 0, total, bytes, kbps: live ? Math.round(kbps) : undefined },
+            record: { active: false, paused: false, durationMs: 0, bytes: 0 }
+          }
+    send({ status: 'connected', stats })
+  }, 1000)
 }
 
 export const DEMO_STREAMERBOT: StreamerbotState = {

@@ -15,6 +15,8 @@ import { StreamElements } from './integrations/streamelements'
 import { Streamlabs } from './integrations/streamlabs'
 import { log } from './log'
 import { ObsLink } from './obs'
+import { StreamlabsLink } from './streamlabs'
+import { MeldLink } from './meld'
 import { Previews } from './previews'
 import type { Connector } from './platforms/connector'
 import { KickConnector } from './platforms/kick/connector'
@@ -109,7 +111,15 @@ export async function startEngine(): Promise<void> {
   // OBS (fake stats in demo mode)
   let obsState: ObsState = { status: 'off' } as ObsState
   const sendObs = (s: ObsState): void => { obsState = s; tell(obsListeners, s) }
-  const obs = new ObsLink(sendObs)
+  // one link per streaming app; only the picked one runs
+  const links = { obs: new ObsLink(sendObs), streamlabs: new StreamlabsLink(sendObs), meld: new MeldLink(sendObs) }
+  const obs = {
+    start: (): void => {
+      for (const l of Object.values(links)) l.stop()
+      ;(links[store.settings.streamApp] ?? links.obs).start()
+    },
+    stop: (): void => { for (const l of Object.values(links)) l.stop() }
+  }
 
   // Streamer.bot actions and commands, kept in sync with whatever is set up there
   let sbState: StreamerbotState = { status: 'off', actions: [], commands: [] }
@@ -215,7 +225,7 @@ export async function startEngine(): Promise<void> {
       if (patch.emoteProviders) await hub.refreshEmotes()
       // turning history off wipes the saved log as well
       if (patch.keepChatHistory === false && !demo) chatLog.clear()
-      if (!demo && (before.obsEnabled !== next.obsEnabled || before.obsPort !== next.obsPort)) obs.start()
+      if (!demo && (before.obsEnabled !== next.obsEnabled || before.obsPort !== next.obsPort || before.streamApp !== next.streamApp || before.slPort !== next.slPort || before.meldPort !== next.meldPort)) obs.start()
       if (before.sbEnabled !== next.sbEnabled || before.sbPort !== next.sbPort) startSb()
       if (!demo && before.twitchClientId !== next.twitchClientId) await restart('twitch')
       if (!demo && before.youtubeClientId !== next.youtubeClientId) await restart('youtube')
@@ -269,6 +279,11 @@ export async function startEngine(): Promise<void> {
     obs: {
       setPassword: async (password) => {
         const state = await core.saveSecret('obsPassword', typeof password === 'string' && password ? password : null)
+        if (!demo) obs.start()
+        return state
+      },
+      setStreamlabsToken: async (token) => {
+        const state = await core.saveSecret('slToken', typeof token === 'string' && token ? token : null)
         if (!demo) obs.start()
         return state
       },

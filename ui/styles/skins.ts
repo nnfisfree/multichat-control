@@ -70,7 +70,7 @@ export const SKINS: Skin[] = [
     })
   },
   {
-    id: 'pos', name: 'POS Club', by: 'The original NoName look',
+    id: 'pos', name: 'POS Club', by: 'The official POS Club',
     swatch: ['#090b3f', '#1e1180', '#8d1fc8', '#27a9e8'],
     vars: make({
       bg: '#090b3f', bgDeep: '#090b3f', window: 'linear-gradient(135deg, #090b3f, #120d5c 45%, #1e1180 75%, #163a9c)',

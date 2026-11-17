@@ -42,10 +42,10 @@ export function ObsTip({ onSetup }: { onSetup(): void }): JSX.Element | null {
           <span className="obs-tip-logo" aria-hidden="true"><ObsLogo size={26} /></span>
           <h2 id="obs-tip-title">See your OBS stats here</h2>
         </header>
-        <p>Your stream's health (bitrate, dropped frames, FPS and CPU) can show under the message box, live from OBS Studio. The app only reads it and never changes anything in OBS.</p>
+        <p>Your stream's health (bitrate, dropped frames, FPS and CPU) can show under the message box, live from OBS Studio. Streamlabs Desktop and Meld Studio work too. The app only reads it and never changes anything there.</p>
         <ol>
-          <li>Make sure <b>Show OBS Stats</b> is on in Settings → Connections → OBS Studio.</li>
-          <li>In OBS, open <b>Tools → WebSocket Server Settings</b> and tick <b>Enable WebSocket server</b>.</li>
+          <li>Make sure <b>Show Stream Stats</b> is on in Settings → Connections → Streaming app, and pick the app you use.</li>
+          <li>For OBS, open <b>Tools → WebSocket Server Settings</b> and tick <b>Enable WebSocket server</b>.</li>
           <li>Follow the steps under <b>How to connect</b> in those settings. A password is only needed if OBS asks for one.</li>
         </ol>
         <div className="wn-foot">

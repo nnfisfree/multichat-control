@@ -367,8 +367,14 @@ export interface Settings {
   alertService: PickedAlertSource | 'none'
   /** Keep chat from the last five streams on this PC. */
   keepChatHistory: boolean
-  /** OBS WebSocket stats. */
+  /** Stream stats from the streaming app below (the name stayed from when it was OBS only). */
   obsEnabled: boolean
+  /** Which streaming app the stats come from. */
+  streamApp: StreamApp
+  /** Streamlabs Desktop's Remote Control port. */
+  slPort: number
+  /** Meld Studio's WebChannel port. */
+  meldPort: number
   /** The one-time OBS tip was shown and dismissed. */
   obsTipSeen: boolean
   /** OBS connected at least once, so the tip isn't needed. */
@@ -417,6 +423,9 @@ export const DEFAULT_SETTINGS: Settings = {
   obsTipSeen: false,
   obsSetUp: false,
   obsPort: 4455,
+  streamApp: 'obs',
+  slPort: 59650,
+  meldPort: 13376,
   sbEnabled: false,
   sbPort: 8080,
   // new installs start on Sweet; engine/store.ts keeps POS Club for anyone upgrading
@@ -427,10 +436,18 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 /** Secrets are write-only from the UI, it only ever learns whether one is stored. */
-export interface SecretState { youtubeSecret: boolean; kickSecret: boolean; obsPassword: boolean; sbPassword: boolean }
+export interface SecretState { youtubeSecret: boolean; kickSecret: boolean; obsPassword: boolean; sbPassword: boolean; slToken: boolean }
 
-/** OBS stats. Sizes in MB, durations in ms, bitrates in kb/s. */
+/** Streaming apps we can read stats from. */
+export type StreamApp = 'obs' | 'streamlabs' | 'meld'
+export const STREAM_APPS: Record<StreamApp, string> = { obs: 'OBS Studio', streamlabs: 'Streamlabs Desktop', meld: 'Meld Studio' }
+
+/**
+ * Stream stats. Sizes in MB, durations in ms, bitrates in kb/s. OBS fills everything; Streamlabs
+ * only shares CPU, FPS, bitrate and dropped frames; Meld only whether it's live or recording.
+ */
 export interface ObsStats {
+  app: StreamApp
   cpu: number
   memoryMb: number
   diskMb: number
@@ -453,7 +470,8 @@ export interface ObsStats {
   renderTotal: number
   encodeSkipped: number
   encodeTotal: number
-  stream: { active: boolean; reconnecting: boolean; durationMs: number; dropped: number; total: number; bytes: number; kbps?: number }
+  /** durationKnown is false when we joined a stream already running and the app can't say since when. */
+  stream: { active: boolean; reconnecting: boolean; durationMs: number; durationKnown?: boolean; dropped: number; total: number; droppedPct?: number; bytes: number; kbps?: number }
   record: { active: boolean; paused: boolean; durationMs: number; bytes: number; kbps?: number }
 }
 
@@ -532,7 +550,7 @@ export interface NnfApi {
   onUpdate(cb: (state: UpdateState) => void): () => void
   onPanelSignedIn(cb: (signedIn: boolean) => void): () => void
   onObs(cb: (state: ObsState) => void): () => void
-  obs: { setPassword(password: string): Promise<SecretState>; reconnect(): Promise<void> }
+  obs: { setPassword(password: string): Promise<SecretState>; setStreamlabsToken(token: string): Promise<SecretState>; reconnect(): Promise<void> }
   onStreamerbot(cb: (state: StreamerbotState) => void): () => void
   streamerbot: {
     setPassword(password: string): Promise<SecretState>

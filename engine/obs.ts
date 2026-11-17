@@ -4,7 +4,8 @@ import { core } from './core'
 import { backoff } from './net'
 import { store } from './store'
 
-const POLL_MS = 2000
+// every second, so the stats graph moves like a system monitor; three tiny local requests
+const POLL_MS = 1000
 // encoder/video settings rarely change, so poll them less often
 const SETUP_MS = 30000
 
@@ -163,7 +164,15 @@ export class ObsLink {
     })
   }
 
+  private busy = false
   private async refresh(run: number): Promise<void> {
+    // a slow OBS must not pile up overlapping polls
+    if (this.busy) return
+    this.busy = true
+    try { await this.readStats(run) } finally { this.busy = false }
+  }
+
+  private async readStats(run: number): Promise<void> {
     await this.readSetup().catch(() => {})
     const [stats, stream, record] = await Promise.all([this.request('GetStats'), this.request('GetStreamStatus'), this.request('GetRecordStatus')])
     if (run !== this.run || !stats) return
@@ -175,6 +184,7 @@ export class ObsLink {
     const kbps = (b: number, prev: number | undefined): number | undefined =>
       since > 0 && prev !== undefined && b >= prev ? Math.round(((b - prev) * 8) / since / 1000) : undefined
     const out: ObsStats = {
+      app: 'obs',
       at: now,
       cpu: Number(stats.cpuUsage) || 0,
       memoryMb: Number(stats.memoryUsage) || 0,

@@ -153,6 +153,7 @@ pub struct SecretState {
     kick_secret: bool,
     obs_password: bool,
     sb_password: bool,
+    sl_token: bool,
 }
 
 #[tauri::command]
@@ -163,6 +164,7 @@ pub fn secret_state() -> SecretState {
         kick_secret: map.contains_key("kick.clientSecret"),
         obs_password: map.contains_key("obs.password"),
         sb_password: map.contains_key("streamerbot.password"),
+        sl_token: map.contains_key("streamlabs.token"),
     }
 }
 
@@ -174,6 +176,7 @@ pub fn secret_save(key: String, value: Option<String>) -> Result<SecretState, St
         "kickSecret" => "kick.clientSecret",
         "obsPassword" => "obs.password",
         "sbPassword" => "streamerbot.password",
+        "slToken" => "streamlabs.token",
         _ => return Err("Unknown secret.".into()),
     };
     set(name, value.as_deref().map(str::trim))?;

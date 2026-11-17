@@ -1,0 +1,28 @@
+[
+  {
+    "name": "G2Warrior",
+    "aliases": ["FAQ U"],
+    "avatar": "https://unavatar.io/twitch/g2warrior",
+    "url": "https://www.twitch.tv/g2warrior"
+  },
+  {
+    "name": "PowerWinter",
+    "aliases": ["que voy , Kiski , pufn , Kx2 , undead87_# , Agent Quantum , Quantum Unlimited , el mendrugo , DOCTOR SI , AUTOBOT , HealManaMechas"],
+    "avatar": "https://unavatar.io/twitch/powerwinterr",
+    "url": "https://www.twitch.tv/powerwinterr"
+  },
+  {
+    "name": "Disown",
+    "aliases": ["Kiski"],
+    "avatar": "https://unavatar.io/twitch/disown",
+    "url": "https://www.twitch.tv/disown"
+  },
+  {
+    "name": "emaspa",
+    "title": "OpenXLR creator & expert dev",
+    "avatar": "https://github.com/emaspa.png?size=160",
+    "amount": 300,
+    "currency": "EUR",
+    "url": "https://github.com/emaspa"
+  }
+]

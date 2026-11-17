@@ -1,8 +1,11 @@
-import { useRef, useState, type JSX, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type JSX, type ReactNode } from 'react'
 import fourthwall from '../../assets/fourthwall.png'
 import logo from '../../assets/logo.webp'
 import { PlatformIcon } from './Icons'
-import { SupportPill } from './SupportPill'
+import { BMC_URL, SupportPill } from './SupportPill'
+import { BUNDLED_SUPPORTERS, SUPPORTERS_URL, cleanSupporters, type Supporter } from '../../shared/supporters'
+import { ANONYMOUS } from '../../shared/moderation'
+import { useStore } from '../lib/store'
 
 const DONATE_URL = 'https://streamelements.com/nonamefound/tip'
 const SUBSCRIBE_URL = 'https://www.twitch.tv/subs/nonamefound'
@@ -26,6 +29,114 @@ function SupportButtons(): JSX.Element {
       <button className="support-btn twitch-sub" onClick={open(SUBSCRIBE_URL)}><PlatformIcon platform="twitch" size={18} /> Subscribe on Twitch</button>
       <button className="support-btn store" onClick={open(STORE_URL)}><img src={fourthwall} alt="" width={18} height={18} /> Gadgets Store</button>
     </div>
+  )
+}
+
+const money = (s: Supporter): string =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency: s.currency, minimumFractionDigits: s.amount % 1 ? 2 : 0, maximumFractionDigits: 2 }).format(s.amount)
+
+// a stable pair of colours per name, for supporters without a picture
+const hue = (name: string): number => [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 360
+
+function SupporterAvatar({ s }: { s: Supporter }): JSX.Element {
+  const [broken, setBroken] = useState(false)
+  const h = hue(s.name)
+  const initials = s.name.replace(/[^\p{L}\p{N} ]/gu, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?'
+  return (
+    <span className="sup-avatar">
+      {s.avatar && !broken
+        ? <img src={s.avatar} alt="" width={64} height={64} loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
+        : <span className="sup-initials" style={{ background: `linear-gradient(135deg, hsl(${h} 70% 45%), hsl(${(h + 50) % 360} 75% 35%))` }}>{s.name === ANONYMOUS ? '🤍' : initials}</span>}
+    </span>
+  )
+}
+
+const CACHE_KEY = 'nnf.supporters'
+// The wall shows the cached (or built-in) list right away, then whatever GitHub has. Checked again
+// when the page is opened and the last check is older than this.
+const RECHECK_MS = 5 * 60 * 1000
+let latest: Supporter[] | null = null
+let loading: Promise<Supporter[] | null> | null = null
+let checkedAt = 0
+
+function cached(): Supporter[] | null {
+  try {
+    return cleanSupporters(JSON.parse(localStorage.getItem(CACHE_KEY) ?? 'null'))
+  } catch {
+    return null
+  }
+}
+
+function fetchSupporters(): Promise<Supporter[] | null> {
+  if (loading && Date.now() - checkedAt > RECHECK_MS - 5000) loading = null
+  if (!loading) checkedAt = Date.now()
+  loading ??= (async () => {
+    try {
+      const ctl = new AbortController()
+      const t = setTimeout(() => ctl.abort(), 8000)
+      const res = await fetch(SUPPORTERS_URL, { cache: 'no-cache', signal: ctl.signal })
+      clearTimeout(t)
+      const list = res.ok ? cleanSupporters(await res.json()) : null
+      if (list) {
+        latest = list
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)) } catch { /* private mode etc. */ }
+      }
+      return list
+    } catch {
+      // offline or GitHub unreachable: keep what we have, try again next time the page opens
+      loading = null
+      return null
+    }
+  })()
+  return loading
+}
+
+// Demo mode doesn't fetch from GitHub; it shows the list built into the app.
+const demoSupporters = (): Supporter[] => BUNDLED_SUPPORTERS
+
+/** The supporters list from GitHub, falling back to the last one seen, then the built-in one. */
+function useSupporters(): Supporter[] {
+  const demo = useStore((s) => !!s.boot?.demo)
+  const [list, setList] = useState<Supporter[]>(() => (demo ? demoSupporters() : latest ?? cached() ?? BUNDLED_SUPPORTERS))
+  useEffect(() => {
+    if (demo) return
+    let alive = true
+    const check = (): void => void fetchSupporters().then((l) => { if (alive && l) setList(l) })
+    check()
+    // keeps checking while the page stays open, so a new supporter pops in without reopening it
+    const timer = setInterval(check, RECHECK_MS)
+    return () => { alive = false; clearInterval(timer) }
+  }, [demo])
+  return list
+}
+
+/** Everyone who chipped in, biggest first, then an open seat for whoever's next. */
+function SupporterWall(): JSX.Element {
+  const list = [...useSupporters()].sort((a, b) => b.amount - a.amount)
+  return (
+    <section className="sup-wall" aria-label="Supporters">
+      <header className="sup-head">
+        <h3>💜 Wall of Supporters</h3>
+        <span className="sup-count">{list.length} {list.length === 1 ? 'hero' : 'heroes'}</span>
+      </header>
+      <div className="sup-grid">
+        {list.map((s, i) => (
+          <button key={`${s.name}-${i}`} className={i === 0 ? 'sup-card top' : 'sup-card'} title={s.url ? `Open ${s.name}'s profile` : s.name} disabled={!s.url} onClick={s.url ? open(s.url) : undefined}>
+            {i === 0 && <span className="sup-crown" aria-label="Top supporter">👑</span>}
+            <SupporterAvatar s={s} />
+            <b className="sup-name">{s.name}</b>
+            {s.title && <span className="sup-title" title={s.title}>{s.title}</span>}
+            <span className="sup-amount">{money(s)}</span>
+            {s.message && <span className="sup-msg" title={s.message}>“{s.message}”</span>}
+          </button>
+        ))}
+        <button className="sup-card next" onClick={open(BMC_URL)} title="Support the project on Buy Me a Coffee">
+          <span className="sup-avatar empty" aria-hidden="true">?</span>
+          <b className="sup-name">Wanna be next?</b>
+          <span className="sup-cta">Your face could be here ☕</span>
+        </button>
+      </div>
+    </section>
   )
 }
 
@@ -84,6 +195,8 @@ const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
     body: () => (
       <>
         <h3>☕ Support ChatControl</h3>
+        <SupporterWall />
+        <div className="support-letter">
         <p>ChatControl is a passion project, developed and maintained independently in my spare time.</p>
         <p>Behind every feature, bug fix, and improvement are countless hours of coding, testing, debugging, and probably way too much coffee! ☕</p>
         <p>If ChatControl makes your streaming life a little easier, and you'd like to support its development, <b>please consider making a small donation</b>.</p>
@@ -94,6 +207,7 @@ const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
         <p><b>Every little bit of support means the world to me. ❤️</b></p>
         <p>Thank you for being part of this journey!</p>
         <p className="about-sign">— <b>NoNameFound</b> 🎮🐧</p>
+        </div>
         <SupportPill big />
         <SupportButtons />
       </>
@@ -119,8 +233,8 @@ const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
 ]
 
 /** Split into chapters so the dedication gets a page of its own. */
-export function About(): JSX.Element {
-  const [chapter, setChapter] = useState(CHAPTERS[0].id)
+export function About({ chapter: start }: { chapter?: string } = {}): JSX.Element {
+  const [chapter, setChapter] = useState(CHAPTERS.some((c) => c.id === start) ? start! : CHAPTERS[0].id)
   const page = useRef<HTMLDivElement>(null)
   const current = CHAPTERS.find((c) => c.id === chapter) ?? CHAPTERS[0]
   const pick = (id: string): void => {

@@ -1,0 +1,34 @@
+[
+  {
+    "name": "emaspa",
+    "title": "OpenXLR creator & expert dev",
+    "amount": 300,
+    "currency": "EUR",
+    "avatar": "https://github.com/emaspa.png?size=160",
+    "url": "https://github.com/emaspa"
+  },
+  {
+    "name": "G2Warrior",
+    "amount": 101,
+    "currency": "EUR",
+    "message": "FAQ YOU",
+    "avatar": "https://unavatar.io/twitch/g2warrior",
+    "url": "https://www.twitch.tv/g2warrior"
+  },
+  {
+    "name": "PowerWinter",
+    "amount": 2,
+    "currency": "EUR",
+    "message": "Hi",
+    "avatar": "https://unavatar.io/twitch/powerwinterr",
+    "url": "https://www.twitch.tv/powerwinterr"
+  },
+  {
+    "name": "Disown",
+    "amount": 1,
+    "currency": "EUR",
+    "message": "welcome back to the EU server. Hopefully we can do some raids together Kiski",
+    "avatar": "https://unavatar.io/twitch/disown",
+    "url": "https://www.twitch.tv/disown"
+  }
+]
