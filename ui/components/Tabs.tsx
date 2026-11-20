@@ -1,4 +1,4 @@
-import type { JSX } from 'react'
+import { useEffect, type JSX } from 'react'
 import { PLATFORMS, PLATFORM_LABEL, type ConnectionState, type Platform } from '../../shared/types'
 import { Icon, PlatformIcon } from './Icons'
 import { connected, useStore } from '../lib/store'
@@ -36,13 +36,18 @@ export function Tabs({ tab, eventsOpen, usersOpen, onUsers, onTab, onEvents, onS
   const statuses = useStore((s) => s.statuses)
   const watching = useStore((s) => PLATFORMS.reduce((n, p) => n + (connected(s.statuses, p) ? s.users[p]?.viewers ?? 0 : 0), 0))
   const unread = useStore((s) => s.unreadEvents)
+  // a platform's tab only shows while it's connected. The open tab stays through a reconnect, so
+  // pressing Reconnect doesn't throw you back to All.
+  const shown = PLATFORMS.filter((p) => connected(statuses, p) || (p === tab && statuses[p]?.status === 'connecting'))
+  const tabGone = tab !== 'all' && !shown.includes(tab)
+  useEffect(() => { if (tabGone) onTab('all') }, [tabGone])
   return (
     <nav className="tabs" role="tablist">
       <button role="tab" aria-selected={tab === 'all' && !eventsOpen} className={tab === 'all' ? 'tab active' : 'tab'} aria-label="All" onClick={() => onTab('all')}>
         <Icon.all /> <span className="tab-label">All</span>
       </button>
-      {PLATFORMS.map((p) => (
-        <button key={p} role="tab" aria-selected={tab === p && !eventsOpen} className={tab === p ? 'tab active' : 'tab'} title={`${PLATFORM_LABEL[p]}: ${statusText(statuses[p])}`} aria-label={PLATFORM_LABEL[p]} onClick={() => onTab(p)}>
+      {shown.map((p) => (
+        <button key={p} role="tab" aria-selected={tab === p && !eventsOpen} className={tab === p ? `tab pf-tab ${p} active` : `tab pf-tab ${p}`} title={`${PLATFORM_LABEL[p]}: ${statusText(statuses[p])}`} aria-label={PLATFORM_LABEL[p]} onClick={() => onTab(p)}>
           <PlatformIcon platform={p} /> <span className="tab-label">{PLATFORM_LABEL[p]}</span>
           <i className={`dot ${dotClass(statuses[p])}`} aria-label={statusText(statuses[p])} />
         </button>
@@ -52,7 +57,7 @@ export function Tabs({ tab, eventsOpen, usersOpen, onUsers, onTab, onEvents, onS
         {unread > 0 && <span className="count">{unread > 99 ? '99+' : unread}</span>}
         <span className={eventsOpen ? 'chev open' : 'chev'}><Icon.chevron /></span>
       </button>
-      <div className="grow connect-slot"><ConnectBar /></div>
+      <div className="grow" />
       <ConnectionsMenu />
       <button className={usersOpen ? 'icon-btn users-btn on' : 'icon-btn users-btn'} aria-label="Users in chat" aria-expanded={usersOpen}
         title={watching ? `Users in chat · ${watching.toLocaleString()} watching` : 'Users in chat'} onClick={onUsers}>
@@ -60,6 +65,7 @@ export function Tabs({ tab, eventsOpen, usersOpen, onUsers, onTab, onEvents, onS
         {watching > 0 && <span className="users-badge">{watching > 9999 ? `${Math.round(watching / 1000)}k` : watching.toLocaleString()}</span>}
       </button>
       <button className="icon-btn" aria-label="Settings" title="Settings" onClick={onSettings}><Icon.gear /></button>
+      <ConnectBar />
     </nav>
   )
 }

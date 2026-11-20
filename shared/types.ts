@@ -1,6 +1,10 @@
-export type Platform = 'twitch' | 'youtube' | 'kick'
-export const PLATFORMS: Platform[] = ['twitch', 'youtube', 'kick']
-export const PLATFORM_LABEL: Record<Platform, string> = { twitch: 'Twitch', youtube: 'YouTube', kick: 'Kick' }
+export type Platform = 'twitch' | 'youtube' | 'kick' | 'tiktok'
+export const PLATFORMS: Platform[] = ['twitch', 'youtube', 'kick', 'tiktok']
+export const PLATFORM_LABEL: Record<Platform, string> = { twitch: 'Twitch', youtube: 'YouTube', kick: 'Kick', tiktok: 'TikTok' }
+/** Platforms we can only read for now: no sending, no moderation. */
+export const READ_ONLY: Platform[] = ['tiktok']
+/** Where TikTok users make the free Euler Stream key the TikTok connection needs. */
+export const EULER_KEY_URL = 'https://www.eulerstream.com/dashboard'
 
 export type MessagePart =
   | { type: 'text'; text: string }
@@ -193,6 +197,8 @@ export interface StreamEvent {
   source?: AlertSource
   /** Card for a newly created clip. */
   preview?: LinkPreview
+  /** Small picture next to the subject, e.g. the TikTok gift that was sent. */
+  image?: string
   /** Test alert (SB test trigger, SE or SL test). Never saved, gone after a restart. */
   test?: boolean
   /** Total months subscribed, including this one. */
@@ -250,7 +256,7 @@ export interface Emote {
   id: string
   name: string
   url: string
-  provider: 'twitch' | '7tv' | 'bttv' | 'ffz' | 'kick' | 'emoji'
+  provider: 'twitch' | '7tv' | 'bttv' | 'ffz' | 'kick' | 'tiktok' | 'emoji'
   platform: Platform
   group: string
   /** Avatar next to the group heading. */
@@ -332,6 +338,8 @@ export interface Settings {
   twitchClientId: string
   youtubeClientId: string
   kickClientId: string
+  /** TikTok @handle to read (no login: TikTok chat is read by username). */
+  tiktokUsername: string
   sendTargets: Record<Platform, boolean>
   confirmActions: boolean
   showClock: boolean
@@ -345,6 +353,8 @@ export interface Settings {
   windowOpacity: number
   /** KDE-style wobbly window while dragging by the title bar. */
   windowWobble: boolean
+  /** The connection line under the tabs keeps a calm glow and a slow comet once everything is up. */
+  connectionLine: boolean
   /** 0-100 */
   wobbleIntensity: number
   uiFont: string
@@ -393,7 +403,8 @@ export const DEFAULT_SETTINGS: Settings = {
   twitchClientId: '',
   youtubeClientId: '',
   kickClientId: '',
-  sendTargets: { twitch: true, youtube: true, kick: true },
+  tiktokUsername: '',
+  sendTargets: { twitch: true, youtube: true, kick: true, tiktok: false },
   confirmActions: true,
   showClock: true,
   showStats: true,
@@ -403,6 +414,7 @@ export const DEFAULT_SETTINGS: Settings = {
   setupDismissed: false,
   windowOpacity: 1,
   windowWobble: false,
+  connectionLine: true,
   wobbleIntensity: 50,
   uiFont: 'Segoe UI',
   chatFont: 'Segoe UI',
@@ -413,7 +425,7 @@ export const DEFAULT_SETTINGS: Settings = {
   closeAction: 'ask',
   eventPopups: true,
   eventPopupSeconds: 6,
-  eventFilter: { platforms: { twitch: true, youtube: true, kick: true }, hiddenTypes: [] },
+  eventFilter: { platforms: { twitch: true, youtube: true, kick: true, tiktok: true }, hiddenTypes: [] },
   autoUpdate: true,
   updatePrereleases: false,
   alertService: 'none',
@@ -436,7 +448,7 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 /** Secrets are write-only from the UI, it only ever learns whether one is stored. */
-export interface SecretState { youtubeSecret: boolean; kickSecret: boolean; obsPassword: boolean; sbPassword: boolean; slToken: boolean }
+export interface SecretState { youtubeSecret: boolean; kickSecret: boolean; obsPassword: boolean; sbPassword: boolean; slToken: boolean; tiktokKey: boolean }
 
 /** Streaming apps we can read stats from. */
 export type StreamApp = 'obs' | 'streamlabs' | 'meld'
@@ -591,6 +603,12 @@ export interface NnfApi {
     reconnect(source: AlertSource): Promise<void>
     /** BMC: saves a pasted token (tested first), then starts. */
     connect(source: 'buymeacoffee', token: string): Promise<void>
+  }
+  tiktok: {
+    /** Checks the username (and the key, when one is given), saves them, then starts reading. */
+    connect(username: string, key?: string): Promise<SecretState>
+    /** Stops reading and forgets the username and key. */
+    disconnect(): Promise<SecretState>
   }
   openExternal(url: string): Promise<void>
   showPanel(bounds: PanelBounds): Promise<ActionResult>

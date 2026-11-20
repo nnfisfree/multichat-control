@@ -4,8 +4,9 @@ import { safeMessage, safeName } from './moderation'
 /**
  * People who supported the project, shown on the Support page.
  *
- * shared/supporters.json is rebuilt from Buy Me a Coffee by a GitHub Action every 30 minutes
- * (scripts/update-supporters.mjs), merged with the hand-added people in supporters-manual.json.
+ * shared/supporters.json is rebuilt by a GitHub Action every 30 minutes (scripts/update-supporters.mjs)
+ * from supporters-manual.json: collaborators, plus Buy Me a Coffee supporters the owner approved by
+ * listing them there. Anyone else on BMC (stream donations, trolls) never appears.
  * The app ships with a copy and reads the latest one from GitHub when the Support page opens, so new
  * supporters show up without a release. BMC doesn't share profile pictures, so `avatar` comes from
  * supporters-manual.json; without one a coloured initials badge shows instead.
@@ -22,6 +23,12 @@ export interface Supporter {
   message?: string
   /** Optional short tagline under their name (who they are), set in supporters-manual.json. */
   title?: string
+  /** 'github' = a GitHub Sponsor (gets a small GitHub mark on the card). */
+  source?: 'github'
+  /** Helped build the project: shown in its own Collaborators section. amount is 0 if they gave nothing. */
+  collaborator?: boolean
+  /** Collaborators: things they made, shown as "& creator of <project> <project>" with links (GitHub). */
+  projects?: { name: string; url?: string }[]
 }
 
 export const SUPPORTERS_URL = 'https://raw.githubusercontent.com/nnfisfree/multichat-control/main/shared/supporters.json'
@@ -48,10 +55,20 @@ export function cleanSupporters(raw: unknown): Supporter[] | null {
     const o = r as Record<string, unknown>
     // filtered again here, in case the file was edited by hand
     const name = o.name === undefined ? undefined : safeName(text(o.name, 40))
+    const extra = { avatar: https(o.avatar), url: https(o.url), title: safeMessage(text(o.title, 60)) }
     const amount = Number(o.amount)
     const currency = typeof o.currency === 'string' && /^[A-Z]{3}$/.test(o.currency) ? o.currency : undefined
+    if (o.collaborator === true) {
+      const gave = Number.isFinite(amount) && amount > 0 && !!currency
+      const projects = (Array.isArray(o.projects) ? o.projects : []).slice(0, 6).flatMap((x: any) => {
+        const n = safeMessage(text(x?.name, 40))
+        return n ? [{ name: n, url: https(x?.url) }] : []
+      })
+      if (name) out.push({ name, amount: gave ? amount : 0, currency: gave ? currency! : 'EUR', collaborator: true, projects, ...extra })
+      continue
+    }
     if (!name || !Number.isFinite(amount) || amount < 0 || !currency) continue
-    out.push({ name, amount, currency, avatar: https(o.avatar), url: https(o.url), message: safeMessage(text(o.message, 140)), title: safeMessage(text(o.title, 60)) })
+    out.push({ name, amount, currency, message: safeMessage(text(o.message, 140)), source: o.source === 'github' ? 'github' : undefined, ...extra })
   }
   return out
 }

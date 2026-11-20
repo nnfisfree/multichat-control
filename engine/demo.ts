@@ -4,6 +4,7 @@ import type {
   ActionDef, ActionResult, ChannelStats, ChatMessage, CommandOutcome, Emote, EventType, HypeTrain, LinkPreview, ModerationRequest, Platform, StreamEvent
 } from '../shared/types'
 import type { Connector, ConnectorContext } from './platforms/connector'
+import { READ_ONLY_TEXT } from './platforms/tiktok/connector'
 import { store } from './store'
 
 // Fake video thumbnail: sky, hills and a sun in the given colours.
@@ -39,7 +40,9 @@ const EMOTE_DEFS: Record<Platform, [string, Emote['provider'], string, string, s
     ['KICKHYPE', 'kick', 'Kick Channel', '#53fc18', 'K'], ['GGkick', 'kick', 'Kick Global', '#3bc411', 'G'],
     ['peepoKick', '7tv', '7TV Kick', '#2aa5c9', 'p']
   ],
-  youtube: [['😀', 'emoji', 'Emoji', '', ''], ['🔥', 'emoji', 'Emoji', '', ''], ['🎉', 'emoji', 'Emoji', '', '']]
+  youtube: [['😀', 'emoji', 'Emoji', '', ''], ['🔥', 'emoji', 'Emoji', '', ''], ['🎉', 'emoji', 'Emoji', '', '']],
+  // TikTok is read-only, so there's no picker for it
+  tiktok: []
 }
 
 const GROUP_ICON: Record<string, string> = {
@@ -54,7 +57,8 @@ const emotesFor = (p: Platform): Emote[] => EMOTE_DEFS[p].map(([name, provider, 
 const CHATTERS: Record<Platform, string[]> = {
   twitch: ['PixelNomad', 'LunaByte', 'TurboTaco', 'NovaRush_', 'CosmicKiwi', 'QuietStorm'],
   youtube: ['Pixel Pete', 'Marta G.', 'Leo the Lion', 'gamer_dad_77'],
-  kick: ['kickfan99', 'snowbyte', 'zerocool_x', 'mira.gg']
+  kick: ['kickfan99', 'snowbyte', 'zerocool_x', 'mira.gg'],
+  tiktok: ['dancequeen.22', 'Tomás 🎮', 'lilmochi', 'skate_or_die', 'nadia.k']
 }
 const LINES = [
   'dude haha', 'that was insane', 'nnfHype nnfHype nnfHype', 'gg', 'KEKW', 'catJAM catJAM', 'what game is next?',
@@ -66,7 +70,12 @@ const LINES = [
 ]
 const COLORS = ['#4fd1ff', '#ff7ad9', '#7dff9b', '#ffb454', '#b794ff', '#ff6b6b']
 
-const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean; months?: number; streak?: number; source?: StreamEvent['source']; preview?: LinkPreview }[]> = {
+// round gift picture for the fake TikTok gifts
+function DEMO_GIFT(bg: string, face: string): string {
+  return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="${bg}"/><text x="16" y="21" font-size="14" text-anchor="middle" fill="#fff" font-family="sans-serif">${face}</text></svg>`)
+}
+
+const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string; amount?: string; message?: string; details?: Record<string, string>; big?: boolean; months?: number; streak?: number; source?: StreamEvent['source']; preview?: LinkPreview; image?: string }[]> = {
   twitch: [
     { type: 'follow', text: 'followed' },
     { type: 'redemption', text: 'redeemed', subject: 'Daily Check-in', amount: '1', details: { Reward: 'KEKW! [MP3]', Status: 'Unfulfilled' } },
@@ -97,6 +106,14 @@ const EVENTS: Record<Platform, { type: EventType; text: string; subject?: string
     { type: 'gift', text: 'gifted 3 subs', amount: '3' },
     { type: 'follow', text: 'followed' },
     { type: 'redemption', text: 'redeemed', subject: 'Hydrate!', amount: '250' }
+  ],
+  tiktok: [
+    { type: 'gift', text: 'sent', subject: 'Rose ×25', amount: '25 coins (~$0.13)', image: DEMO_GIFT('#ff2d55', '🌹'), details: { Gift: 'Rose', Count: '25', Coins: '25', 'Approx. value': '~$0.13 to the creator' } },
+    { type: 'gift', text: 'sent', subject: 'Galaxy', amount: '1,000 coins (~$5.00)', image: DEMO_GIFT('#5b35f0', '🌌'), big: true, details: { Gift: 'Galaxy', Count: '1', Coins: '1,000', 'Approx. value': '~$5.00 to the creator' } },
+    { type: 'gift', text: 'sent', subject: 'TikTok ×3', amount: '3 coins (~$0.02)', image: DEMO_GIFT('#25f4ee', '♪'), details: { Gift: 'TikTok', Count: '3', Coins: '3', 'Approx. value': '~$0.02 to the creator' } },
+    { type: 'follow', text: 'followed' },
+    { type: 'sub', text: 'subscribed' },
+    { type: 'other', text: 'shared the LIVE' }
   ]
 }
 
@@ -195,7 +212,7 @@ export class DemoConnector implements Connector {
   async start(): Promise<void> {
     // connect one after the other like the real thing, so the progress bar has something to show
     this.ctx.status({ status: 'connecting' })
-    const order = ['twitch', 'youtube', 'kick'].indexOf(this.platform)
+    const order = ['twitch', 'youtube', 'kick', 'tiktok'].indexOf(this.platform)
     this.timers.push(setTimeout(() => this.ctx.status({ status: 'connected', account: 'DemoStreamer', mentions: ['DemoStreamer'] }), 2500 + order * 1800))
     // a Streamer.bot test trigger, so the TEST tag and the Clear menu have something to work with
     if (this.platform === 'twitch') {
@@ -262,6 +279,7 @@ export class DemoConnector implements Connector {
   async logout(): Promise<void> {}
 
   async send(text: string): Promise<void> {
+    if (this.platform === 'tiktok') throw new Error(READ_ONLY_TEXT)
     this.ctx.message(this.msg('DemoStreamer', text, { author: { id: 'me', name: 'DemoStreamer', color: '#ffb454', badges: [{ id: 'broadcaster', title: 'Broadcaster' }], isBroadcaster: true } }))
   }
 
@@ -281,12 +299,12 @@ export class DemoConnector implements Connector {
   }
 
   async stats(): Promise<ChannelStats> {
-    return { twitch: { followers: 4343, subscribers: 261 }, youtube: { subscribers: 12300, rounded: true }, kick: { followers: 1874, subscribers: 57, gifted: 12 } }[this.platform]
+    return { twitch: { followers: 4343, subscribers: 261 }, youtube: { subscribers: 12300, rounded: true }, kick: { followers: 1874, subscribers: 57, gifted: 12 }, tiktok: { followers: 12840 } }[this.platform]
   }
 
   /** Twitch gets a full chatter list like the real thing, the others just a count. */
   async users(): Promise<UsersInfo> {
-    const viewers = { twitch: 142, youtube: 37, kick: 58 }[this.platform]
+    const viewers = { twitch: 142, youtube: 37, kick: 58, tiktok: 211 }[this.platform]
     if (this.platform !== 'twitch') return { live: true, viewers }
     const u = (name: string): UserEntry => ({ id: name, name, login: name.toLowerCase(), color: COLORS[Math.abs(CHATTERS.twitch.indexOf(name)) % COLORS.length] })
     const lurkers = ['QuietMoth', 'PixelPanda', 'AstroLatte', 'NightOwl_92', 'SoftReset', 'Blinky', 'CozyGamer', 'LateNightLuna'].map((name) => ({ id: name, name, login: name.toLowerCase() }))

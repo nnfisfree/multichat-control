@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type JSX, type KeyboardEvent, type ReactNode } from 'react'
-import { PLATFORMS, PLATFORM_LABEL, type ChatMessage, type Platform, type SendResult, type UserEntry } from '../../shared/types'
+import { PLATFORMS, PLATFORM_LABEL, READ_ONLY, type ChatMessage, type Platform, type SendResult, type UserEntry } from '../../shared/types'
 import { composerPlaceholder, plainText } from '../../shared/parts'
 import { allCommands, COMMAND_GROUPS, findCommand, findSbAction, isSbCommand, isTwitchCommand, matchCommands, SB_PREFIX, type CommandGroup, type CommandInfo } from '../lib/commands'
 import { ObsStrip } from './ObsStrip'
 import { Clock } from './Clock'
-import { SupportPill } from './SupportPill'
+import { SupportIcons } from './SupportPill'
 import { AppLogo, Icon, PlatformIcon, StreamerbotLogo } from './Icons'
 import { connected, updateSettings, useStore } from '../lib/store'
 import type { Tab } from './Tabs'
@@ -48,8 +48,11 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
   // Row under the message box: support pill on the left, OBS stats in the middle, clock on the right.
   // The support pill is always there, so the row always shows.
 
-  const destinations: Platform[] = replyTo ? [replyTo.platform]
-    : tab === 'all' ? PLATFORMS.filter((p) => targets[p] && connected(statuses, p))
+  // TikTok is read-only: never a destination, and on its tab (or replying to it) sending is off
+  const readOnly = (replyTo && READ_ONLY.includes(replyTo.platform)) || (tab !== 'all' && READ_ONLY.includes(tab))
+  const destinations: Platform[] = readOnly ? []
+    : replyTo ? [replyTo.platform]
+    : tab === 'all' ? PLATFORMS.filter((p) => !READ_ONLY.includes(p) && targets[p] && connected(statuses, p))
     : [tab]
 
   useEffect(() => {
@@ -186,7 +189,8 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     }
   }
 
-  const placeholder = replyTo ? `Reply to ${replyTo.author.name}…`
+  const placeholder = readOnly ? `${PLATFORM_LABEL[replyTo?.platform ?? (tab as Platform)]} is read-only for now. Use the All tab to message your other platforms`
+    : replyTo ? `Reply to ${replyTo.author.name}…`
     : composerPlaceholder(tab, destinations, PLATFORMS.some((p) => connected(statuses, p)))
 
   return (
@@ -214,7 +218,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
         <textarea ref={input} rows={1} aria-label="Message" placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} />
         {tab === 'all' && !replyTo && (
           <div className="targets">
-            {PLATFORMS.map((p) => (
+            {PLATFORMS.filter((p) => !READ_ONLY.includes(p)).map((p) => (
               <button key={p} className={targets[p] ? `pf-toggle on ${p}` : `pf-toggle ${p}`} aria-pressed={targets[p]} disabled={!connected(statuses, p)}
                 title={connected(statuses, p) ? `${targets[p] ? 'Sending to' : 'Not sending to'} ${PLATFORM_LABEL[p]}` : `${PLATFORM_LABEL[p]} is not connected`}
                 onClick={() => void updateSettings({ sendTargets: { ...targets, [p]: !targets[p] } })}><PlatformIcon platform={p} size={16} /></button>
@@ -226,7 +230,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
         <button className="send" aria-label="Send" disabled={!text.trim() || (!findCommand(text) && (busy || (!isSbCommand(text) && !destinations.length)))} onClick={() => void send()}><Icon.send /></button>
       </div>
       <div className="clock-row">
-        <span className="support-cell"><SupportPill /></span>
+        <span className="support-cell"><SupportIcons /></span>
         <span className="stats-cell">{obsOn && <ObsStrip onFix={onObsSettings} />}</span>
         <span className="clock-cell">{showClock && <Clock />}</span>
       </div>

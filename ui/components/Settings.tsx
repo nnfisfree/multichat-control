@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
-import { ALERTS_READY, KICK_REDIRECT_URI } from '../../shared/app-config'
-import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform, STREAM_APPS, type StreamApp } from '../../shared/types'
+import { ALERTS_READY } from '../../shared/app-config'
+import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, EULER_KEY_URL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform, STREAM_APPS, type StreamApp } from '../../shared/types'
 import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamerbotLogo } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
 import { login as startLogin } from '../lib/login'
@@ -8,42 +8,52 @@ import { About } from './About'
 import { statusText } from './Tabs'
 import { SKINS, skinById } from '../styles/skins'
 
-const GUIDE: Record<Platform, { title: string; url: string; steps: string[] }> = {
-  twitch: {
-    title: 'dev.twitch.tv/console',
-    url: 'https://dev.twitch.tv/console/apps/create',
-    steps: ['Register an application.', 'Set the OAuth redirect URL to https://localhost and click Add. The app never uses it, but Twitch requires one.', 'Set Client Type to Public.', 'Copy the Client ID below.']
-  },
-  youtube: {
-    title: 'console.cloud.google.com',
-    url: 'https://console.cloud.google.com/apis/credentials',
-    steps: [
-      'Create a project and enable "YouTube Data API v3".',
-      'Set up the OAuth consent screen, add yourself as a user, then Publish it. Apps left in Testing lose their login every 7 days.',
-      'Create an OAuth client ID of type Desktop app.',
-      'Copy the Client ID and Client secret below.'
-    ]
-  },
-  kick: {
-    title: 'kick.com/settings/developer',
-    url: 'https://kick.com/settings/developer',
-    steps: ['Enable developer mode and create an app.', `Set the redirect URL to ${KICK_REDIRECT_URI}`, 'Tick every scope.', 'Copy the Client ID and Client Secret below.']
-  }
+/** Platforms with a real login. TikTok is read by username instead, see TikTokAccount. */
+type LoginPlatform = Exclude<Platform, 'tiktok'>
+
+/**
+ * YouTube only: the built-in Google app is unverified, so Google caps it at 100 users in total.
+ * Past that, a streamer's own Google app is the way in. Twitch and Kick logins are built in for
+ * everyone, so they have no such option (developers building the app use .env instead).
+ */
+const YOUTUBE_GUIDE = {
+  title: 'console.cloud.google.com',
+  url: 'https://console.cloud.google.com/apis/credentials',
+  steps: [
+    'Create a project and enable "YouTube Data API v3".',
+    'Set up the OAuth consent screen, add yourself as a user, then Publish it. Apps left in Testing lose their login every 7 days.',
+    'Create an OAuth client ID of type Desktop app.',
+    'Copy the Client ID and Client secret below.'
+  ]
 }
 
-function Account({ platform }: { platform: Platform }): JSX.Element {
-  const boot = useStore((s) => s.boot!)
+/** Arrow at the end of an account row that opens or closes its extra settings. */
+function MoreButton({ open, onClick }: { open: boolean; onClick(): void }): JSX.Element {
+  return (
+    <button className="icon-btn acc-more" aria-expanded={open} aria-label={open ? 'Show less' : 'Show more'} title={open ? 'Show less' : 'Show more'} onClick={onClick}>
+      <span className={open ? 'chev open' : 'chev'}><Icon.chevron /></span>
+    </button>
+  )
+}
+
+/** Clicking an empty part of an account row toggles it, like its arrow. Buttons and fields keep their own clicks. */
+const rowToggle = (toggle: () => void) => (e: MouseEvent): void => {
+  if (!(e.target as HTMLElement).closest('button, a, input, label')) toggle()
+}
+
+function Account({ platform }: { platform: LoginPlatform }): JSX.Element {
   const settings = useStore((s) => s.settings!)
   const secrets = useStore((s) => s.secrets)
   const st = useStore((s) => s.statuses[platform])
   const [secret, setSecret] = useState('')
   const [err, setErr] = useState('')
-  const g = GUIDE[platform]
+  const g = YOUTUBE_GUIDE
   const idKey = `${platform}ClientId` as const
-  const secretKey = platform === 'youtube' ? 'youtubeSecret' : platform === 'kick' ? 'kickSecret' : null
-  const builtIn = platform === 'twitch' ? boot.builtInTwitchId : platform === 'youtube' ? boot.builtInYoutube : boot.builtInKick
-  const showFields = !(platform === 'twitch' && builtIn)
+  const secretKey = platform === 'youtube' ? 'youtubeSecret' : null
   const live = st?.status === 'connected' || st?.status === 'waiting' || st?.status === 'reconnecting'
+  // rows start as one line; the arrow opens the "own developer app" settings
+  const [open, setOpen] = useState(false)
+  const hasMore = platform === 'youtube' && !live
 
   const act = (fn: () => Promise<unknown>) => () => {
     setErr('')
@@ -58,8 +68,8 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
   }
 
   return (
-    <article className="account">
-      <header>
+    <article className={hasMore ? 'account has-more' : 'account'}>
+      <header onClick={hasMore ? rowToggle(() => setOpen(!open)) : undefined}>
         <span className={`pf ${platform}`}><PlatformIcon platform={platform} size={18} /></span>
         <h3>{PLATFORM_LABEL[platform]}</h3>
         <span className="state" title={statusText(st)}>{st?.account ? `${st.account} · ` : ''}{statusText(st)}</span>
@@ -68,6 +78,7 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
           {live
             ? <button className="btn ghost sm" onClick={act(() => window.nnf.logout(platform))}>Log out</button>
             : <button className="btn sm" disabled={st?.status === 'connecting' || (st?.status === 'authorizing' && platform !== 'twitch')} onClick={login}>{st?.status === 'authorizing' && platform === 'twitch' ? 'New code' : 'Log in'}</button>}
+          {hasMore && <MoreButton open={open} onClick={() => setOpen(!open)} />}
         </div>
       </header>
       {st?.device && (
@@ -77,9 +88,9 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
         </div>
       )}
       {err && <div className="notice bad" role="alert">{err}</div>}
-      {showFields && !live && (
-        <details className="advanced">
-          <summary>Advanced: use my own developer app</summary>
+      {hasMore && open && (
+        <div className="advanced">
+          <h4>Advanced: use my own developer app</h4>
           <ol>{g.steps.map((s) => <li key={s}>{s}</li>)}</ol>
           <p><button className="linkish" onClick={() => void window.nnf.openExternal(g.url)}>Open {g.title}</button></p>
           <label>Client ID
@@ -93,8 +104,86 @@ function Account({ platform }: { platform: Platform }): JSX.Element {
               </div>
             </label>
           )}
-        </details>
+        </div>
       )}
+    </article>
+  )
+}
+
+/**
+ * TikTok has no login we could use for chat: it's read by @username, and an Euler Stream key (free,
+ * the user's own) signs the connection. Read-only for now.
+ */
+function TikTokAccount({ startOpen }: { startOpen?: boolean }): JSX.Element {
+  const settings = useStore((s) => s.settings!)
+  const secrets = useStore((s) => s.secrets)
+  const demo = useStore((s) => !!s.boot?.demo)
+  const st = useStore((s) => s.statuses.tiktok)
+  const configured = !!settings.tiktokUsername && secrets.tiktokKey
+  // one line until opened, unless the user came here from a "Set up" button
+  const [open, setOpen] = useState(!!startOpen)
+  const [name, setName] = useState(settings.tiktokUsername ? `@${settings.tiktokUsername}` : '')
+  const [key, setKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const clean = (e: any): string => String(e?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+  const run = async (fn: () => Promise<unknown>): Promise<void> => {
+    setBusy(true)
+    setErr('')
+    try { await fn() } catch (e) { setErr(clean(e)) } finally { setBusy(false) }
+  }
+  const save = (): Promise<void> => run(async () => {
+    setSecrets(await window.nnf.tiktok.connect(name, key.trim() || undefined))
+    setKey('')
+    setOpen(false)
+  })
+  const showForm = open
+  const canSave = !!name.trim() && (!!key.trim() || secrets.tiktokKey) && !busy
+  return (
+    <article className="account tiktok has-more" id="tiktok-settings">
+      <header onClick={rowToggle(() => { setErr(''); setOpen(!open) })}>
+        <span className="pf tiktok"><PlatformIcon platform="tiktok" size={18} /></span>
+        <h3>TikTok <span className="pill-soft" title="TikTok chat and gifts show here; messages can't be sent to TikTok yet">Read-only</span></h3>
+        <span className="state" title={statusText(st)}>{configured || demo ? `${st?.account ? `${st.account} · ` : ''}${statusText(st)}` : 'Not set up'}</span>
+        <div className="row-btns">
+          {configured && <button className="btn ghost sm" disabled={busy} onClick={() => void run(() => window.nnf.reconnect('tiktok'))}>Reconnect</button>}
+          {configured && <button className="btn ghost sm" disabled={busy} onClick={() => void run(async () => { setSecrets(await window.nnf.tiktok.disconnect()); setName(''); setOpen(false) })}>Disconnect</button>}
+          {!configured && !demo && !open && <button className="btn sm" onClick={() => { setErr(''); setOpen(true) }}>Set up</button>}
+          <MoreButton open={open} onClick={() => { setErr(''); setOpen(!open) }} />
+        </div>
+      </header>
+      {showForm && (
+        <div className="bmc-connect">
+          <ol>
+            <li>Type your TikTok username.</li>
+            <li>Click <b>Get a free key</b>, sign up at Euler Stream (free) and copy your <b>API key</b>.</li>
+            <li>Paste it here and click <b>Connect</b>. The app joins your LIVE by itself whenever you go live.</li>
+          </ol>
+          <label>TikTok username
+            <input spellCheck={false} placeholder="@yourname" value={name} aria-label="TikTok username" disabled={demo}
+              onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && canSave) void save() }} />
+          </label>
+          <label>Euler Stream key {secrets.tiktokKey && <em>(saved)</em>}
+            <div className="row-btns">
+              <input type="password" autoComplete="off" spellCheck={false} value={key} aria-label="Euler Stream API key" disabled={demo}
+                placeholder={secrets.tiktokKey ? 'Saved. Paste a new one to replace it' : 'Paste your API key'}
+                onChange={(e) => setKey(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && canSave) void save() }} />
+              <button className="btn ghost sm" onClick={() => void window.nnf.openExternal(EULER_KEY_URL)}>Get a free key</button>
+            </div>
+          </label>
+          <div className="row-btns">
+            <button className="btn sm" disabled={!canSave || demo} title={demo ? 'Not available in demo mode' : undefined} onClick={() => void save()}>{busy ? 'Checking…' : 'Connect'}</button>
+            <button className="btn ghost sm" disabled={busy} onClick={() => { setOpen(false); setKey(''); setErr('') }}>Cancel</button>
+          </div>
+          <p className="hint">
+            Read-only for now: TikTok chat, gifts, follows and subs show here, and your messages go to the other platforms.
+            TikTok has no official chat API, so this uses the same unofficial connection as tools like TikFinity.
+            The key stays encrypted on this PC and is only sent to Euler Stream.
+          </p>
+        </div>
+      )}
+      {err && <div className="notice bad" role="alert">{err}</div>}
+      {!err && st?.detail && st.status !== 'connected' && configured && <div className={st.status === 'needs-setup' || st.status === 'error' ? 'notice bad' : 'notice'} role="status">{st.detail}</div>}
     </article>
   )
 }
@@ -435,7 +524,7 @@ function StreamerbotSettings(): JSX.Element {
 
 const CHAT_EVENT_ROWS: [ChatEventGroup, string, string][] = [
   ['subs', 'Subs', 'New subs, resubs and memberships'],
-  ['gifts', 'Gifted Subs', 'Single gifts and gift bombs'],
+  ['gifts', 'Gifts', 'Gifted subs, gift bombs and TikTok gifts'],
   ['hype', 'Hype Train', 'Start, level-ups and end. The top banner always shows.'],
   ['raids', 'Raids', 'Incoming and outgoing raids and hosts'],
   ['redemptions', 'Redemptions', 'Channel point rewards'],
@@ -633,7 +722,8 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
               {cat === 'connections' && <>
                 {!s.setupDismissed && <p className="lead">Welcome! Log in to each platform you stream on. You can do this later from the gear icon.</p>}
                 <Section title="Accounts" desc="Connect the platforms you stream on">
-                  {(['twitch', 'youtube', 'kick'] as Platform[]).map((p) => <Account key={p} platform={p} />)}
+                  {(['twitch', 'youtube', 'kick'] as LoginPlatform[]).map((p) => <Account key={p} platform={p} />)}
+                  <TikTokAccount startOpen={focus?.target === 'tiktok-settings'} />
                 </Section>
                 <Section title="Alerts & Donations" desc="Pick only the one you use. It adds donations, plus past subs, gifts and Bits the platforms don't share.">
                   <AlertsPicker />
@@ -662,6 +752,9 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                   </Row>
                   <Row title="Wobbly Window" desc="The window bends like jelly while you drag it by the title bar, and settles when you let go. Inspired by the Wobbly Windows effect built into KDE Plasma, the Linux desktop.">
                     <Toggle label="Wobbly window" on={s.windowWobble} onChange={(v) => void updateSettings({ windowWobble: v })} />
+                  </Row>
+                  <Row title="Animated Connection Line" desc="Once everything is connected, the line under the tabs keeps a soft glow in your platforms' colours, with a slow comet now and then. Off: it fades away after connecting. A platform that drops always turns its part of the line red.">
+                    <Toggle label="Animated connection line" on={s.connectionLine} onChange={(v) => void updateSettings({ connectionLine: v })} />
                   </Row>
                   {s.windowWobble && (
                     <Row title="Wobble Intensity" desc="Low is a light sway, high is soft jelly">

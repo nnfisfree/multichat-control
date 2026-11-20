@@ -37,7 +37,7 @@ export interface State {
   raid: RaidInfo | null
 }
 
-let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false, obsPassword: false, sbPassword: false, slToken: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0, users: {}, obs: { status: 'off' }, streamerbot: { status: 'off', actions: [], commands: [] }, pinned: null, raid: null }
+let state: State = { ready: false, boot: null, settings: null, secrets: { youtubeSecret: false, kickSecret: false, obsPassword: false, sbPassword: false, slToken: false, tiktokKey: false }, messages: [], events: [], statuses: {}, unreadEvents: 0, pronouns: {}, hype: null, actionsVersion: {}, update: null, integrations: {}, panelSignedIn: null, history: [], historySessions: [], historyShown: 0, users: {}, obs: { status: 'off' }, streamerbot: { status: 'off', actions: [], commands: [] }, pinned: null, raid: null }
 const listeners = new Set<() => void>()
 let eventsOpen = false
 // while the user is scrolled up reading, keep old rows so their scroll position doesn't jump

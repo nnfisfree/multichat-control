@@ -3,7 +3,7 @@ import { ALERT_SOURCE_LABEL, EVENT_TYPE_LABEL, PLATFORMS, PLATFORM_LABEL, type E
 import { Icon, PlatformIcon } from './Icons'
 import { removeEvents, updateSettings, useStore } from '../lib/store'
 import { EventBadge, EventIcon, SourceTag, TestTag } from './EventCard'
-import { isMembership, standaloneSource, subMonths } from '../../shared/events'
+import { isMembership, shownAmount, standaloneSource, subMonths } from '../../shared/events'
 import { PreviewCard } from './LinkPreview'
 
 const ALL_TYPES = Object.keys(EVENT_TYPE_LABEL) as EventType[]
@@ -27,10 +27,10 @@ function EventRow({ e, open, onToggle }: { e: StreamEvent; open: boolean; onTogg
     <li className={`event ${e.type}${open ? ' open' : ''}${e.history ? ' history' : ''}`}>
       <button className="event-head" aria-expanded={open} onClick={onToggle}>
         <EventIcon e={e} size={16} />
-        <span className="event-text">{e.actor && <b>{e.actor} </b>}{e.text}{e.subject && <b> {e.subject}</b>}</span>
+        <span className="event-text">{e.actor && <b>{e.actor} </b>}{e.text}{e.image && <img className="ev-img" src={e.image} alt="" loading="lazy" draggable={false} />}{e.subject && <b> {e.subject}</b>}</span>
         <SourceTag e={e} />
         <TestTag e={e} />
-        {e.amount && <span className="amount">{e.amount}</span>}
+        {e.amount && <span className="amount">{shownAmount(e)}</span>}
         {/* resubs always say how long: total months, plus the streak if the viewer shares it */}
         {months && <span className="sub-months" title={`${isMembership(e) ? 'Member' : 'Subscribed'} for ${months} months in total${e.streak ? `, ${e.streak} in a row` : ''}`}><b>{months}</b> months{e.streak ? <> · <b>{e.streak}</b> in a row</> : null}</span>}
         <EventBadge e={e} />

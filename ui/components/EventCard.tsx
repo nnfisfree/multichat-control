@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { eventBadge, standaloneSource, subMonths } from '../../shared/events'
+import { eventBadge, shownAmount, standaloneSource, subMonths } from '../../shared/events'
 import { ALERT_SOURCE_LABEL, PLATFORM_LABEL, type StreamEvent } from '../../shared/types'
 import { BadgeIcon } from './BadgeIcons'
 import { BmcLogo, DollarIcon, PlatformIcon, StreamElementsLogo, StreamlabsLogo } from './Icons'
@@ -54,11 +54,10 @@ export function EventCard({ e, popup }: { e: StreamEvent; popup?: boolean }): JS
     <div className={`ev ev-${e.type} on-${e.platform}${standaloneSource(e) ? ` from-${standaloneSource(e)}` : ''}${e.big ? ' ev-big' : ''}${e.type === 'powerup' && /celebration/i.test(e.subject ?? '') ? ' ev-celebration' : ''}`}>
       <div className="ev-top">
         <EventIcon e={e} size={18} />
-        <span className="ev-title">{e.actor && <b>{e.actor} </b>}{e.text}{e.subject && <b> {e.subject}</b>}</span>
+        <span className="ev-title">{e.actor && <b>{e.actor} </b>}{e.text}{e.image && <img className="ev-img" src={e.image} alt="" loading="lazy" draggable={false} />}{e.subject && <b> {e.subject}</b>}</span>
         <SourceTag e={e} />
         <TestTag e={e} />
-        {/* the BITS badge already says bits, so the pop-up shows just the number */}
-        {e.amount && <span className="ev-amount">{popup && e.type === 'cheer' ? e.amount.replace(/\s*bits?$/i, '') : e.amount}</span>}
+        {e.amount && <span className="ev-amount">{shownAmount(e)}</span>}
         <EventBadge e={e} months={popup ? subMonths(e) : undefined} />
       </div>
       {e.message && <div className="ev-msg">{e.message}</div>}

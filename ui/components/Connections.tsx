@@ -25,10 +25,19 @@ const live = (s?: string): boolean => s === 'connected' || s === 'waiting' || s 
 
 function platformService(p: (typeof PLATFORMS)[number], st?: ConnectionState): Service {
   const base = { key: p, label: PLATFORM_LABEL[p], icon: <PlatformIcon platform={p} size={16} />, account: st?.account }
-  const login = { label: 'Log in', run: () => startLogin(p) }
+  // TikTok has no login: "Set up" opens its card in Settings
+  const tiktok = p === 'tiktok'
+  const login = { label: tiktok ? 'Set up' : 'Log in', run: () => startLogin(p) }
   const actions = live(st?.status)
-    ? [{ label: 'Reconnect', run: () => window.nnf.reconnect(p) }, { label: 'Log out', run: () => window.nnf.logout(p) }]
+    ? [{ label: 'Reconnect', run: () => window.nnf.reconnect(p) }, tiktok ? { label: 'Disconnect', run: () => window.nnf.tiktok.disconnect() } : { label: 'Log out', run: () => window.nnf.logout(p) }]
     : [login]
+  if (tiktok && (st?.status === 'needs-setup' || st?.status === 'needs-login' || !st)) {
+    // set up before, but the key or username stopped working: that's a problem, not "off"
+    const broken = !!st?.detail && !/^Add your TikTok @username/.test(st.detail)
+    return broken
+      ? { ...base, tone: 'bad', text: 'Needs attention', tracked: true, pending: false, actions: [login], hint: st?.detail }
+      : { ...base, tone: 'off', text: 'Not set up', tracked: false, pending: false, actions: [login] }
+  }
   switch (st?.status) {
     case 'connected':
       // connected, but a newer feature needs a fresh login: say which and offer it
@@ -129,30 +138,61 @@ const counts = (list: Service[]): { tracked: number; up: number; pending: number
 }
 
 /** Thin progress bar while services connect, then a summary that fades out. */
-export function ConnectBar({ fallback }: { fallback?: ReactNode }): JSX.Element | null {
-  const { tracked, up, pending } = counts(useServices())
-  const [phase, setPhase] = useState<'hidden' | 'progress' | 'done'>(pending ? 'progress' : 'hidden')
+/** Colour of each service's segment in the glow line: the platform's or service's own colour. */
+const LINE_COLOR: Record<string, string> = {
+  twitch: 'var(--twitch)', panel: 'var(--twitch)', youtube: 'var(--youtube)', kick: 'var(--kick)', tiktok: 'var(--tiktok)',
+  buymeacoffee: '#ffdd00', streamlabs: '#80f5d2', streamelements: '#3b82f6', obs: 'var(--blue)', streamerbot: 'var(--purple)'
+}
+
+/**
+ * Comet line along the bottom of the tab bar: one gradient blending the colours of the services in
+ * use, each lit once it's up.
+ * - connecting: a comet sweeps back and forth, and a burst of light goes off where a service connects
+ * - all up: one flash, then a calm glow with a slow comet every ~10 s (or it fades away, if the
+ *   user turned the animated line off)
+ * - a service fails: its stretch of the line pulses red until it's back (shown either way)
+ * The Connections button next to it has the details in words.
+ */
+export function ConnectBar(): JSX.Element | null {
+  const services = useServices()
+  const animated = useStore((s) => s.settings?.connectionLine ?? true)
+  const { tracked, up, pending } = counts(services)
+  const [phase, setPhase] = useState<'progress' | 'done' | 'calm'>(pending ? 'progress' : 'calm')
   useEffect(() => {
     if (pending > 0) return setPhase('progress')
     if (phase !== 'progress') return
     setPhase('done')
-    const t = setTimeout(() => setPhase('hidden'), 2500)
+    const t = setTimeout(() => setPhase('calm'), 2600)
     return () => clearTimeout(t)
   }, [pending])
-  if (phase === 'hidden' || tracked === 0) return <>{fallback}</>
-  const settled = tracked - pending
-  const allUp = phase === 'done' && up === tracked
-  const label = phase === 'progress' ? `Connecting… ${settled} of ${tracked}` : allUp ? 'All connected' : `${up} of ${tracked} connected`
-  const pct = Math.round((phase === 'done' ? 1 : settled / tracked) * 100)
-  const text = <>{allUp && <span className="connect-check" aria-hidden="true">✓</span>}{label}</>
-  // The label is drawn twice, once over the empty track and once in a contrasting colour clipped to
-  // the fill, so it stays readable as the fill passes underneath.
+  const list = services.filter((s) => s.tracked).map((s, i, all) => ({
+    key: s.key,
+    from: (i / all.length) * 100,
+    at: ((i + 0.5) / all.length) * 100,
+    width: 100 / all.length,
+    color: LINE_COLOR[s.key] ?? 'var(--blue)',
+    // 'warn' without pending is e.g. "waiting for OBS to open": not a problem, just not lit yet
+    state: s.pending ? 'wait' : s.tone === 'good' || s.tone === 'wait' ? 'up' : s.tone === 'bad' ? 'bad' : 'idle'
+  }))
+  const failing = list.filter((s) => s.state === 'bad')
+  if (tracked === 0) return null
+  // with the animated line off, it only stays while connecting or while something is wrong
+  if (!animated && phase === 'calm' && !failing.length) return null
+  const allUp = up === tracked
+  const label = phase === 'progress' ? `Connecting… ${tracked - pending} of ${tracked}`
+    : failing.length ? `${failing.length} not connected: open Connections to fix` : allUp ? 'All connected' : `${up} of ${tracked} connected`
+  const stops = list.map((s) => `${s.state === 'up' ? s.color : s.state === 'bad' ? 'var(--bad)' : `color-mix(in srgb, ${s.color} 22%, transparent)`} ${s.at}%`)
+  const gradient = `linear-gradient(90deg, ${stops.length === 1 ? `${stops[0]}, ${stops[0]}` : stops.join(', ')})`
+  const comet = phase === 'progress' ? 'cl-comet' : animated && phase === 'calm' ? 'cl-comet idle' : null
   return (
-    <div className={`connect-bar ${phase}${phase === 'done' ? (allUp ? ' good' : ' warn') : ''}`} role="status" aria-live="polite" style={{ '--pct': `${pct}%` } as CSSProperties}>
-      <span className="connect-fill" />
-      <span className="connect-label">{text}</span>
-      <span className="connect-label over" aria-hidden="true">{text}</span>
-      {phase === 'progress' && <span className="connect-ticks" aria-hidden="true">{Array.from({ length: tracked - 1 }, (_, i) => <i key={i} style={{ left: `${((i + 1) / tracked) * 100}%` }} />)}</span>}
+    <div className={`connect-line ${phase}${allUp ? ' good' : ''}${animated ? '' : ' still'}`} role="status" aria-live="polite" aria-label={label} title={label}>
+      <span className="cl-base" style={{ background: gradient }} />
+      <span className="cl-glow" style={{ background: gradient }} />
+      {failing.map((s) => <span key={`alarm-${s.key}`} className="cl-alarm" style={{ left: `${s.from}%`, width: `${s.width}%` }} />)}
+      {comet && <span className={comet} />}
+      {list.filter((s) => s.state === 'up').map((s) => (
+        <span key={s.key} className="cl-burst" style={{ left: `${s.at}%`, '--seg': s.color } as CSSProperties} />
+      ))}
     </div>
   )
 }

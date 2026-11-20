@@ -11,6 +11,7 @@ mod raid;
 mod secrets;
 mod sockets;
 mod storage;
+mod tiktok;
 mod updater;
 mod webview2;
 mod window;
@@ -118,6 +119,10 @@ fn main() {
             kick::kick_json_via_page,
             youtube::youtube_stream_start,
             youtube::youtube_stream_stop,
+            tiktok::tiktok_room,
+            tiktok::tiktok_key,
+            tiktok::tiktok_connect,
+            tiktok::tiktok_disconnect,
             window::window_opacity,
             wobble::window_wobble,
             sockets::ws_open,

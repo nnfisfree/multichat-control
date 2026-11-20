@@ -25,6 +25,10 @@ export const EVENT_BADGE: Record<EventType, string> = {
   moderation: 'MOD', stream: 'LIVE', donation: 'TIP', announcement: 'ANN', other: 'INFO'
 }
 
+/** The amount as shown next to the badge. The BITS badge already says bits, so "500 bits" shows as "500". */
+export const shownAmount = (e: Pick<StreamEvent, 'type' | 'amount'>): string | undefined =>
+  e.type === 'cheer' || e.type === 'bits' ? e.amount?.replace(/\s*bits?$/i, '') : e.amount
+
 /** YouTube and BMC call them memberships, not subs. */
 export const isMembership = (e: Partial<Pick<StreamEvent, 'type' | 'source' | 'platform'>>): boolean =>
   e.type === 'sub' && (e.source === 'buymeacoffee' || e.platform === 'youtube')

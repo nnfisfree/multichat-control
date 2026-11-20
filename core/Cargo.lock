@@ -2307,10 +2307,11 @@ dependencies = [
 
 [[package]]
 name = "multichat-control"
-version = "0.3.5"
+version = "0.4.0"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
+ "flate2",
  "futures-util",
  "prost",
  "rand 0.8.8",

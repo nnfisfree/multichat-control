@@ -1,6 +1,7 @@
-# Keeps the Wall of Supporters (shared/supporters.json) in sync with Buy Me a Coffee.
-# Needs the repo secret BMC_TOKEN: a Personal Access Token from https://developers.buymeacoffee.com
-# (Settings → Secrets and variables → Actions → New repository secret).
+# Keeps the Wall of Supporters (shared/supporters.json) in sync with GitHub Sponsors. Buy Me a Coffee
+# is left out on purpose (it's the stream's own tip jar). Needs the repo secret SPONSORS_TOKEN
+# (Settings → Secrets and variables → Actions): a classic personal access token of nnfisfree with the
+# read:user and read:org scopes.
 name: Update supporters
 
 on:
@@ -21,14 +22,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Read supporters from Buy Me a Coffee
+      - name: Read sponsors from GitHub
         run: node scripts/update-supporters.mjs
         env:
-          BMC_TOKEN: ${{ secrets.BMC_TOKEN }}
+          SPONSORS_TOKEN: ${{ secrets.SPONSORS_TOKEN }}
       - name: Commit the list if it changed
         run: |
           if git diff --quiet -- shared/supporters.json; then echo "No change"; exit 0; fi

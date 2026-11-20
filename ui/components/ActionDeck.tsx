@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent, type JSX } from 'react'
-import { PLATFORMS, PLATFORM_LABEL, type ActionDef, type Platform } from '../../shared/types'
+import { PLATFORMS, PLATFORM_LABEL, READ_ONLY, type ActionDef, type Platform } from '../../shared/types'
 import { Icon, PlatformIcon } from './Icons'
 import { useStore } from '../lib/store'
 
@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function ActionDeck({ scope, onClose, onRewards }: Props): JSX.Element {
-  const [platform, setPlatform] = useState<Platform>(scope === 'all' ? 'twitch' : scope)
+  const [platform, setPlatform] = useState<Platform>(scope === 'all' || READ_ONLY.includes(scope) ? 'twitch' : scope)
   const [actions, setActions] = useState<ActionDef[] | null>(null)
   const [form, setForm] = useState<ActionDef | null>(null)
   const [values, setValues] = useState<Record<string, string>>({})
@@ -64,7 +64,7 @@ export function ActionDeck({ scope, onClose, onRewards }: Props): JSX.Element {
       <div className="pop-head">
         <h2>Actions</h2>
         <div className="filters">
-          {PLATFORMS.map((p) => (
+          {PLATFORMS.filter((p) => !READ_ONLY.includes(p)).map((p) => (
             <button key={p} className={p === platform ? `pf-toggle on ${p}` : `pf-toggle ${p}`} aria-pressed={p === platform} title={PLATFORM_LABEL[p]}
               onClick={() => { setPlatform(p); setActions(null); setForm(null); setPendingConfirm(null); setNote(null) }}><PlatformIcon platform={p} size={16} /></button>
           ))}

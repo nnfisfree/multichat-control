@@ -1,33 +1,18 @@
 import { useEffect, useRef, useState, type JSX, type ReactNode } from 'react'
-import fourthwall from '../../assets/fourthwall.png'
 import logo from '../../assets/logo.webp'
-import { PlatformIcon } from './Icons'
-import { BMC_URL, SupportPill } from './SupportPill'
+import { BmcLogo } from './Icons'
+import { BMC_URL, GithubMark, SPONSOR_URL, SponsorHeart, SupportPill } from './SupportPill'
 import { BUNDLED_SUPPORTERS, SUPPORTERS_URL, cleanSupporters, type Supporter } from '../../shared/supporters'
 import { ANONYMOUS } from '../../shared/moderation'
 import { useStore } from '../lib/store'
 
-const DONATE_URL = 'https://streamelements.com/nonamefound/tip'
-const SUBSCRIBE_URL = 'https://www.twitch.tv/subs/nonamefound'
-const STORE_URL = 'https://nonamefound.lol/en-eur'
 
 const open = (url: string) => (): void => void window.nnf.openExternal(url)
-
-function PayPalMark(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-      <path fill="#fff" d="M8.3 21.2H4.9a.6.6 0 0 1-.6-.7L7 3.4A.8.8 0 0 1 7.8 2.7h6.1c3.4 0 5.5 1.7 4.9 5-.6 3.8-3.2 5.6-6.6 5.6H10a.8.8 0 0 0-.8.7l-.9 7.2z" />
-      <path fill="#cfe6ff" d="M19.6 7.9c-.7 3.9-3.4 5.8-7 5.8h-1.6a.8.8 0 0 0-.8.7l-1 6.5a.5.5 0 0 0 .5.6h2.8a.7.7 0 0 0 .7-.6l.6-3.6a.8.8 0 0 1 .8-.7h.9c3 0 5.2-1.6 5.8-4.8.3-1.6 0-2.9-.7-3.9z" />
-    </svg>
-  )
-}
 
 function SupportButtons(): JSX.Element {
   return (
     <div className="support-buttons">
-      <button className="support-btn paypal" onClick={open(DONATE_URL)}><PayPalMark /> Donate</button>
-      <button className="support-btn twitch-sub" onClick={open(SUBSCRIBE_URL)}><PlatformIcon platform="twitch" size={18} /> Subscribe on Twitch</button>
-      <button className="support-btn store" onClick={open(STORE_URL)}><img src={fourthwall} alt="" width={18} height={18} /> Gadgets Store</button>
+      <button className="support-btn bmc" onClick={open(BMC_URL)}><BmcLogo size={20} /> Buy Me a Coffee</button>
     </div>
   )
 }
@@ -110,10 +95,51 @@ function useSupporters(): Supporter[] {
   return list
 }
 
-/** Everyone who chipped in, biggest first, then an open seat for whoever's next. */
-function SupporterWall(): JSX.Element {
-  const list = [...useSupporters()].sort((a, b) => b.amount - a.amount)
+/** People who helped build the project. Their own section, no amounts. Hidden when there are none. */
+function Collaborators({ list }: { list: Supporter[] }): JSX.Element | null {
+  if (!list.length) return null
   return (
+    <section className="sup-wall collab" aria-label="Collaborators">
+      <header className="sup-head">
+        <h3>🛠️ Collaborators</h3>
+        <span className="sup-count">Thank you for building this with me</span>
+      </header>
+      <div className="collab-list">
+        {list.map((s, i) => (
+          <article key={`${s.name}-${i}`} className="collab-card">
+            <button className="collab-face" title={s.url ? `Open ${s.name}'s profile` : s.name} disabled={!s.url} onClick={s.url ? open(s.url) : undefined}>
+              <span className="sup-crown" aria-hidden="true">👑</span>
+              <SupporterAvatar s={s} />
+            </button>
+            <div className="collab-info">
+              <button className="collab-name" disabled={!s.url} onClick={s.url ? open(s.url) : undefined}>{s.name}</button>
+              <div className="collab-role">
+                {s.title && <span className="collab-badge">{s.title}</span>}
+                {!!s.projects?.length && <>
+                  <span className="collab-of">{s.title ? '& creator of' : 'Creator of'}</span>
+                  {s.projects.map((pr) => (
+                    <button key={pr.name} className="collab-repo" disabled={!pr.url} title={pr.url ? `Open ${pr.name} on GitHub` : pr.name} onClick={pr.url ? open(pr.url) : undefined}>
+                      <GithubMark /> {pr.name}{pr.url && <span className="collab-arrow" aria-hidden="true">↗</span>}
+                    </button>
+                  ))}
+                </>}
+              </div>
+            </div>
+            {s.amount > 0 && <span className="collab-amount" title="Donated">{money(s)}</span>}
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/** Approved supporters, biggest first, then an open seat for whoever's next. Collaborators get their own section above. */
+function SupporterWall(): JSX.Element {
+  const all = useSupporters()
+  const list = all.filter((s) => !s.collaborator).sort((a, b) => b.amount - a.amount)
+  return (
+    <>
+    <Collaborators list={all.filter((s) => s.collaborator)} />
     <section className="sup-wall" aria-label="Supporters">
       <header className="sup-head">
         <h3>💜 Wall of Supporters</h3>
@@ -126,17 +152,18 @@ function SupporterWall(): JSX.Element {
             <SupporterAvatar s={s} />
             <b className="sup-name">{s.name}</b>
             {s.title && <span className="sup-title" title={s.title}>{s.title}</span>}
-            <span className="sup-amount">{money(s)}</span>
+            <span className="sup-amount">{s.source === 'github' && <span className="sup-gh" title="GitHub Sponsor"><GithubMark /></span>}{money(s)}</span>
             {s.message && <span className="sup-msg" title={s.message}>“{s.message}”</span>}
           </button>
         ))}
-        <button className="sup-card next" onClick={open(BMC_URL)} title="Support the project on Buy Me a Coffee">
+        <button className="sup-card next" onClick={open(SPONSOR_URL)} title="Sponsor the project on GitHub: you'll show up here by yourself">
           <span className="sup-avatar empty" aria-hidden="true">?</span>
           <b className="sup-name">Wanna be next?</b>
-          <span className="sup-cta">Your face could be here ☕</span>
+          <span className="sup-cta">Sponsor on GitHub <SponsorHeart size={10} /></span>
         </button>
       </div>
     </section>
+    </>
   )
 }
 
@@ -162,11 +189,11 @@ const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
             <p>I'm not a big company or a team of developers. I'm just one guy who enjoys building things, solving problems, and sharing what he creates with others.</p>
           </div>
         </header>
-        <h3>💡 Why I Created ChatControl</h3>
-        <p>The idea behind <b>ChatControl</b> came from a simple frustration: I tried different tools and applications to manage my streaming experience, but none of them perfectly fit my needs.</p>
+        <h3>💡 Why I Created Multichat Control</h3>
+        <p>The idea behind <b>Multichat Control</b> came from a simple frustration: I tried different tools and applications to manage my streaming experience, but none of them perfectly fit my needs.</p>
         <p>There was always something missing, something I wished worked differently, or a feature I really wanted.</p>
         <p>So, one day, I thought: <b>"Why not just build my own?"</b></p>
-        <p>And that's how ChatControl was born.</p>
+        <p>And that's how Multichat Control was born.</p>
         <p>What started as a personal project became something I wanted to share with the entire streaming community. Because if I needed a tool like this, chances are someone else does too!</p>
       </>
     )
@@ -178,7 +205,7 @@ const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
       <>
         <h3>❤️ Free, Open Source, and Privacy First</h3>
         <p>I strongly believe that useful software should be accessible to everyone.</p>
-        <p>That's why <b>ChatControl is completely FREE and OPEN SOURCE</b>, and it always will be.</p>
+        <p>That's why <b>Multichat Control is completely FREE and OPEN SOURCE</b>, and it always will be.</p>
         <div className="about-cards">
           {FEATURES.map(([icon, title, text]) => (
             <div key={title} className="about-card"><span className="about-card-icon">{icon}</span><b>{title}</b><span>{text}</span></div>
@@ -194,21 +221,23 @@ const CHAPTERS: { id: string; label: ReactNode; body: () => JSX.Element }[] = [
     label: 'Support',
     body: () => (
       <>
-        <h3>☕ Support ChatControl</h3>
+        <h3>☕ Support Multichat Control</h3>
         <SupporterWall />
         <div className="support-letter">
-        <p>ChatControl is a passion project, developed and maintained independently in my spare time.</p>
+        <p>Multichat Control is a passion project, developed and maintained independently in my spare time.</p>
         <p>Behind every feature, bug fix, and improvement are countless hours of coding, testing, debugging, and probably way too much coffee! ☕</p>
-        <p>If ChatControl makes your streaming life a little easier, and you'd like to support its development, <b>please consider making a small donation</b>.</p>
+        <p>If Multichat Control makes your streaming life a little easier, and you'd like to support its development, <b>please consider making a small donation</b>.</p>
         <p>Even the price of a coffee can make a difference!</p>
         <p>Your support helps me dedicate more time to improving the app, creating new features, fixing bugs, and keeping the project <b>free and open source for everyone</b>.</p>
         <p>Donations are completely optional. You'll always have access to the same features whether you donate or not.</p>
-        <p>And if you can't donate, that's perfectly fine! Sharing ChatControl with your friends, reporting bugs, suggesting features, or contributing to the code is just as appreciated.</p>
+        <p>And if you can't donate, that's perfectly fine! Sharing Multichat Control with your friends, reporting bugs, suggesting features, or contributing to the code is just as appreciated.</p>
         <p><b>Every little bit of support means the world to me. ❤️</b></p>
         <p>Thank you for being part of this journey!</p>
         <p className="about-sign">— <b>NoNameFound</b> 🎮🐧</p>
         </div>
         <SupportPill big />
+        <p className="support-how">Pick <b>one-time</b> or <b>monthly</b>, any amount, and you'll appear on the wall above by yourself.<br />No GitHub account? Make one in seconds with <b>Continue with Google</b> (or Apple).</p>
+        <p className="support-wall-note">💜 Only GitHub sponsors appear on the Wall of Supporters. Buy Me a Coffee is also my stream tip jar, so tips there can't be told apart and won't show on the wall.</p>
         <SupportButtons />
       </>
     )

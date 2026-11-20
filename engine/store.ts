@@ -26,6 +26,10 @@ export async function loadStore(): Promise<void> {
     // Sweet became the default in 0.3.2. A settings file from before skins existed has no theme,
     // and that person has been looking at POS Club all along, so keep it for them.
     if (!('theme' in saved)) saved.theme = 'pos'
+    // TikTok arrived in 0.4. These two are nested, so the shallow merge below wouldn't add it.
+    if (saved.sendTargets && typeof saved.sendTargets === 'object' && !('tiktok' in saved.sendTargets)) saved.sendTargets.tiktok = false
+    const filter = saved.eventFilter?.platforms
+    if (filter && typeof filter === 'object' && !('tiktok' in filter)) filter.tiktok = true
     store.settings = { ...DEFAULT_SETTINGS, ...saved }
   } catch {
     // corrupt file: fall back to defaults, it gets overwritten on the next change

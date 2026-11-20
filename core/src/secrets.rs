@@ -154,6 +154,7 @@ pub struct SecretState {
     obs_password: bool,
     sb_password: bool,
     sl_token: bool,
+    tiktok_key: bool,
 }
 
 #[tauri::command]
@@ -165,6 +166,7 @@ pub fn secret_state() -> SecretState {
         obs_password: map.contains_key("obs.password"),
         sb_password: map.contains_key("streamerbot.password"),
         sl_token: map.contains_key("streamlabs.token"),
+        tiktok_key: map.contains_key("tiktok.eulerKey"),
     }
 }
 

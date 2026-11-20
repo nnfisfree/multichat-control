@@ -1,4 +1,4 @@
-import { PLATFORMS, PLATFORM_LABEL, type Emote, type MessagePart, type Platform } from './types'
+import { PLATFORMS, PLATFORM_LABEL, READ_ONLY, type Emote, type MessagePart, type Platform } from './types'
 
 const URL_RE = /\bhttps?:\/\/[^\s<>"']+/gi
 
@@ -140,7 +140,7 @@ export function composerPlaceholder(tab: Platform | 'all', destinations: Platfor
   if (tab !== 'all') return `Send a message to ${PLATFORM_LABEL[tab]}...`
   if (!anyConnected) return 'No platforms connected'
   if (!destinations.length) return 'No platforms selected'
-  if (destinations.length === PLATFORMS.length) return 'Send a message to all platforms...'
+  if (destinations.length === PLATFORMS.filter((p) => !READ_ONLY.includes(p)).length) return 'Send a message to all platforms...'
   return `Send a message to ${destinations.map((p) => PLATFORM_LABEL[p]).join(' and ')}...`
 }
 

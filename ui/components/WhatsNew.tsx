@@ -1,6 +1,6 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { updateSettings, useStore } from '../lib/store'
-import { Icon } from './Icons'
+import { Icon, PlatformIcon } from './Icons'
 import type { SettingsFocus } from './Settings'
 
 /**
@@ -20,32 +20,33 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
+    icon: <PlatformIcon platform="tiktok" size={18} />,
+    title: 'TikTok LIVE (beta)',
+    text: 'TikTok chat, gifts, subs, follows and shares now show next to Twitch, YouTube and Kick. Type your @username, paste a free Euler Stream key, and the app joins your LIVE on its own. Still under development and read-only for now, so please report anything odd.',
+    show: { cat: 'connections', target: 'tiktok-settings' }
+  },
+  {
     icon: <Icon.bolt />,
-    title: 'Live stream graph',
-    text: 'Hover the OBS stats under the message box for a 60-second graph of bitrate, FPS, CPU and dropped frames, updated every second. Click for the full stats, graph included.'
+    title: 'A comet under the tabs',
+    text: "A thin line in your platforms' colours shows connections coming up, keeps a calm glow once everything is connected, and turns red if a platform drops. Tabs now only show for connected platforms, with coloured icons.",
+    show: { cat: 'appearance', target: 'window-settings' }
   },
   {
     icon: <Icon.plug />,
-    title: 'Streamlabs Desktop and Meld Studio',
-    text: 'Stream stats now also work with Streamlabs Desktop (SLOBS) and Meld Studio. Pick yours in Settings; the icon spins, hops or wobbles while you are live.',
-    show: { cat: 'connections', target: 'obs-settings' }
-  },
-  {
-    icon: <Icon.palette />,
-    title: 'A smaller skin picker',
-    text: 'Skins are now compact chips split into dark and light, with a big preview of the one you hover.',
-    show: { cat: 'appearance', target: 'skins-settings' }
+    title: 'Tidier Connections',
+    text: 'Each account is one line until you click it, and the developer-app fields are gone for Twitch and Kick.',
+    show: { cat: 'connections' }
   },
   {
     icon: <Icon.gem />,
-    title: 'Wall of Supporters',
-    text: 'The Support page thanks everyone who supported the project, updated on its own. Hover the support button for a surprise.',
+    title: 'Sponsor on GitHub',
+    text: 'The Support page has a Collaborators section, and GitHub sponsors appear on the Wall of Supporters by themselves. Two small icons under the message box lead to GitHub Sponsors and Buy Me a Coffee.',
     show: { cat: 'about', target: 'support' }
   },
   {
     icon: <Icon.events />,
-    title: 'Event colours',
-    text: 'Subs, gifts, Bits, Super Chats, raids and follows in chat now use the colour of their platform, and tips the colour of their service.',
+    title: 'Cleaner Bits cards',
+    text: 'Cheers show just the amount next to the BITS badge, in chat, pop-ups and Recent events.',
     fixed: true
   }
 ]

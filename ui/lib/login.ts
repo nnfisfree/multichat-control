@@ -11,6 +11,11 @@ export type YoutubeNoticeDetail = (go: boolean) => void
  * client (people using their own Google app get their own screens).
  */
 export function login(platform: Platform): Promise<unknown> {
+  // TikTok has no login, just a username and key in Settings
+  if (platform === 'tiktok') {
+    window.dispatchEvent(new CustomEvent('nnf:open-settings', { detail: { cat: 'connections', target: 'tiktok-settings' } }))
+    return Promise.resolve()
+  }
   const { boot, settings } = getState()
   const builtIn = !!boot?.builtInYoutube && !settings?.youtubeClientId
   if (platform !== 'youtube' || !builtIn || settings?.youtubeNoticeSeen) return window.nnf.login(platform)

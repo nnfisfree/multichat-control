@@ -4,7 +4,7 @@ import { PlatformIcon } from './Icons'
 import { connected, useStore } from '../lib/store'
 
 // Poll interval per platform. YouTube's daily quota is tiny, so it gets asked less.
-const EVERY: Record<Platform, number> = { twitch: 60000, youtube: 5 * 60000, kick: 60000 }
+const EVERY: Record<Platform, number> = { twitch: 60000, youtube: 5 * 60000, kick: 60000, tiktok: 5 * 60000 }
 
 // 4,343 below a million, 1.2M above
 const show = (n: number): string => (n < 1_000_000 ? n.toLocaleString('en-US') : `${(n / 1_000_000).toFixed(n < 10_000_000 ? 1 : 0).replace(/\.0$/, '')}M`)

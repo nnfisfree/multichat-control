@@ -128,7 +128,7 @@ export function UsersDrawer({ open, onClose, onUser, onCard }: Props): JSX.Eleme
           {shown.map((p) => <Section key={p} data={users[p]!} filter={q} onUser={onUser} onCard={onCard} />)}
         </div>
         <p className="users-foot">
-          Viewers who aren't logged in don't appear in any list. YouTube and Kick don't share who's watching, so they show who has chatted this stream.
+          Viewers who aren't logged in don't appear in any list. YouTube, Kick and TikTok don't share who's watching, so they show who has chatted this stream.
           {shown.length > 0 && Number.isFinite(updated) && <> Updated {ago(updated, now)}.</>}
         </p>
       </div>

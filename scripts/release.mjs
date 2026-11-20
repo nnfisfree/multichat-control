@@ -99,7 +99,10 @@ try {
 step('Checking the release for personal data')
 const work = mkdtempSync(join(tmpdir(), 'release-audit-'))
 try {
-  const zipped = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', `Expand-Archive -LiteralPath '${join(out, files.zip)}' -DestinationPath '${work}' -Force`], { stdio: 'inherit' })
+  // Run from a PowerShell 7 window, Windows PowerShell inherits PS7's PSModulePath and loads its
+  // Archive module, which fails there without changing the exit code. Drop it, and fail on errors.
+  const { PSModulePath: _ps7, ...env } = process.env
+  const zipped = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'; Expand-Archive -LiteralPath '${join(out, files.zip)}' -DestinationPath '${work}' -Force`], { stdio: 'inherit', env })
   if (zipped.status !== 0) stop('Could not open the zip to check it.')
   const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]))
   const shipped = walk(work).map((f) => relative(work, f).replace(/\\/g, '/')).sort()

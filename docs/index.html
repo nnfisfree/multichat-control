@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MultichatControl: Twitch, YouTube and Kick chat in one app</title>
-<meta name="description" content="NoName's Multichat Control (MultichatControl) is a free, open-source Windows app to read and write Twitch, YouTube and Kick chat together." />
+<title>MultichatControl: Twitch, YouTube, Kick and TikTok chat in one app</title>
+<meta name="description" content="NoName's Multichat Control (MultichatControl) is a free, open-source Windows app to read and write Twitch, YouTube and Kick chat together, with TikTok LIVE chat and gifts next to them." />
 <link rel="icon" href="icon.png" />
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -26,19 +26,19 @@
     <div class="hero">
       <h1>MultichatControl</h1>
       <p class="also">NoName's Multichat Control</p>
-      <p class="lead">Read and write Twitch, YouTube and Kick chat together, see every event as it happens, and run channel actions in one click. A free, open-source Windows app for streamers who go live on several platforms at once.</p>
+      <p class="lead">Read and write Twitch, YouTube and Kick chat together, read TikTok LIVE next to them, see every event as it happens, and run channel actions in one click. A free, open-source Windows app for streamers who go live on several platforms at once.</p>
       <a class="btn" href="#download">⬇️ Download for Windows</a>
       <a class="btn ghost" href="#guide">🧭 How to start</a>
-      <p class="version">Latest version: <a id="version" href="https://github.com/nnfisfree/multichat-control/releases/latest">0.3.5</a></p>
-      <img class="shot" src="media/chat.png" width="1000" height="760" alt="MultichatControl showing Twitch, YouTube and Kick chat merged in one window, with event cards, a highlighted message that tags the streamer, and OBS stats" />
+      <p class="version">Latest version: <a id="version" href="https://github.com/nnfisfree/multichat-control/releases/latest">0.4.0</a></p>
+      <img class="shot" src="media/chat.png" width="1000" height="760" alt="MultichatControl showing Twitch, YouTube, Kick and TikTok chat merged in one window, with a TikTok gift card, a Super Chat pop-up, a suspicious-user warning and the live stream graph" />
       <p class="muted">Shown in demo mode, with invented chatters.</p>
     </div>
 
     <section>
       <h2>What it does</h2>
       <div class="grid">
-        <div class="card"><h3>💬 One merged chat</h3>Twitch, YouTube and Kick together, with a tab for each. Messages that tag you are highlighted in their platform's colour. Reply, and choose exactly where each message goes.</div>
-        <div class="card"><h3>⚡ Every event</h3>Subscriptions, memberships, Super Chats, gifts, raids, redemptions, follows, donations in one list, with the supporter's message, and as pop-ups above the message box. YouTube videos and clips posted in chat get a preview.</div>
+        <div class="card"><h3>💬 One merged chat</h3>Twitch, YouTube, Kick and TikTok together, with a tab for each. Messages that tag you are highlighted in their platform's colour. Reply, and choose exactly where each message goes.</div>
+        <div class="card"><h3>⚡ Every event</h3>Subscriptions, memberships, Super Chats, TikTok gifts with their coin value, raids, redemptions, follows, donations in one list, with the supporter's message, and as pop-ups above the message box. YouTube videos and clips posted in chat get a preview.</div>
         <div class="card"><h3>🛡️ Moderation</h3>Delete messages, time out or ban on every platform, in one click. Allow or deny the messages Twitch's AutoMod holds, and spot suspicious users and "buy followers" spam bots.</div>
         <div class="card"><h3>🎨 Made for live</h3>Live stream stats with a graph (OBS Studio, Streamlabs Desktop or Meld Studio) and a clock under the message box, twelve colour skins (three of them light), an emote picker, and a wobbly window if you like.</div>
       </div>
@@ -51,7 +51,7 @@
           <img src="icon.png" alt="" width="64" height="64" />
           <div>
             <h3>Multichat Control for Windows</h3>
-            <p class="dl-meta">Version <b id="dl-version">0.3.5</b> · Windows 10 and 11 · <span id="dl-size">about 8 MB</span> · Free</p>
+            <p class="dl-meta">Version <b id="dl-version">0.4.0</b> · Windows 10 and 11 · <span id="dl-size">about 8 MB</span> · Free</p>
           </div>
         </div>
         <a class="btn big" id="dl-button" href="https://github.com/nnfisfree/multichat-control/releases/latest">⬇️ Download Multichat Control</a>
@@ -84,7 +84,7 @@
         </li>
         <li class="card">
           <h3>🔑 Log in to your platforms</h3>
-          <p>Settings open on the first start. Under <b>Connections</b>, click <b>Log in</b> next to Twitch, YouTube and Kick. Each one opens that platform's own login page, so the app never sees your password.</p>
+          <p>Settings open on the first start. Under <b>Connections</b>, click <b>Log in</b> next to Twitch, YouTube and Kick. Each one opens that platform's own login page, so the app never sees your password. For TikTok, type your @username and paste a free Euler Stream key; there's no TikTok login at all.</p>
           <p class="tip">💡 For YouTube, Google shows <i>"Google hasn't verified this app"</i>. That's expected: click <b>Advanced</b>, then <b>Go to MultichatControl</b>.</p>
         </li>
         <li class="card">
@@ -120,11 +120,10 @@
       <h2>☕ Support the project</h2>
       <p>MultichatControl is free and open source, and it always will be. It's built in my spare time, so if it makes your streams easier, you can help keep it going:</p>
       <p class="support">
+        <a class="pill sponsor big" href="https://github.com/sponsors/nnfisfree"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="#db61a2" d="m8 14.25.345.666a.75.75 0 0 1-.69 0l-.008-.004-.018-.01a7.152 7.152 0 0 1-.31-.17 22.055 22.055 0 0 1-3.434-2.414C2.045 10.731 0 8.35 0 5.5 0 2.836 2.086 1 4.25 1 5.797 1 7.153 1.802 8 3.02 8.847 1.802 10.203 1 11.75 1 13.914 1 16 2.836 16 5.5c0 2.85-2.045 5.231-3.885 6.818a22.066 22.066 0 0 1-3.744 2.584l-.018.01-.006.003h-.002Z"/></svg>Sponsor on GitHub</a>
         <a class="pill bmc" href="https://buymeacoffee.com/nnfisfree"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="178" height="50" /></a>
-        <a class="pill twitch" href="https://www.twitch.tv/subs/nonamefound"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>Subscribe on Twitch</a>
-        <a class="pill store" href="https://nonamefound.lol/en-eur"><img src="media/store.png" alt="" />Gadgets Store</a>
       </p>
-      <p class="muted">Donations are optional, and everyone gets the same features. Sharing the app, reporting bugs or suggesting features helps just as much. ❤️</p>
+      <p class="muted"><b>GitHub sponsors appear on the Wall of Supporters inside the app.</b> No GitHub account? You can make one in seconds with Continue with Google. Donations are optional, and everyone gets the same features. Sharing the app, reporting bugs or suggesting features helps just as much. ❤️</p>
     </section>
 
     <section>

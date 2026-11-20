@@ -1,6 +1,6 @@
 [package]
 name = "multichat-control"
-version = "0.3.5"
+version = "0.4.0"
 description = "NoName's Multichat Control: lightweight multi-platform stream chat"
 license = "MIT"
 repository = "https://github.com/nnfisfree/multichat-control"
@@ -27,6 +27,8 @@ tonic = { version = "0.12", default-features = false, features = ["transport", "
 prost = "0.13"
 tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-native-roots"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+# TikTok sends its chat frames gzipped
+flate2 = "1"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_UI_WindowsAndMessaging", "Win32_System_Registry", "Win32_UI_Shell", "Win32_UI_HiDpi", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_Storage_Xps", "Win32_System_LibraryLoader"] }

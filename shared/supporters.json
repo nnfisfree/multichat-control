@@ -1,32 +1,21 @@
 [
   {
     "name": "emaspa",
+    "collaborator": true,
+    "title": "Senior Dev",
+    "projects": [
+      {
+        "name": "OpenXLR",
+        "url": "https://github.com/emaspa/openxlr"
+      },
+      {
+        "name": "WireView Linux",
+        "url": "https://github.com/emaspa/wireview-linux"
+      }
+    ],
     "amount": 300,
     "currency": "EUR",
     "avatar": "https://github.com/emaspa.png?size=160",
-    "url": "https://github.com/emaspa",
-    "title": "OpenXLR creator & expert dev"
-  },
-  {
-    "name": "G2Warrior",
-    "amount": 111.14,
-    "currency": "USD",
-    "message": "FAQ YOU",
-    "avatar": "https://unavatar.io/twitch/g2warrior",
-    "url": "https://www.twitch.tv/g2warrior"
-  },
-  {
-    "name": "Anonymous Supporters",
-    "amount": 2.2,
-    "currency": "USD",
-    "message": "Hi"
-  },
-  {
-    "name": "Disown",
-    "amount": 1.1,
-    "currency": "USD",
-    "message": "welcome back to the EU server. Hopefully we can do some raids together<br>Kiski",
-    "avatar": "https://unavatar.io/twitch/disown",
-    "url": "https://www.twitch.tv/disown"
+    "url": "https://github.com/emaspa"
   }
 ]

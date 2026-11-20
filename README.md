@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/media/banner.jpg" width="100%" alt="NoName's Multichat Control: one window, every stream chat. Free and open source, for Twitch, YouTube and Kick." />
+<img src="docs/media/banner.jpg" width="100%" alt="Multichat Control: one window, every stream chat. Free and open source, for Twitch, YouTube, Kick and TikTok." />
 
 <br />
 
@@ -8,75 +8,132 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-5b35f0?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDQuNWw4LjUtMS4ydjguMkgyem05LjUwMC0xLjMwMEwyMiAxLjgwMHY5LjcwMEgxMS41MDB6TTIgMTIuNTAwaDguNTAwdjguMjAwTDIgMTkuNTAwem05LjUwMCAwSDIydjkuNzAwbC0xMC41MDAtMS40MDB6Ii8%2BPC9zdmc%2B)
 ![Size](https://img.shields.io/badge/Size-8%20MB-a838e0?style=for-the-badge)
 [![License](https://img.shields.io/badge/License-MIT-27a9e8?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik01IDJoMTNhMiAyIDAgMCAxIDIgMnYxNEg2LjVhMS41MDAgMS41MDAgMCAwIDAgMCAzSDIwdjFINi41MDBBMi41MDAgMi41MDAgMCAwIDEgNCAxOS41MDBWM2ExIDEgMCAwIDEgMS0xem0zIDR2Mmg4VjZIOHoiLz48L3N2Zz4%3D)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/Sponsor-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/nnfisfree)
 
-<br />
+![Twitch](https://img.shields.io/badge/Twitch-9146ff?style=flat-square&logo=twitch&logoColor=white)
+![YouTube](https://img.shields.io/badge/YouTube-ff0033?style=flat-square&logo=youtube&logoColor=white)
+![Kick](https://img.shields.io/badge/Kick-53fc18?style=flat-square&logo=kick&logoColor=black)
+![TikTok LIVE](https://img.shields.io/badge/TikTok%20LIVE-000000?style=flat-square&logo=tiktok&logoColor=25f4ee)
 
-💪 **Inspired by [Streamer.bot](https://streamer.bot)'s [chat](https://docs.streamer.bot/guide/extra-features/chat), but on steroids.**
+### One window. Every stream chat.
 
-**Read and write Twitch, YouTube and Kick chat together, see every event as it happens, and run channel actions in one click.**
-<br />
+**Read and write Twitch, YouTube and Kick chat together, read TikTok LIVE right next to them,<br />see every event as it happens, and run your channel in one click.**
+
 One small file, nothing else to install. It updates itself.
 
+💪 *Inspired by [Streamer.bot](https://streamer.bot)'s [chat](https://docs.streamer.bot/guide/extra-features/chat), but on steroids.*
+
 <br />
 
-<img src="docs/media/chat.png" width="760" alt="NoName's Multichat Control: Twitch, YouTube and Kick chat merged in one window in the Sweet skin, with event cards in their platform's colour, a raid pop-up at the top of chat, moderation warnings, and the live bitrate graph opened from the stream stats under the message box" />
+**[Download](https://github.com/nnfisfree/multichat-control/releases/latest)** &nbsp;·&nbsp;
+**[Features](#-features)** &nbsp;·&nbsp;
+**[Screenshots](#-screenshots)** &nbsp;·&nbsp;
+**[Get started](#-get-started)** &nbsp;·&nbsp;
+**[Commands](#%EF%B8%8F-commands)** &nbsp;·&nbsp;
+**[Good to know](#-good-to-know)** &nbsp;·&nbsp;
+**[Support](#-support-the-project)**
 
-<sub>Every image here is built-in demo mode, with invented chatters and placeholder emotes.</sub>
+<br />
+
+<img src="docs/media/chat.webp" width="800" alt="Multichat Control in the Sweet skin: Twitch, YouTube, Kick and TikTok chat merged in one window, a TikTok Galaxy gift card, a Super Chat pop-up at the top, a suspicious-user warning, follower counts for all four platforms in the title bar, and the live bitrate graph opened from the stream stats" />
+
+<sub>Every image here is the built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
 </div>
 
----
+<br />
 
-## Why it exists
+> [!TIP]
+> ### 🎉 New: TikTok LIVE
+> TikTok chat, gifts, subs, follows and shares now show up next to Twitch, YouTube and Kick. There's no TikTok login: type your **@username**, paste a free key, and the app joins your LIVE by itself every time you go live. Gifts show with their picture, their price in coins and roughly what you earn, and a streak like *Rose ×25* lands as one clean card. [How to set it up](#-get-started)
 
-Streaming to several platforms usually means juggling browser tabs, or running a large bot suite just to read chat. NoName's Multichat Control is focused on the moment you're live: one merged chat, one list of events, and real controls within a click.
+## 🧭 Platforms at a glance
 
-It doesn't need OBS, a bot, a server or a runtime. Each person logs in with their own accounts, so it works for any streamer.
+<div align="center">
 
-**And it's light.** Version 0.2 was rebuilt on [Tauri](https://tauri.app): instead of shipping its own copy of Chromium, it uses Microsoft Edge WebView2, which is already part of Windows 10 and 11.
+| | <img src="https://cdn.simpleicons.org/twitch/9146ff" width="18" /> **Twitch** | <img src="https://cdn.simpleicons.org/youtube/ff0033" width="18" /> **YouTube** | <img src="https://cdn.simpleicons.org/kick/53fc18" width="18" /> **Kick** | <img src="https://cdn.simpleicons.org/tiktok/25f4ee" width="18" /> **TikTok LIVE** |
+|---|:---:|:---:|:---:|:---:|
+| **Read chat** | ✅ | ✅ | ✅ | ✅ |
+| **Send messages** | ✅ | ✅ | ✅ | 👀 read-only for now |
+| **Events** | subs, gifts, Bits, raids, rewards, Power-ups, Hype Train | memberships, Super Chats, Super Stickers | subs, gifts, KICKs, raids, rewards | gifts with coin value, subs, follows, shares |
+| **Moderation** | delete, timeout, ban, AutoMod, warnings | delete, timeout, ban | delete, timeout, ban | — |
+| **Emotes** | Twitch, 7TV, BTTV, FFZ | emoji | Kick, 7TV | stickers in chat |
+| **Log in** | one click | one click (Google) | one click | @username + free key |
 
-| | 0.1 | 0.2 |
+</div>
+
+## ✨ Why it exists
+
+Streaming to several platforms usually means juggling browser tabs, or running a large bot suite just to read chat. Multichat Control is built for the moment you're live: **one merged chat, one list of events, and real controls within a click.**
+
+<table>
+<tr>
+<td width="33%" valign="top" align="center">
+
+### 🪶 Light
+An **8 MB exe**. It uses the WebView2 already in Windows 10 and 11 instead of shipping its own browser.
+
+</td>
+<td width="33%" valign="top" align="center">
+
+### 🔒 Yours
+No server, no bot account, no OBS required. You log in with **your own accounts**, and everything stays on your PC.
+
+</td>
+<td width="33%" valign="top" align="center">
+
+### 🆓 Free forever
+**Open source** under MIT. Every feature for everyone, no paywalls, no subscriptions.
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary><b>How much lighter than version 0.1?</b></summary>
+
+<br />
+
+Version 0.2 was rebuilt on [Tauri](https://tauri.app). Instead of carrying its own copy of Chromium, it uses Microsoft Edge WebView2, which Windows already has.
+
+| | 0.1 | 0.2 and later |
 |---|---|---|
 | Download | 150 MB zip | **an 8 MB exe** |
 | Beside the app | ~70 files and folders | **just `user-data`** |
 | Memory while running | ~300 MB | **~230 MB** |
 
-> [!NOTE]
-> This is an early release, and live use on all three platforms is still being tested. Please [report](../../issues) anything that doesn't work.
+</details>
 
-## Features
+## 🚀 Features
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
 ### 💬 Unified chat
-- **All, Twitch, YouTube and Kick** tabs
+- **All, Twitch, YouTube, Kick and TikTok** tabs, each shown only while that platform is connected
 - On All, choose exactly where a message goes
 - **Chat from your last 5 streams**, so you can read what you missed
-- **Messages that tag you stand out**, in the colour of the platform they came from: purple for Twitch, red for YouTube, green for Kick
-- **Click any name for a user card**: account age, follow and sub, their badges (VIP, moderator, artist, subscriber, event badges) and everything they said in your channel
+- **Messages that tag you stand out** in the colour of their platform: purple Twitch, red YouTube, green Kick, cyan TikTok
+- **Click any name for a user card**: account age, follow and sub, badges and everything they said in your channel
 - **Users in Chat** for every platform, grouped Broadcaster · Moderators · VIPs · Users, with live viewer counts
-- **Previews for videos and clips**: YouTube links and Twitch, Kick or YouTube clips get a card with the picture, length, title and channel
+- **Previews for videos and clips**: YouTube links and Twitch, Kick or YouTube clips get a card with picture, length, title and channel
 - Reply, delete, time out (even for 1 second, to clear messages), ban or shout out
 
 </td>
 <td width="50%" valign="top">
 
-### ⚡ Events and history
-- Subs, gifts, raids, redemptions, follows and donations as cards in chat, **in the official colour of their platform**: purple for Twitch, red for YouTube, green for Kick. Tips keep the colour of the service they came through
-- **Event pop-ups** at the top of chat, one at a time, gone after the time you pick (on by default, 6 seconds). Hover to keep one, click to close it
-- **A wave of follows becomes one pop-up** ("Sam and 5 others" ×6), big cheers stay longer, and pop-ups wait while a panel covers chat
+### ⚡ Events and pop-ups
+- Subs, gifts, raids, redemptions, follows and donations as cards in chat, **in the official colour of their platform**
+- **TikTok gifts** with their picture, price in coins and roughly what you earn; streaks land as one card
+- **Event pop-ups** at the top of chat, one at a time. Hover to keep one, click to close it
+- **A wave of follows becomes one pop-up** ("Sam and 5 others"), and big cheers stay longer
 - **Resub months at a glance**: SUB ×14 on the pop-up, months and streak in Recent events
-- **Tips carry the logo** of the service they came through: StreamElements, Streamlabs, Buy Me a Coffee or the platform
-- **The supporter's message always shows**: resubs, cheers, Super Chats and tips, in chat, in pop-ups and in Recent events
-- **Recent events from every platform, in time order**, kept between sessions
-- Filter by platform and type, sort newest or oldest first. Pop-ups follow the same filters
-- **Test alerts** from Streamer.bot, StreamElements and Streamlabs are tagged **TEST**, never saved, and cleared in one click
-- **Gift bombs**: one summary card, then a line for every sub and who received it
-- **Twitch Power-ups as on Twitch**: Message Effects get their animated RGB outline, Gigantify an Emote pops in big, On-Screen Celebrations sparkle, and custom Power-ups show by name
-- Animated icons on every event badge
-- Hype Train banner with level, progress and countdown
+- **The supporter's message always shows**: resubs, cheers, Super Chats and tips
+- **Recent events from every platform**, in time order, kept between sessions, with filters
+- **Test alerts** from Streamer.bot, StreamElements and Streamlabs tagged **TEST** and never saved
+- **Twitch Power-ups as on Twitch**: RGB Message Effects, giant emotes, On-Screen Celebrations
+- Gift bombs, Hype Train banner, and animated icons on every badge
 
 </td>
 </tr>
@@ -84,130 +141,198 @@ It doesn't need OBS, a bot, a server or a runtime. Each person logs in with thei
 <td valign="top">
 
 ### 🛡️ Moderation
-- **Messages Twitch's AutoMod holds** appear in chat with the reason and **Allow** / **Deny**, and show who decided
-- **Suspicious users** flagged by Twitch, such as likely ban evaders, are highlighted with Twitch's reasons
-- **"Buy followers" spam bots** are marked on Twitch, Kick and YouTube
-- **Delete** and **Ban** right on the warning, so a bot is gone in one click
+- **Messages held by Twitch's AutoMod** appear with the reason and **Allow** / **Deny**
+- **Suspicious users** flagged by Twitch, like likely ban evaders, highlighted with Twitch's reasons
+- **"Buy followers" spam bots** marked on Twitch, Kick and YouTube
+- **Delete** and **Ban** right on the warning: a bot is gone in one click
 
 ### 🤖 Streamer.bot
-- **Run any Streamer.bot action** from the message box: `/sb Action name`, with text after the name passed to the action
-- The list **follows Streamer.bot live**: add, rename or turn off an action there and it updates here
-- Your Streamer.bot **chat commands** (like `!lurk`) are listed too, ready to send
-- **Test triggers** fired in Streamer.bot (follow, cheer, sub, gift, raid, redemption) show up in chat and Events, so you can try alerts while offline
-- Works with or without Streamer.bot's WebSocket password
-
-### 💸 Alerts and donations
-- <img src="assets/buymeacoffee.png" width="16" height="16" alt=""> **Buy Me a Coffee**: tips, memberships and shop sales live in chat and in Recent events. Renewals show **how many months** each member has supported you
-- *(coming soon)* One-click login with **Streamlabs** and **StreamElements**, once both approve the app
+- **Run any action** from the message box: `/sb Action name`, with text passed along
+- The list **follows Streamer.bot live**, chat commands (like `!lurk`) included
+- **Test triggers** show up in chat and Events, so you can try alerts while offline
 
 </td>
 <td valign="top">
 
 ### 🎛️ One-click control
-- Twitch's real Rewards & Power-ups panel, custom Power-ups included
-- **Every Twitch chat command**, typed in the message box: raids, polls, predictions, modes, pins and more
-- **The / list**, split into Twitch, app and Streamer.bot commands, **with search**
-- **Raid bar** like OBS's Twitch chat: the raided channel's picture, game, viewers and title, Twitch's countdown, **Raid Now** and Cancel
-- **Pinned messages** at the top of chat, out of the way during a Hype Train
-- Announcements, shoutouts, raids, ads and clips in one click
-- Shield mode, stream title and category
+- Twitch's real **Rewards & Power-ups panel**, custom Power-ups included
+- **Every Twitch chat command** in the message box: raids, polls, predictions, modes, pins and more
+- **The / list**, split into Twitch, app and Streamer.bot commands, with search
+- **Raid bar** like OBS's: picture, game, viewers, title, countdown, **Raid Now** and Cancel
+- **Pinned messages** at the top of chat
+- Announcements, shoutouts, ads, clips, shield mode, title and category
+
+### 💸 Alerts
+- <img src="assets/buymeacoffee.png" width="14" height="14" alt=""> **Buy Me a Coffee** tips, memberships and shop sales live in chat, with **how many months** each member has supported you
+- *(coming soon)* one-click **Streamlabs** and **StreamElements**
 
 </td>
 </tr>
 <tr>
 <td valign="top">
 
-### 🎨 Skins and emotes
-- **12 skins** in a compact picker, split into dark and light, with a big preview of the one you point at: Sweet (the default), POS Club, Myst Bourne, Dracula, Catppuccin Mocha, Tokyo Night, Kanagawa, Rosé Pine and OLED Black, plus three light ones: Butterfly, Catppuccin Latte and Everforest Light
-- **Wobbly window**, inspired by KDE Plasma on Linux: it bends like jelly while you drag it (optional, with an intensity slider)
+### 🎨 Look and feel
+- **12 skins**, dark and light, with a big live preview: Sweet, POS Club, Myst Bourne, Dracula, Catppuccin, Tokyo Night, Kanagawa, Rosé Pine, OLED Black, Butterfly, Everforest Light
+- **A comet line** under the tabs while platforms connect, that turns red if one drops
+- **Wobbly window**, inspired by KDE Plasma: it bends like jelly while you drag it
 - **Remembers its size and place**, monitor included
-- Picker that follows the active tab, with search
-- Twitch, BetterTTV, 7TV, FrankerFaceZ and Kick emotes
-- Overlay emotes, animated cheermotes and Twitch chat GIFs
+- Twitch, BetterTTV, 7TV, FrankerFaceZ and Kick emotes, overlay emotes, cheermotes and GIFs
 - Pronouns beside Twitch chatters
 
 </td>
 <td valign="top">
 
-### 📈 Stream health and updates
-- **Stream stats under the message box** from **OBS Studio, Streamlabs Desktop (SLOBS) or Meld Studio**: live, uptime, bitrate, dropped frames, FPS and CPU
-- **Point at them for a live graph** of the last 60 seconds, like a system monitor: bitrate, FPS, CPU or dropped frames, one click to switch
-- Click for everything: encoder, canvas and output resolution, render and encoding lag, graph included
-- The app's icon comes alive while you're live: the OBS logo spins, SLOBS hops and Meld wobbles
-- A status menu for every connection, with reconnect and log in
-- **Followers and subscribers** of every connected platform, in the title bar
-- **A clock** beside the OBS stats: point at it for the date. Everything follows the skin and can be hidden.
-- A small, optional **Support the project** button (Buy Me a Coffee) under the message box, and a **Wall of Supporters** on the Support page that updates on its own
-- Installs new versions in one click, checked against GitHub's checksum, and shows **what's new** after each update
+### 📈 Stream health
+- **Live stats under the message box** from **OBS Studio, Streamlabs Desktop or Meld Studio**: uptime, bitrate, dropped frames, FPS and CPU
+- **Point at them for a 60-second live graph**, like a system monitor
+- Click for everything: encoder, resolutions, render and encoding lag
+- **Followers and subscribers** of every platform in the title bar
+- A clock, a status menu for every connection, and **one-click updates** checked against GitHub's checksum
 
 </td>
 </tr>
 </table>
 
-## Screenshots
+## 📸 Screenshots
 
 <table>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/popups.gif" alt="Event pop-ups appearing one at a time at the top of chat, each in the colour of where it came from: YouTube memberships and Super Chats in red, Kick subs in green, Twitch gifts in purple and Buy Me a Coffee tips in yellow, each with a bar that drains" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
+<td align="center" colspan="2"><img src="docs/media/popups.webp" alt="Event pop-ups sliding in at the top of chat, one at a time, each in the colour of its platform: a TikTok gift in cyan, Twitch cheers in purple, Kick gifted subs in green" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/moderation.png" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and a spam bot offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots, one click away</b></td>
-<td align="center"><img src="docs/media/raid.png" alt="Raid bar at the top of chat: the raided channel's picture with a LIVE tag, its game, viewers and title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view, and Raid Now when you're ready</b></td>
+<td align="center" width="50%"><img src="docs/media/tiktok.webp" alt="The TikTok tab: TikTok chat with gift cards for a Rose streak and a TikTok gift, each with its price in coins and approximate value, and the message box saying TikTok is read-only for now" /><br /><b>🎵 TikTok LIVE chat and gifts, with their value</b></td>
+<td align="center" width="50%"><img src="docs/media/moderation.webp" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and spam bots offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/usercard.png" alt="User card with the viewer's badge, account age, follow and subscription, moderation buttons and their messages" /><br /><b>Know who you're talking to</b></td>
-<td align="center"><img src="docs/media/streamerbot.png" alt="Typing /sb S suggests the Streamer.bot actions that match, in the commands list" /><br /><b>Run Streamer.bot actions from the message box</b></td>
+<td align="center"><img src="docs/media/raid.webp" alt="Raid bar at the top of chat: the raided channel's picture with a LIVE tag, its game, viewers and title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view</b></td>
+<td align="center"><img src="docs/media/usercard.webp" alt="User card with the viewer's role, account age, follow and subscription, moderation buttons and their messages" /><br /><b>Know who you're talking to</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/stats.png" alt="The full stream stats: encoder, canvas and output resolution, CPU, memory, FPS, render and encoding lag, and stream and recording status, with a live bitrate graph of the last 60 seconds and tabs for FPS, CPU and dropped frames" /><br /><b>Stream stats with a live graph, from OBS, Streamlabs Desktop or Meld</b></td>
-<td align="center"><img src="docs/media/skins.png" alt="Settings, Appearance: a big preview of the Butterfly skin above compact skin chips split into Dark and Light, from Sweet and POS Club to Catppuccin Latte and Everforest Light" /><br /><b>Twelve skins, three of them light, one click each</b></td>
+<td align="center"><img src="docs/media/streamerbot.webp" alt="Typing /sb S suggests the Streamer.bot actions that match, in the commands list" /><br /><b>Run Streamer.bot actions from the message box</b></td>
+<td align="center"><img src="docs/media/stats.webp" alt="The full stream stats: encoder, resolutions, CPU, memory, FPS, render and encoding lag, stream and recording status, with a live bitrate graph" /><br /><b>Stream stats with a live graph</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/media/skins.webp" alt="Settings, Appearance: the current skin's preview above compact skin chips split into Dark and Light" /><br /><b>Twelve skins, one click each</b></td>
+<td align="center"><img src="docs/media/support.webp" alt="The Support page: a golden Collaborators card for emaspa with his projects, and the Wall of Supporters" /><br /><b>Collaborators and the Wall of Supporters</b></td>
 </tr>
 </table>
 
-## Get started
+## 🏁 Get started
 
-### Download
+<table>
+<tr>
+<td width="33%" valign="top">
 
-1. Get the latest version from **[Releases](https://github.com/nnfisfree/multichat-control/releases/latest)**: **`Multichat-Control-x.y.z-portable.exe`** is the whole app in one file. Put it in its own folder (it keeps its data in a `user-data` folder next to itself) and run it.
-2. Windows SmartScreen may warn on first run because the exe isn't code-signed. Choose **More info**, then **Run anyway**.
+### 1️⃣ Download
+Grab **`Multichat-Control-x.y.z-portable.exe`** from **[Releases](https://github.com/nnfisfree/multichat-control/releases/latest)**. Put it in its own folder: it keeps its data in a `user-data` folder next to itself.
 
-That's it. Future versions arrive through the app's own update banner.
+</td>
+<td width="33%" valign="top">
 
-**Using version 0.1?** Click **Update** in the app as usual. Your settings, logins, saved events and chat history carry over, and the old version's files are removed. The rewards panel asks you to sign in to Twitch once more.
+### 2️⃣ Run
+Windows SmartScreen may warn on the first run because the exe isn't code-signed: choose **More info**, then **Run anyway**. Future versions arrive through the app's own update banner.
 
-**Missing WebView2?** It's part of Windows 10 and 11, so this is rare. If it's missing, the app says so and offers [Microsoft's free installer](https://go.microsoft.com/fwlink/p/?LinkId=2124703).
+</td>
+<td width="33%" valign="top">
 
-### Connect your accounts
+### 3️⃣ Connect
+Open the ⚙️ gear and click **Log in** next to each platform you stream on. You sign in on the platform's own page, so the app never sees your password.
 
-Open the gear icon and click **Log in** beside each platform you stream on. You sign in on the platform's own page: Twitch, your Google account for YouTube, or your Kick account. There's nothing else to set up.
+</td>
+</tr>
+</table>
 
-- **YouTube:** Google will show *"Google hasn't verified this app"*. The app explains why before Google's page opens. **That's expected and safe:** click **Advanced**, then **Go to MultichatControl (unsafe)**. [Why it says that](#about-the-youtube-login-warning).
-- **Twitch** expires its logins after about 30 days, so the app may ask you to log in again.
-- **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. This is a separate sign-in to Twitch's website, and it stays signed in. Your custom Power-ups and points only show once you're signed in.
-- **Buy Me a Coffee:** click **Connect**. Buy Me a Coffee's developer page opens: log in, click **Create new token**, keep it read only, and paste the token into the app. That's it.
-- **Alerts & Donations:** Streamlabs and StreamElements are marked **Soon..** until both services approve the app.
-- **The status menu** next to the gear shows every connection. Click a row to reconnect or log in.
+New to all this? The **[step-by-step guide](https://multichat.nonamefound.lol/#guide)** walks through download, first start and logins.
+
+<details>
+<summary><b>🟪 Twitch</b></summary>
+
+<br />
+
+- Twitch expires its logins after about 30 days, so the app may ask you to log in again.
+- **Rewards panel:** click the gem icon, then **Sign in to Twitch** inside the panel once. It stays signed in, and your custom Power-ups and points show from then on.
 - **Users in Chat, held messages, suspicious users and some commands** need a newer Twitch login. If the app asks, click **Log in again** once.
-- **Held messages:** these appear only if AutoMod is on for your channel (Twitch's Creator Dashboard → Settings → Moderation). To catch spam bots' links, also turn on **Block hyperlinks** there.
-- **Stream stats (optional):** pick your app in **Settings → Connections → Streaming app** (Show Stream Stats is on by default). The app only reads from it and never changes anything there.
-  - **OBS Studio:** open **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info** into the app.
-  - **Streamlabs Desktop (SLOBS):** open **Settings → Remote Control**, click the QR code, then **Show details**, and copy the **API Token** into the app. Streamlabs shares CPU, FPS, bitrate and dropped frames, but not the encoder or render times.
-  - **Meld Studio:** nothing to set up, just keep Meld open. Meld only shares whether you're live or recording, so there's a live timer but no graph.
-- **Streamer.bot (optional):** in Streamer.bot, open **Servers/Clients → WebSocket Server**, tick **Auto Start** and click **Start Server** (address `127.0.0.1`, port `8080`, endpoint `/`). Then turn on **Settings → Connections → Streamer.bot → Use Streamer.bot**. If Authentication is on in Streamer.bot, paste its password there too.
-- **Skins:** **Settings → Appearance**. The window edge keeps its glow in every skin.
-- **Wobbly window:** **Settings → Appearance → Window**, with a slider for how much it wobbles.
-- **Step by step for beginners:** [multichat.nonamefound.lol](https://multichat.nonamefound.lol/#guide) walks through download, first start and logins.
+- **Held messages** appear only if AutoMod is on for your channel (Creator Dashboard → Settings → Moderation). To catch spam bots' links, also turn on **Block hyperlinks** there.
 
-### Commands
+</details>
 
-Type these in the message box. The **/** button (left of the message box) lists them in three groups, Twitch, Multichat Control and Streamer.bot, with a search box on top. The list also narrows as you type. None are posted as chat text, except Streamer.bot's `!` chat commands, which are meant for chat.
+<details>
+<summary><b>🟥 YouTube</b></summary>
+
+<br />
+
+Google shows *"Google hasn't verified this app"*. The app explains why before Google's page opens. **That's expected and safe:** click **Advanced**, then **Go to MultichatControl (unsafe)**. [Why it says that](#-about-the-youtube-login-warning).
+
+The app connects by itself whenever you start a broadcast.
+
+</details>
+
+<details>
+<summary><b>🟩 Kick</b></summary>
+
+<br />
+
+Click **Log in** and approve the app on Kick's page. That's all.
+
+</details>
+
+<details>
+<summary><b>🎵 TikTok LIVE</b></summary>
+
+<br />
+
+TikTok has no login for this. In **Settings → Connections → TikTok**, click **Set up**:
+
+1. Type your TikTok **@username**.
+2. Click **Get a free key**: sign up at [Euler Stream](https://www.eulerstream.com) (free) and copy your **API key**.
+3. Paste it and click **Connect**.
+
+From then on the app checks every minute whether you're live and joins your LIVE by itself. TikTok is **read-only** for now: its chat and gifts show in the app, and your messages go to your other platforms.
+
+</details>
+
+<details>
+<summary><b>📈 Stream stats, Streamer.bot and alerts (optional)</b></summary>
+
+<br />
+
+- **Stream stats:** pick your app in **Settings → Connections → Streaming app**. The app only reads from it and never changes anything.
+  - **OBS Studio:** **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info** into the app.
+  - **Streamlabs Desktop:** **Settings → Remote Control**, click the QR code, then **Show details**, and copy the **API Token** into the app. Streamlabs shares CPU, FPS, bitrate and dropped frames, but not encoder or render times.
+  - **Meld Studio:** nothing to set up, just keep Meld open. Meld only shares whether you're live or recording.
+- **Streamer.bot:** in Streamer.bot, **Servers/Clients → WebSocket Server**, tick **Auto Start**, click **Start Server** (`127.0.0.1`, port `8080`, endpoint `/`). Then turn on **Settings → Connections → Streamer.bot**, with its password if you set one.
+- **Buy Me a Coffee alerts:** click **Connect**, log in on Buy Me a Coffee's developer page, click **Create new token**, keep it read only, and paste it into the app.
+- **Streamlabs and StreamElements** are marked **Soon..** until both services approve the app.
+
+</details>
+
+<details>
+<summary><b>🧩 Upgrading from 0.1, or missing WebView2?</b></summary>
+
+<br />
+
+- **From 0.1:** click **Update** in the app as usual. Settings, logins, saved events and chat history carry over, and the old files are removed. The rewards panel asks you to sign in to Twitch once more.
+- **WebView2** is part of Windows 10 and 11, so this is rare. If it's missing, the app says so and offers [Microsoft's free installer](https://go.microsoft.com/fwlink/p/?LinkId=2124703).
+
+</details>
+
+### 🧪 Try it without an account
+
+Start the app with `--demo` (or `npm run demo` from source). Demo mode simulates all four platforms with invented chatters, so you can explore everything except Twitch's real rewards panel.
+
+## ⌨️ Commands
+
+Type them in the message box, or click the **/** button for the full list with search. None are posted as chat text, except Streamer.bot's `!` chat commands, which are meant for chat.
 
 | Command | What it does |
 |---|---|
+| `/sb Action name [text]` | Runs that Streamer.bot action. Text after the name reaches it as `rawInput`, `input0`, `input1`… |
 | `/clearhistory` | Clears the chat in the app and deletes the saved chat of past streams. Your viewers' chat isn't affected. |
-| `/sb Action name [text]` | Runs that Streamer.bot action. Any text after the name reaches the action as `rawInput`, `input0`, `input1`… |
 
-**Twitch** commands go straight to Twitch, whichever tab is open:
+<details>
+<summary><b>All Twitch commands</b> (they go straight to Twitch, whichever tab is open)</summary>
+
+<br />
 
 | Command | What it does |
 |---|---|
@@ -241,18 +366,134 @@ Type these in the message box. The **/** button (left of the message box) lists 
 
 You can also right-click any Twitch message and choose **Pin message**.
 
-### Try it without an account
+</details>
 
-Start the app with `--demo`, or from source:
+## 💡 Good to know
 
-```bash
-npm run demo
-```
+These limits come from the platforms, not the app.
 
-Demo mode simulates all three platforms, so you can explore everything except the real Twitch panel.
+<details>
+<summary><b>🟪 Twitch</b></summary>
+
+<br />
+
+- No public API can redeem a reward or Power-up, so the panel is Twitch's own page. **Power-ups there spend real Bits.**
+- Only the app that created a reward can edit it or fulfil its redemptions. Rewards from the Twitch dashboard are read-only here, and their redemptions still appear in Events.
+- The API keeps dated history only for follows, past streams, polls, predictions and the Hype Train record. Older subs, gifts, Bits and raids come from Streamlabs or StreamElements, or build up as the app sees them.
+- The rewards panel and **Raid Now** use Twitch's own page, so a Twitch redesign can stop them until the app is updated. A raid still goes when the countdown ends.
+- Twitch sends no notice when a message is pinned, so the pinned bar checks every 20 seconds.
+- Pronouns come from [pronouns.alejo.io](https://pronouns.alejo.io). Turning them on sends chatter names to that service.
+
+</details>
+
+<details>
+<summary><b>🟥 YouTube</b></summary>
+
+<br />
+
+- Chat exists only during a live broadcast. The app waits and connects by itself.
+- Each Google project gets 10,000 quota units a day, shared by everyone using that build, and each message sent costs 20. To have your own, enter your own Google app in **Settings → Connections** (click the YouTube row). Messages are limited to 200 characters.
+- Custom member emoji have no documented API, so they show as text. The subscriber count is rounded by YouTube.
+
+</details>
+
+<details>
+<summary><b>🟩 Kick</b></summary>
+
+<br />
+
+- Official events need a public web server, so **reading uses the same unofficial live connection as Kick's website**. Sending and moderation use the official API, and the app warns you if reading stops.
+- Kick only times people out in whole minutes, so **Timeout 1 second** deletes that user's recent messages instead.
+- The follower count, user-card details and clip previews come from Kick's public website data and can be missing.
+
+</details>
+
+<details>
+<summary><b>🎵 TikTok LIVE</b></summary>
+
+<br />
+
+- TikTok has no official API for LIVE chat, so **reading uses the same unofficial connection as tools like TikFinity**. Your free [Euler Stream](https://www.eulerstream.com) key (encrypted on your PC) signs each connection, only while you're live, so the free plan is plenty. TikTok can change the connection without notice; the app says so if reading stops.
+- **Read-only for now.** Sending would need your TikTok session and a paid Euler Stream plan, so it isn't offered. Moderation and TikTok's emote picker aren't supported yet.
+- Gift values are estimates: the coin price, and about $0.005 per diamond for what the creator earns. TikTok doesn't publish the exact rate.
+
+</details>
+
+<details>
+<summary><b>🌐 Every platform</b></summary>
+
+<br />
+
+- Platforms only list viewers who are logged in. **Twitch** shares who is in chat; **YouTube**, **Kick** and **TikTok** don't, so their lists show who has chatted this stream, next to the viewer count.
+- The user card's history covers your channel only: this stream plus the saved chat of your last 5 streams.
+- Kick and YouTube don't flag spam to apps, so **spam warnings there come from the app's own check**. It only marks messages that offer followers or viewers and point somewhere, and never deletes anything by itself.
+- Streamer.bot's chat commands (like `!lurk`) run when Streamer.bot sees them in chat, so they're sent as normal messages. If a StreamElements test alert shows without the **TEST** tag, please [report](../../issues) it.
+
+</details>
+
+## 🔐 About the YouTube login warning
+
+When you log in to YouTube, Google shows **"Google hasn't verified this app"**. Click **Advanced**, then **Go to MultichatControl (unsafe)**, and the login continues as normal.
+
+**Why it appears:** reading and sending live chat and moderating it needs YouTube's `youtube.force-ssl` permission. Google shows this warning for every app using it until the app passes Google's verification, a process aimed at companies (a recorded demo video and a review that can take weeks). This is a free project made by one streamer, so it hasn't been done.
+
+**What it doesn't mean:** nothing is wrong with the app, and your account isn't at risk. The app only uses that permission to read your live chat, send what you write, and moderate when you choose to. It never touches your videos, comments or captions; your login stays encrypted on your PC and is sent only to Google; there's no server of its own; and the code is open for anyone to check. You can remove its access any time at [myaccount.google.com/permissions](https://myaccount.google.com/permissions), or with **Log out** in the app.
+
+**The 100-person limit:** until an app is verified, Google lets at most 100 different people use its built-in login. If Google ever says the app has reached its limit, create your own free Google app and enter it in **Settings → Connections → YouTube**. The app shows the steps, and it also gives you your own daily quota.
+
+## 🛡️ Privacy and security
+
+| | |
+|---|---|
+| 📁 **Your data stays with you** | Settings, logins, saved events and chat history live in the `user-data` folder beside the exe. There's no server. **Keep that folder private: it holds your logins.** |
+| 🔑 **Logins are encrypted** | With Windows' own protection for your Windows user. They never reach the app's window: the Rust side adds them to each request and only sends each one to its own service. |
+| 👀 **Read-only where it should be** | OBS, Streamlabs Desktop and Meld are only read, never controlled. Streamer.bot only runs what you send with `/sb`. |
+| 🧱 **Chat can't run code** | Messages are plain text, links open only in your browser, and Twitch's panel is isolated from the app. |
+| ✅ **Verified updates** | Only a download matching GitHub's checksum is installed, and `user-data` is never touched. |
+| 🌍 **Who the app talks to** | The platforms and services you connect (TikTok through [Euler Stream](https://www.eulerstream.com)), GitHub for updates and the supporters list, and BetterTTV, 7TV, FrankerFaceZ and pronouns.alejo.io for the features you leave on. |
+
+The full **[privacy policy](https://multichat.nonamefound.lol/privacy/)** has every detail.
+
+## 💜 Support the project
+
+Multichat Control is free and open source, and it always will be. It's built in my spare time, so if it makes your streams easier, you can help keep it going:
+
+<div align="center">
+
+<a href="https://github.com/sponsors/nnfisfree"><img src="https://img.shields.io/badge/%E2%9D%A4%20Sponsor%20on%20GitHub-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub" height="46"></a>
+
+<sub>One-time or monthly, any amount. GitHub sponsors appear on the <b>Wall of Supporters</b> inside the app, by themselves.</sub>
+
+<br />
+
+No GitHub account? &nbsp;<a href="https://buymeacoffee.com/nnfisfree"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="32" align="absmiddle"></a>
+
+</div>
+
+Donations are optional, and everyone gets the same features. Sharing the app, reporting bugs, suggesting features or contributing code helps just as much. ❤️
+
+## 🙏 Credits
+
+<table>
+<tr>
+<td width="96" align="center"><a href="https://github.com/emaspa"><img src="https://github.com/emaspa.png?size=160" width="72" alt="emaspa" /></a></td>
+<td>
+
+**[emaspa](https://github.com/emaspa)** · Senior Dev & creator of **[OpenXLR](https://github.com/emaspa/openxlr)** and **[WireView Linux](https://github.com/emaspa/wireview-linux)**<br />
+Collaborator and supporter of the project. Thank you for building this with me.
+
+</td>
+</tr>
+</table>
+
+Built with [Tauri](https://tauri.app), [React](https://react.dev) and Rust. The TikTok connection follows the protocol work of [TikTok-Live-Connector](https://github.com/zerodytrash/TikTok-Live-Connector) and [TikTokLive](https://github.com/isaackogan/TikTokLive), signed by [Euler Stream](https://www.eulerstream.com).
+
+## 🛠️ Development
 
 <details>
 <summary><b>Build it from source</b></summary>
+
+<br />
 
 You need:
 
@@ -268,123 +509,23 @@ npm install
 npm run build
 ```
 
-You'll find the app at `core/target/release/Multichat-Control.exe`. Running it needs none of the tools above.
+The app lands in `core/target/release/Multichat-Control.exe`. Running it needs none of the tools above. `npm run build` keeps your PC's folder paths out of the exe; plain `tauri build` works too, but Rust then embeds your user folder in the exe's error messages.
 
-`npm run build` keeps your PC's folder paths out of the exe. Building with plain `tauri build` works too, but Rust then embeds your user folder in the exe's error messages.
+Twitch works as it is. YouTube, Kick, Streamlabs and StreamElements need a developer app, because their credentials aren't in this repository. Put them in your build (below); YouTube's can also be entered in the app (click the YouTube row in Settings → Connections).
 
-Twitch works as it is. YouTube, Kick, Streamlabs and StreamElements need a developer app, because their credentials aren't stored in this repository. For YouTube and Kick you can enter your own in Settings, under **Advanced**, or include them all in your build.
+**YouTube:** in the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create a project, enable **YouTube Data API v3**, configure and **publish** the OAuth consent screen (logins from an app left in Testing expire after 7 days), and create an OAuth client ID of type **Desktop app**.
 
-**YouTube**
+**Kick:** at [kick.com/settings/developer](https://kick.com/settings/developer), enable developer mode, create an app, set the redirect URL to exactly `http://localhost:53682/callback`, and enable all scopes.
 
-1. In the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create a project and enable **YouTube Data API v3**.
-2. Configure the OAuth consent screen, then **publish** it. Logins from an app left in Testing expire after 7 days.
-3. Create an OAuth client ID of type **Desktop app**.
+**Streamlabs:** [register an app](https://streamlabs.com/dashboard#/oauth-clients/register) with the redirect URL `http://localhost:53683/streamlabs` and the scopes `donations.read` and `socket.token`. Until Streamlabs approves it, only the accounts you whitelist (up to 10) can log in.
 
-Google warns that an app is unverified until it passes Google's review.
+**StreamElements** gives out credentials on request. Use the redirect URL `http://localhost:53683/streamelements` and the scopes `channel:read activities:read tips:read`.
 
-**Kick**
+**Including them in your build:** copy `.env.example` to `.env.local`, fill it in, and run `npm run build`. Never commit `.env.local`. Anything built into an exe can be extracted from it, so only use apps made for this purpose.
 
-1. At [kick.com/settings/developer](https://kick.com/settings/developer), enable developer mode and create an app.
-2. Set the redirect URL to exactly `http://localhost:53682/callback`.
-3. Enable all scopes.
-
-**Streamlabs**
-
-1. [Register an app](https://streamlabs.com/dashboard#/oauth-clients/register) with the redirect URL `http://localhost:53683/streamlabs` and the scopes `donations.read` and `socket.token`.
-2. Until Streamlabs approves it, only the accounts you whitelist (up to 10) can log in.
-
-**StreamElements**
-
-StreamElements gives out app credentials on request. Use the redirect URL `http://localhost:53683/streamelements` and the scopes `channel:read activities:read tips:read`.
-
-**Including them in your build**
-
-Copy `.env.example` to `.env.local`, fill it in, and run `npm run build`. People using that build can then log in without any setup.
-
-Never commit `.env.local`. Anything built into an exe can be extracted from it, so only do this with apps made for this purpose, and don't reuse their credentials elsewhere.
-
-**Publishing your own builds?** Also register your own Twitch app as a **Public** client. A Confidential app can log in, but its logins drop after about 4 hours. Set its Client ID as `TWITCH_CLIENT_ID` in `core/src/auth.rs`. A public Client ID isn't a secret. Then set `UPDATE_REPO` in `core/src/updater.rs` to your repository, so your users get your updates.
+**Publishing your own builds?** Register your own Twitch app as a **Public** client and set its Client ID as `TWITCH_CLIENT_ID` in `core/src/auth.rs` (a Confidential app's logins drop after about 4 hours). Then set `UPDATE_REPO` in `core/src/updater.rs` to your repository, so your users get your updates.
 
 </details>
-
-## Good to know
-
-These limits come from the platforms.
-
-| Platform | Limit |
-|---|---|
-| **Twitch** | No public API can redeem a reward or Power-up, so the panel is Twitch's own page. **Power-ups there spend real Bits.** |
-| **Twitch** | Only the app that created a reward can edit it or fulfil its redemptions. Rewards from the Twitch dashboard are read-only here, and their redemptions still appear in Events. |
-| **Twitch** | The API keeps dated history only for follows, past streams, polls, predictions and the Hype Train record. Subs, gifts, Bits and raids from before the app started come from Streamlabs or StreamElements, or build up as the app sees them. |
-| **Twitch** | The rewards panel depends on Twitch's page layout, so a Twitch redesign can stop it opening until the app is updated. Rewards that need a typed chat message must be redeemed in Twitch's normal chat. |
-| **Twitch** | Twitch sends no notice when a message is pinned, so the pinned bar checks every 20 seconds. |
-| **Twitch** | Twitch's API can start and cancel a raid but not send it early, so **Raid Now presses Twitch's own button** on your chat page, kept open out of sight during the countdown. It needs the rewards panel's Twitch sign-in and unlocks 10 seconds in, like on Twitch. A Twitch redesign can stop it until the app is updated; the raid still goes when the countdown ends. |
-| **Twitch** | Pronouns come from the community service [pronouns.alejo.io](https://pronouns.alejo.io), so they cover Twitch chatters who registered there. Turning them on sends chatter names to that service. |
-| **YouTube** | Chat exists only during a live broadcast. The app waits and connects by itself. |
-| **YouTube** | Each Google project gets 10,000 quota units a day, shared by everyone using that build. Each message sent costs 20. To avoid sharing, enter your own app in Settings. Messages are limited to 200 characters. |
-| **YouTube** | Custom member emoji have no documented API, so they show as text and aren't in the picker. |
-| **All** | Platforms only list viewers who are logged in. **Twitch** shares who is in chat; **YouTube** and **Kick** don't share who is watching, so their lists show who has chatted this stream, next to the viewer count. |
-| **All** | The user card's history covers your channel only: this stream plus the saved chat of your last 5 streams. No platform shares what someone said elsewhere. |
-| **Kick** | Kick only times people out in whole minutes, so **Timeout 1 second** deletes that user's recent messages instead. Follow and sub details on the user card come from Kick's website data and can be missing. |
-| **Kick** | Official events need a public web server, so **reading uses the same unofficial live connection as Kick's website**. Kick can change it without notice. Sending and moderation use the official API, and the app warns you if reading stops. |
-| **Streamer.bot** | The app connects to Streamer.bot on the same PC. Its chat commands (like `!lurk`) run when Streamer.bot sees them in chat, so they're sent as normal messages. |
-| **YouTube** | The subscriber count is rounded by YouTube, and member counts aren't shared with apps. |
-| **Kick** | Kick's API has no follower count, so it's read from Kick's public channel page every few minutes. |
-| **Kick** | Previews of Kick clip links come from Kick's website data. When Kick's protection turns plain requests away, the app reads them in a hidden window, like the channel page. |
-| **StreamElements** | Its live connection doesn't document how test alerts are marked, so the app checks the usual flags. If an SE test alert shows without the **TEST** tag, please [report](../../issues) it. |
-| **All** | Kick and YouTube don't flag spam to apps, so **spam warnings there come from the app's own check** of the message text. It only marks messages that offer followers or viewers and point somewhere, and it never deletes anything by itself. |
-
-## About the YouTube login warning
-
-When you log in to YouTube, Google shows a page saying **"Google hasn't verified this app"**. You don't need to worry about it. Click **Advanced**, then **Go to MultichatControl (unsafe)**, and the login continues as normal.
-
-**Why it appears:** to read and send live chat and to moderate it, an app needs YouTube's `youtube.force-ssl` permission. Google treats that permission as sensitive, and shows this warning for every app using it until the app has been through Google's verification, which needs a recorded demo video and a review that can take weeks. That process is aimed at companies, and this is a free project made by one streamer, so it hasn't been done.
-
-**What the warning doesn't mean:** it isn't a sign that something is wrong with the app or that your account is at risk. The app:
-
-- only uses that permission to read your live chat, send the messages you write, and delete messages, time out or ban people when you choose to. It never touches your videos, comments or captions
-- keeps your login on your own PC, encrypted by Windows, and sends it only to Google
-- has no server of its own, so nothing reaches the developer
-- is open source, so anyone can check exactly what it does
-
-The [privacy policy](https://multichat.nonamefound.lol/privacy/) has every detail. You can remove the app's access at any time at [myaccount.google.com/permissions](https://myaccount.google.com/permissions), or with **Log out** in the app.
-
-**The 100-person limit:** until an app is verified, Google lets at most 100 different people use its built-in login. If Google ever says the app has reached its user limit, create your own free Google app and enter it in **Settings → Connections → YouTube**. The app shows the steps, and that also gives you your own daily YouTube quota.
-
-## Privacy and security
-
-- **Privacy policy:** [multichat.nonamefound.lol/privacy](https://multichat.nonamefound.lol/privacy/), with exactly what the app does with your YouTube data.
-- **Your data stays with you.** Settings, logins, saved events and chat history live in a `user-data` folder beside the exe, and the app has no server of its own. **Keep that folder private, because it holds your logins.**
-- **Logins are encrypted** with Windows' own protection for your Windows user, so moving to another PC means logging in again. The OBS and Streamer.bot passwords and the Streamlabs Desktop token are stored the same way.
-- **Logins never reach the app's window.** The part of the app written in Rust keeps them, adds them to each request itself, and only ever sends each one to that service's own servers.
-- **Your streaming app is read-only.** The app only reads stats from OBS, Streamlabs Desktop or Meld Studio on this PC; it never switches scenes or starts or stops anything.
-- **Streamer.bot only runs what you ask.** The app reads its list of actions and commands, listens for its test triggers, and runs an action only when you send `/sb`.
-- **Chat history stays on your PC.** The last 5 streams are kept in `user-data`, with deleted messages saved only as deleted. Turn it off under Settings → Chat, or type `/clearhistory` to delete it.
-- **Coming from version 0.1?** Everything carries over: the app reads 0.1's files and logins on first start. From 0.1.2 or earlier, the `nnf-data` folder is renamed to `user-data` too.
-- **Updates are verified.** The app only installs a download that matches GitHub's checksum, and never touches `user-data`.
-- **Twitch's panel is isolated.** It's Twitch's own page and can't reach the app or its logins; links to other sites open in your browser.
-- **Chat can't run code.** Messages are displayed as plain text, and links open only in your browser.
-- **Link previews ask the site.** To show a video or clip card, the app asks YouTube, Twitch or Kick for its title and picture, the same way it loads emotes. Turn it off under Settings → Chat → Link Previews. Held and flagged messages never get a preview.
-- **Third parties:** the app contacts the platforms and alert service you connect, GitHub to check for updates, plus BetterTTV, 7TV, FrankerFaceZ and pronouns.alejo.io for the features you leave on. Each can be turned off in Settings. The Support page loads the supporters list from GitHub and their pictures from GitHub or unavatar.io.
-
-## Support the project
-
-NoName's Multichat Control is free and open source, and it always will be. It's built in my spare time, so if it makes your streams easier, you can help keep it going:
-
-<div align="center">
-
-<a href="https://buymeacoffee.com/nnfisfree"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="50"></a>
-
-[![Subscribe on Twitch](https://img.shields.io/badge/Subscribe%20on%20Twitch-9146ff?style=for-the-badge&logo=twitch&logoColor=white)](https://www.twitch.tv/subs/nonamefound)
-[![Gadgets Store](https://img.shields.io/badge/Gadgets%20Store-000000?style=for-the-badge&logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd%2BUAAADzUlEQVR4nLxWTUxTQRD%2B%2BnivLXAgAi0aBBRjRSJqNEq9eAATjWev%2Fh80MSbe1HgUjVeNUaOeNDF6lpD4gz9J1RZti1BIpCRUBBL%2BKX9aCu%2B5M3TJo7RNRGCSl327OzvfzDe7s6s6HOteWhQcNQwYABSLEKygGEKoIauGjgaLsyjfkBMrDWYGlbZV8a%2BLlvqW1QCVNmWkymqCIWHcZNuiSpDVotNsm1olk%2BI8C6y48Mmx5YqaCSwrKwtzc3OIxWLQdR2KosBms%2FHccglR04GR8ampKdjtdpRvLodm1RCfiaOntwf%2Fw76SCowii8X%2BYM%2BevWhs%2FAifzw%2Bf148bN25hcnISmqotREm69JkdpT61qehXk8HIyOzsLMZGp1B3%2FSaqdlQh3BlG49s3aGiox%2B%2FpOMbVceTk5GBmZgbT09O8Njc3F5qmYWJigterqspjyfQvAqQJyhkZO3fuGKqqdnK%2FqcmH5y%2BewekswqnTxzEwMACPx4Oy0lJmgaTpaxP6%2BnpRU1OL%2FPx8DAodr8%2FLwIswZKVhfpUsDA8P4vz5C7hz%2By6DETXSQ6%2F3C9zuA%2Bju7kb5lk24cvkK6upu8tylSxfx6PFD%2FIz0orCwEE%2BfPsGZsyfhcDjYThpKdRFdLlpavuP1m1eorTkkcjaB%2Bw%2FuIRgIiAid2LdvPwoKClBcvAFlZWULeSoR0ZaUlCIvL48B3n94lzKPiwBp6xPvHz94cOL4L05%2BR0cHrl27itk4UFN7kKMlne3bK%2BFybUN%2Ffz%2FnbpurApWVlfxPuW1vDy0cobSAZCwej8PhXIfqajcrt7e3sRGnGAuHw5yn4uKNcFcfEIAuQfNnZIucV1RUcPS0pqurS3yRlIBLjgV5t2H9PF3kQPP3Zt519D80NIQ24QDJ4cNHUFS0Ht%2F83xAMBoT%2BJk4BSSjUgmh0lDdMRkDinKrK1q0uziXlIhRq5UNPQtEHA36mfteu3TxGDJAO0b9DHCFd7AO%2FcIJ0ZDnMSClFU%2B12M3g0GkVnZydsVhsbII%2F9fj8bp6NDEolERE5zWF%2BOBUTEmmblNcmStGkMWK1WriTNzUH2fGRkmMco2uxsO0JtrfhCebNnYyw6Js5kP89%2F%2BuThzTQ%2BHhUb7QeXxFSVZtE5lFWBjMuzQxtG3hLUktdEraSK5iXdCSscnXlNRkplLZ2vjxY2IBfKWim9N19X5luE2nQ3StrrSXqbaqEEMVOWaiyVLAFMNm7u%2F8u1lE5XwRqLknhNyffjqogZQ0m05qfcioOZn4mqfEit1TNRMXSjnh%2FhiUixwpKwqROGoev1fwEAAP%2F%2FYS96FAAAAAZJREFUAwDZbiCuC53RGgAAAABJRU5ErkJggg%3D%3D)](https://nonamefound.lol/en-eur)
-
-</div>
-
-Everyone who chips in shows up on the **Wall of Supporters** in the app (About → Support), which updates on its own within about half an hour. Names and messages go through a word filter first.
-
-Donations are optional, and everyone gets the same features. Sharing the app, reporting bugs, suggesting features or contributing code helps just as much. ❤️
-
-## Development
 
 | Command | Purpose |
 |---|---|
@@ -393,7 +534,7 @@ Donations are optional, and everyone gets the same features. Sharing the app, re
 | `npm run typecheck` | Type checking |
 | `npm run build` | Build `core/target/release/Multichat-Control.exe` |
 | `npm run release -- --dry` | Build both downloads into `release/` and check them for personal data, without publishing |
-| `npm run release -- --notes notes.md` | Build, check for personal data, and publish a GitHub release (`--pre` for a test version) |
+| `npm run release -- --notes notes.md` | Build, check, and publish a GitHub release (`--pre` for a test version) |
 
 ```text
 ui/            The interface (React): components, skins and styles
@@ -401,21 +542,28 @@ engine/        The app's logic (TypeScript): the hub that merges chats, one conn
   platforms/   platform behind a shared interface, alert services, OBS / Streamlabs Desktop /
                Meld Studio stats, Streamer.bot, demo mode
 core/          The Rust side (Tauri): window, logins and tokens, encrypted secrets, files,
-  src/         YouTube's live chat, Twitch's rewards panel and Raid Now, updater, tray
+  src/         YouTube's live chat, TikTok's LIVE connection, Twitch's rewards panel and
+               Raid Now, updater, tray
 shared/        Types, message parsing, the name filter and the supporters list
-.github/       The Action that rebuilds the supporters list from Buy Me a Coffee
+.github/       The Action that rebuilds the supporters list from GitHub Sponsors
 assets/        Icon and logos
 proto/         YouTube's live chat definition
 scripts/       The build, release and supporters-list commands
-docs/media/    README images
+docs/          The website, privacy policy and README images
 ```
 
-To add a platform, implement the `Connector` interface in `engine/platforms/connector.ts`, and convert its messages to the shared types. If it needs a login, add it to `core/src/auth.rs`. The interface needs no platform-specific changes.
+To add a platform, implement the `Connector` interface in `engine/platforms/connector.ts` and convert its messages to the shared types. If it needs a login, add it to `core/src/auth.rs`.
 
 Contributions are welcome. Please run `npm run typecheck` before opening a pull request, and never include real chat logs, tokens or the `user-data` folder.
 
-## License
+<br />
 
-[MIT](LICENSE). Use it, change it and share it.
+<div align="center">
 
-<sub>NoName's Multichat Control is an independent project, and isn't affiliated with or endorsed by Twitch, YouTube, Kick, Streamlabs, StreamElements, Fourthwall, BetterTTV, 7TV or FrankerFaceZ. All trademarks belong to their owners.</sub>
+**[MIT](LICENSE)** · Use it, change it and share it.
+
+Made with 💜 by **[NoNameFound](https://github.com/nnfisfree)** · [Website](https://multichat.nonamefound.lol) · [Report a bug](../../issues)
+
+<sub>NoName's Multichat Control is an independent project, and isn't affiliated with or endorsed by Twitch, YouTube, Kick, TikTok, Streamlabs, StreamElements, Euler Stream, BetterTTV, 7TV or FrankerFaceZ. All trademarks belong to their owners.</sub>
+
+</div>

@@ -20,6 +20,7 @@ import { MeldLink } from './meld'
 import { Previews } from './previews'
 import type { Connector } from './platforms/connector'
 import { KickConnector } from './platforms/kick/connector'
+import { TikTokConnector } from './platforms/tiktok/connector'
 import { TwitchConnector } from './platforms/twitch/connector'
 import { YouTubeConnector } from './platforms/youtube/connector'
 import { ALERTS_READY } from '../shared/app-config'
@@ -69,7 +70,8 @@ export async function startEngine(): Promise<void> {
     const c: Connector = demo ? new DemoConnector(p, ctx, 20)
       : p === 'twitch' ? (twitch = new TwitchConnector(ctx))
       : p === 'youtube' ? new YouTubeConnector(ctx)
-      : new KickConnector(ctx)
+      : p === 'kick' ? new KickConnector(ctx)
+      : new TikTokConnector(ctx)
     connectors.set(p, c)
     hub.register(c)
   }
@@ -135,7 +137,7 @@ export async function startEngine(): Promise<void> {
   let panelSignedIn = await invoke<boolean | null>('panel_signed_in').catch(() => null)
   await listen<UpdateState>('update:state', (e) => { update = e.payload; tell(updateListeners, e.payload) })
   await listen<boolean>('panel:signedIn', (e) => { panelSignedIn = e.payload; tell(panelListeners, e.payload) })
-  const secrets = await core.secretState()
+  let secrets = await core.secretState()
   const builtIn = await core.builtInLogins()
 
   const applyOpacity = (): Promise<void> => invoke('window_opacity', { value: store.settings.windowOpacity })
@@ -189,7 +191,7 @@ export async function startEngine(): Promise<void> {
   const api: NnfApi = {
     bootstrap: async (): Promise<Bootstrap> => ({
       settings: store.settings,
-      secrets,
+      secrets: await core.secretState().catch(() => secrets),
       ...hub.snapshot(),
       demo,
       builtInTwitchId: true,
@@ -271,6 +273,25 @@ export async function startEngine(): Promise<void> {
         if (source !== 'buymeacoffee') throw new Error('This service logs in through the browser.')
         if (demo) throw new Error('Not available in demo mode.')
         await bmc.connect(String(token ?? ''))
+      }
+    },
+    tiktok: {
+      connect: async (username, key) => {
+        if (demo) throw new Error('Not available in demo mode.')
+        const room = await core.tiktokRoom(String(username ?? ''))
+        if (typeof key === 'string' && key.trim()) await core.tiktokKey(key.trim())
+        secrets = await core.secretState()
+        if (!secrets.tiktokKey) throw new Error('Paste your free Euler Stream key too. TikTok chat can only be read with one.')
+        saveSettings({ tiktokUsername: room.handle })
+        await restart('tiktok')
+        return secrets
+      },
+      disconnect: async () => {
+        await hub.get('tiktok').logout()
+        await core.tiktokKey(null).catch(() => null)
+        saveSettings({ tiktokUsername: '' })
+        secrets = await core.secretState()
+        return secrets
       }
     },
     openExternal: async (url) => { await core.openUrl(url) },
