@@ -4,6 +4,7 @@ import { Icon, PlatformIcon } from './Icons'
 import { removeEvents, updateSettings, useStore } from '../lib/store'
 import { EventBadge, EventIcon, SourceTag, TestTag } from './EventCard'
 import { isMembership, shownAmount, standaloneSource, subMonths } from '../../shared/events'
+import { inEventsTab } from '../../shared/event-prefs'
 import { PreviewCard } from './LinkPreview'
 
 const ALL_TYPES = Object.keys(EVENT_TYPE_LABEL) as EventType[]
@@ -141,14 +142,17 @@ function TypesMenu({ hidden, onChange }: { hidden: EventType[]; onChange(hidden:
 export function EventsDrawer({ open, onClose }: { open: boolean; onClose(): void }): JSX.Element {
   const events = useStore((s) => s.events)
   const filter = useStore((s) => s.settings!.eventFilter)
+  const chatEvents = useStore((s) => s.settings!.chatEvents)
+  const platformPrefs = useStore((s) => s.settings!.platformPrefs)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const testIds = useMemo(() => events.filter((e) => e.test).map((e) => e.id), [events])
 
   const oldest = !!filter.oldestFirst
   const shown = useMemo(() => events
-    .filter((e) => (!!standaloneSource(e) || filter.platforms[e.platform]) && !filter.hiddenTypes.includes(e.type))
+    // Settings > Chat > Platforms decides which kinds show here at all, the filters narrow it down
+    .filter((e) => inEventsTab({ chatEvents, platformPrefs, eventFilter: filter }, e))
     .sort((a, b) => (oldest ? a.ts - b.ts : b.ts - a.ts))
-    .slice(0, 500), [events, filter, oldest])
+    .slice(0, 500), [events, filter, oldest, chatEvents, platformPrefs])
 
   const toggle = (id: string): void => setExpanded((s) => {
     const n = new Set(s)

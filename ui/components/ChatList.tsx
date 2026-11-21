@@ -12,9 +12,13 @@ interface Props {
   showPlatform: boolean
   showTime: boolean
   onMenu(e: MouseEvent, m: ChatMessage): void
+  onReply(m: ChatMessage): void
+  onQuick(m: ChatMessage, anchor: DOMRect): void
+  /** Message whose quick menu is open. */
+  quickId?: string
 }
 
-export function ChatList({ messages, showPlatform, showTime, onMenu }: Props): JSX.Element {
+export function ChatList({ messages, showPlatform, showTime, onMenu, onReply, onQuick, quickId }: Props): JSX.Element {
   const scroller = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
   const pausedRef = useRef(false)
@@ -114,7 +118,7 @@ export function ChatList({ messages, showPlatform, showTime, onMenu }: Props): J
         <div style={{ height: v.getTotalSize(), position: 'relative' }}>
           {v.getVirtualItems().map((it) => (
             <div key={it.key} data-index={it.index} ref={v.measureElement} className="row-slot" style={{ transform: `translateY(${it.start}px)` }}>
-              <ChatRow m={messages[it.index]} showPlatform={showPlatform} showTime={showTime} onMenu={onMenu} />
+              <ChatRow m={messages[it.index]} showPlatform={showPlatform} showTime={showTime} onMenu={onMenu} onReply={onReply} onQuick={onQuick} quickOpen={quickId === messages[it.index].id} />
             </div>
           ))}
         </div>

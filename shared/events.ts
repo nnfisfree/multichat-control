@@ -46,9 +46,13 @@ const GROUP: Partial<Record<EventType, ChatEventGroup>> = {
 
 export const chatEventGroup = (type: EventType): ChatEventGroup | undefined => GROUP[type]
 
-/** Event -> chat row. null for events that only live in the drawer. */
+/**
+ * Event -> chat row. null for events that already show as a message. Every other kind gets a row;
+ * whether it shows is up to the user's switches (shared/event-prefs.ts), so turning one on later
+ * also shows the ones that came in before.
+ */
 export function eventToMessage(e: StreamEvent): ChatMessage | null {
-  if (e.noChat || e.history || !GROUP[e.type]) return null
+  if (e.noChat || e.history) return null
   return {
     id: `event:${e.id}`,
     platform: e.platform,

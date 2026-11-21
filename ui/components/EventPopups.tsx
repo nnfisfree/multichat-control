@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import { chatEventGroup, standaloneSource, subMonths } from '../../shared/events'
 import type { EventFilter, StreamEvent } from '../../shared/types'
-import { useStore } from '../lib/store'
+import { getState, useStore } from '../lib/store'
+import { inEventsTab } from '../../shared/event-prefs'
 import { EventCard } from './EventCard'
 
 // One at a time. The next waits until the current one has fully left.
@@ -97,7 +98,8 @@ export function EventPopups({ covered }: { covered: boolean }): JSX.Element | nu
     for (const e of events) {
       if (seen.current.has(e.id)) continue
       seen.current.add(e.id)
-      if (!on || !popsUp(e, filter)) continue
+      // a kind switched off for the Events tab (Settings > Chat > Platforms) doesn't pop up either
+      if (!on || !popsUp(e, filter) || !inEventsTab(getState().settings!, e)) continue
       const key = groupKey(e)
       // join a pop-up that's already up (its timer restarts) or one still waiting
       const up = key ? current.current.findIndex((s) => s.key === key && !s.leaving) : -1

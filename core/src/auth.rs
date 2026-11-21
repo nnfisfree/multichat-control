@@ -302,7 +302,9 @@ pub async fn api_request(app: AppHandle, service: String, method: String, url: S
     }
     let t = fresh(&app, s).await?;
     let reply = send(&method, &u, &headers, body.as_ref(), Some(("Authorization", &s.header(&host, &t.access)))).await?;
-    if reply.status != 401 {
+    // A pasted token (Buy Me a Coffee) has nothing to renew: hand the 401 back and let the engine
+    // decide, one stray 401 during a server hiccup shouldn't end the login.
+    if reply.status != 401 || t.refresh.is_none() {
         return Ok(reply);
     }
     let t = refresh(&app, s, Some(&t.access)).await?;

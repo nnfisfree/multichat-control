@@ -5,6 +5,7 @@ import { api, HttpError, message, sleep } from '../../net'
 import type { Connector, ConnectorContext } from '../connector'
 import { normalize } from './normalize'
 import { GRPC_ENDED, GRPC_UNAUTHENTICATED, openStream } from './stream'
+import { quota } from './quota'
 
 const API = 'https://www.googleapis.com/youtube/v3'
 // Looking for a live broadcast costs quota, so keep offline checks slow.
@@ -26,7 +27,13 @@ export class YouTubeConnector implements Connector {
   /** Authenticated Data API call. Rust adds and refreshes the token. */
   private async api(method: string, path: string, query: Record<string, string>, body?: unknown): Promise<any> {
     if (!this.loggedIn) throw new Error('Not logged in to YouTube.')
-    return api('youtube', method, `${API}${path}?${new URLSearchParams(query)}`, body)
+    quota.call(method, path)
+    try {
+      return await api('youtube', method, `${API}${path}?${new URLSearchParams(query)}`, body)
+    } catch (err) {
+      quota.failed(err instanceof HttpError && /quota/i.test(err.message))
+      throw err
+    }
   }
 
   /** Rust found the token revoked or expired: stop and ask for a new login. */
@@ -101,6 +108,7 @@ export class YouTubeConnector implements Connector {
   }
 
   async stop(): Promise<void> {
+    quota.report('YouTube stopped')
     this.run++
     this.cancelStream?.()
     this.cancelStream = null
@@ -152,8 +160,10 @@ export class YouTubeConnector implements Connector {
     let failures = 0
     while (run === this.run) {
       const outcome = await new Promise<'ended' | 'retry' | 'unsupported'>((resolve) => {
+        quota.streamOpened()
         this.cancelStream = openStream(liveChatId, pageToken, {
           onItems: (items, next) => {
+            quota.batch()
             failures = 0
             pageToken = next ?? pageToken
             if (this.handle(items, since)) {
@@ -162,6 +172,7 @@ export class YouTubeConnector implements Connector {
             }
           },
           onEnd: (err) => {
+            if (err && /quota/i.test(err.message)) quota.failed(true)
             if (err?.code === GRPC_ENDED) resolve('ended')
             // Rust already tried a refresh. If the login is really gone we hear about it separately.
             else if (err?.code === GRPC_UNAUTHENTICATED) resolve(this.loggedIn ? 'retry' : 'ended')

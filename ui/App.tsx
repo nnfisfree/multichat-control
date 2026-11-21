@@ -4,6 +4,7 @@ import { ActionDeck } from './components/ActionDeck'
 import { ChatList } from './components/ChatList'
 import { Composer, type Pop } from './components/Composer'
 import { ContextMenu } from './components/ContextMenu'
+import { QuickMenu } from './components/QuickMenu'
 import { EmotePicker } from './components/EmotePicker'
 import { EventsDrawer } from './components/EventsDrawer'
 import { EventPopups } from './components/EventPopups'
@@ -42,12 +43,13 @@ function Main(): JSX.Element {
   const [pop, setPop] = useState<Pop>(null)
   const [settingsOpen, setSettingsOpen] = useState<boolean | SettingsFocus>(!settings.setupDismissed && !boot.demo)
   const [menu, setMenu] = useState<{ x: number; y: number; m: ChatMessage; userOnly?: boolean } | null>(null)
+  const [quick, setQuick] = useState<{ m: ChatMessage; anchor: DOMRect } | null>(null)
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
   const [insert, setInsert] = useState<{ text: string; n: number } | null>(null)
   const [toast, setToast] = useState<ActionResult | null>(null)
   const history = useStore((s) => s.history)
   const all = useMemo(() => (history.length ? [...history, ...messages] : messages), [history, messages])
-  const shown = useFiltered(all, tab, settings.chatEvents)
+  const shown = useFiltered(all, tab, settings)
 
   // lets things outside App (the Connections menu) jump to a Settings section
   useEffect(() => {
@@ -123,6 +125,12 @@ function Main(): JSX.Element {
   }, [openCard])
 
   const closeMenu = useCallback(() => setMenu(null), [])
+  // the ⋮ on a hovered message toggles its quick menu
+  const onQuick = useCallback((m: ChatMessage, anchor: DOMRect) => {
+    setMenu(null)
+    setQuick((q) => (q?.m.id === m.id ? null : { m, anchor }))
+  }, [])
+  const closeQuick = useCallback(() => setQuick(null), [])
 
   return (
     <div className="app" style={{ '--chat-scale': settings.fontScale, '--ui-font': `"${settings.uiFont}"`, '--chat-font': `"${settings.chatFont}"` } as React.CSSProperties}>
@@ -136,7 +144,7 @@ function Main(): JSX.Element {
           {(tab === 'all' || tab === 'twitch') && <PinnedBar />}
           {/* inside the chat area, so pop-ups always stay below the raid / Hype Train / pinned bars */}
           <div className="chat-area">
-            <ChatList key={tab} messages={shown} showPlatform={tab === 'all'} showTime={settings.showTimestamps} onMenu={onMenu} />
+            <ChatList key={tab} messages={shown} showPlatform={tab === 'all'} showTime={settings.showTimestamps} onMenu={onMenu} onReply={setReplyTo} onQuick={onQuick} quickId={quick?.m.id} />
             <EventPopups covered={events || users || !!pop || !!settingsOpen} />
           </div>
           <EventsDrawer open={events} onClose={() => openEvents(false)} />
@@ -149,6 +157,7 @@ function Main(): JSX.Element {
         {pop === 'rewards' && <RewardsPanel onClose={() => setPop(null)} />}
       </div>
       {menu && <ContextMenu {...menu} onClose={closeMenu} onReply={setReplyTo} onResult={setToast} onCard={menu.m.author.id ? (m) => openCard(m, menu.x, menu.y) : undefined} />}
+      {quick && <QuickMenu {...quick} onClose={closeQuick} onResult={setToast} onCard={openCard} />}
       {card && <UserCardPanel platform={card.platform} user={card.user} x={card.x} y={card.y} onClose={() => setCard(null)} onReply={setReplyTo} onResult={setToast} />}
       {settingsOpen && <Settings focus={typeof settingsOpen === 'object' ? settingsOpen : undefined} onClose={() => setSettingsOpen(false)} />}
       {!settingsOpen && !boot.demo && <WhatsNew onSettings={(f) => setSettingsOpen(f)} onCommands={() => setPop('commands')} />}

@@ -243,6 +243,8 @@ export interface ConnectionState {
   platform: Platform
   status: ConnectionStatus
   account?: string
+  /** Channel login (Twitch), for links like Twitch's popout viewer card. */
+  channel?: string
   /** Names viewers tag the streamer with (no @), used to highlight mentions. */
   mentions?: string[]
   detail?: string
@@ -332,6 +334,23 @@ export interface UpdateState {
   checkedAt?: number
 }
 
+/** How names are coloured in chat: the platform's own colours, the platform's brand colour, a colour per person, or one colour for everyone. */
+export type NameColorMode = 'default' | 'platform' | 'random' | 'custom'
+export type NameRole = 'broadcaster' | 'mod' | 'vip' | 'member'
+/** Where one kind of event shows: as a card in chat, and in the Events tab (plus its pop-ups). */
+export interface EventShow { chat: boolean; feed: boolean }
+/** Per-platform chat options. Everything is optional, missing means the default. */
+export interface PlatformPrefs {
+  nameColor?: NameColorMode
+  customColor?: string
+  /** Wins over nameColor for people with that role. */
+  roleColors?: Partial<Record<NameRole, string>>
+  /** Only the switches the user changed. */
+  events?: Partial<Record<EventType, Partial<EventShow>>>
+  /** Twitch: show GIFs in messages, or just their name. */
+  showGifs?: boolean
+}
+
 export interface EventFilter { platforms: Record<Platform, boolean>; hiddenTypes: EventType[]; oldestFirst?: boolean }
 
 export interface Settings {
@@ -397,6 +416,12 @@ export interface Settings {
   theme: string
   /** Ticked "Don't show this again" on the note about Google's "unverified app" warning. */
   youtubeNoticeSeen: boolean
+  /** Per-platform username colours and event switches (Twitch, YouTube, Kick). */
+  platformPrefs: Partial<Record<Platform, PlatformPrefs>>
+  /** Chatters whose messages are hidden from chat, "platform:userId" -> name. */
+  ignoredUsers: Record<string, string>
+  /** Chatters whose messages stand out in chat, "platform:userId" -> name. */
+  highlightedUsers: Record<string, string>
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -443,6 +468,9 @@ export const DEFAULT_SETTINGS: Settings = {
   // new installs start on Sweet; engine/store.ts keeps POS Club for anyone upgrading
   theme: 'sweet',
   youtubeNoticeSeen: false,
+  platformPrefs: {},
+  ignoredUsers: {},
+  highlightedUsers: {},
   // all event types on by default, each one can be turned off in Settings
   chatEvents: { subs: true, gifts: true, cheers: true, raids: true, redemptions: true, powerups: true, follows: true, paid: true, donations: true, hype: true }
 }

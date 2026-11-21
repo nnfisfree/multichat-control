@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.1
+
+**New**
+
+- **Reply, copy and quick actions.** Point at a Twitch, YouTube or Kick message for Reply, Copy and a menu with Pin, the user card, Twitch's viewer card, a 60 second timeout, Ban, Ignore, Highlight and Delete. Ban needs a second click while Confirm big actions is on.
+- **Ignore and highlight people.** Ignored chatters' messages leave chat (their events stay); highlighted ones stand out in gold. Both lists are in Settings → Chat → Ignored and Highlighted.
+- **Chat settings per platform.** Settings → Chat → Platforms has username colours for Twitch, YouTube and Kick (their own, platform colour, random per person, or one colour), colours per role, Show GIFs and Show Pronouns for Twitch, and a Chat and an Events tab switch for every kind of event.
+- **The Events tab, its pop-ups and its badge follow those switches.** Hidden events are still recorded and come back when switched on again.
+- **A shorter Chat settings page** with sections that fold open and closed.
+- **Two new skins:** Solarized Dark and Tokyo Night Day.
+- **YouTube quota report** in app.log every 30 minutes and when the quota runs out.
+
+**Fixed**
+
+- Kick no longer drops for a few seconds every 45 minutes while its login renews.
+- A Buy Me a Coffee server hiccup no longer shows as a disconnect, and no longer deletes the saved token.
+- The Events badge no longer counts events hidden by the Events tab's filters.
+
 ## 0.3.5
 
 **New**

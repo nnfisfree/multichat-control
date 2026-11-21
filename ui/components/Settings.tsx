@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
 import { ALERTS_READY } from '../../shared/app-config'
-import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, EULER_KEY_URL, PLATFORM_LABEL, type ChatEventGroup, type CloseAction, type IntegrationState, type Platform, STREAM_APPS, type StreamApp } from '../../shared/types'
+import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, EULER_KEY_URL, PLATFORM_LABEL, type CloseAction, type IntegrationState, type Platform, STREAM_APPS, type StreamApp } from '../../shared/types'
 import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamerbotLogo } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
 import { login as startLogin } from '../lib/login'
 import { About } from './About'
+import { ChatSettings } from './ChatSettings'
+import { Row, Toggle } from './SettingsParts'
 import { statusText } from './Tabs'
 import { SKINS, skinById } from '../styles/skins'
 
@@ -255,7 +257,8 @@ function BmcRow(): JSX.Element {
   const [token, setToken] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const live = st?.status === 'connected' || st?.status === 'reconnecting' || st?.status === 'connecting'
+  // 'error': the token was refused a few times but is still saved, so Reconnect can retry it
+  const live = st?.status === 'connected' || st?.status === 'reconnecting' || st?.status === 'connecting' || st?.status === 'error'
   const clean = (e: any): string => String(e?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
   const connect = (): void => {
     setErr('')
@@ -522,19 +525,6 @@ function StreamerbotSettings(): JSX.Element {
   )
 }
 
-const CHAT_EVENT_ROWS: [ChatEventGroup, string, string][] = [
-  ['subs', 'Subs', 'New subs, resubs and memberships'],
-  ['gifts', 'Gifts', 'Gifted subs, gift bombs and TikTok gifts'],
-  ['hype', 'Hype Train', 'Start, level-ups and end. The top banner always shows.'],
-  ['raids', 'Raids', 'Incoming and outgoing raids and hosts'],
-  ['redemptions', 'Redemptions', 'Channel point rewards'],
-  ['powerups', 'Power-ups', 'On-Screen Celebrations and custom Power-ups'],
-  ['paid', 'Super Stickers and KICKs', 'Paid messages already appear in chat'],
-  ['donations', 'Donations', 'Tips from StreamElements, Streamlabs and Buy Me a Coffee'],
-  ['cheers', 'Kick Cheers', 'Twitch cheers always show as messages'],
-  ['follows', 'Follows', 'New followers. Turn this off if follow bots flood your chat.']
-]
-
 function UpdatesRow(): JSX.Element {
   const u = useStore((s) => s.update)
   const boot = useStore((s) => s.boot!)
@@ -566,19 +556,6 @@ function useFonts(): string[] {
     }).catch(() => {})
   }, [])
   return fonts
-}
-
-function Row({ title, desc, children }: { title: string; desc: string; children: ReactNode }): JSX.Element {
-  return (
-    <div className="set-row">
-      <div className="set-text"><b>{title}</b><span>{desc}</span></div>
-      <div className="set-control">{children}</div>
-    </div>
-  )
-}
-
-function Toggle({ on, label, onChange }: { on: boolean; label: string; onChange(v: boolean): void }): JSX.Element {
-  return <button className={on ? 'toggle on' : 'toggle'} role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}><i /></button>
 }
 
 function Section({ title, desc, children, id }: { title: string; desc?: string; children: ReactNode; id?: string }): JSX.Element {
@@ -671,8 +648,6 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
   const boot = useStore((s) => s.boot!)
   const s = useStore((x) => x.settings!)
   const fonts = useFonts()
-  const providers = s.emoteProviders
-  const setProvider = (key: keyof typeof providers, on: boolean): void => void updateSettings({ emoteProviders: { ...providers, [key]: on } })
   const percent = Math.round(s.windowOpacity * 100)
   const [cat, setCat] = useState<Category>('connections')
   const scroll = useRef<HTMLDivElement>(null)
@@ -785,56 +760,7 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                 </Section>
               </>}
 
-              {cat === 'chat' && <>
-                <Section id="messages-settings" title="Messages" desc="Choose what each message shows">
-                  <Row title="Show Timestamps" desc="Show the time beside each message">
-                    <Toggle label="Show timestamps" on={s.showTimestamps} onChange={(v) => void updateSettings({ showTimestamps: v })} />
-                  </Row>
-                  <Row title="Keep Chat History" desc="Saves chat from your last 5 streams on this PC, so you can read what you missed. Turning it off deletes it. /clearhistory deletes it too.">
-                    <Toggle label="Keep chat history" on={s.keepChatHistory ?? true} onChange={(v) => void updateSettings({ keepChatHistory: v })} />
-                  </Row>
-                  <Row title="Show Pronouns" desc="Twitch only, for chatters who set them at pronouns.alejo.io. Sends chatter names to that service.">
-                    <Toggle label="Show pronouns" on={s.showPronouns} onChange={(v) => void updateSettings({ showPronouns: v })} />
-                  </Row>
-                  <Row title="Link Previews" desc="A card with the picture and title under YouTube links and Twitch, Kick or YouTube clip links. The details come from those sites.">
-                    <Toggle label="Link previews" on={s.linkPreviews ?? true} onChange={(v) => void updateSettings({ linkPreviews: v })} />
-                  </Row>
-                  <Row title="Spam Warnings" desc="Marks messages that offer to sell followers or viewers and point to a site, on every platform, with Delete and Ban buttons. Twitch's own held messages and suspicious-user warnings always show.">
-                    <Toggle label="Spam warnings" on={s.spamWarnings ?? true} onChange={(v) => void updateSettings({ spamWarnings: v })} />
-                  </Row>
-                </Section>
-                <Section id="popup-settings" title="Event Pop-ups" desc="New subs, gifts, cheers, raids, follows and more rise above the message box, then slide away">
-                  <Row title="Show Pop-ups" desc="Hover a pop-up to keep it open, click it to close it now. Every event still goes to the Events drop-down.">
-                    <Toggle label="Event pop-ups" on={s.eventPopups ?? true} onChange={(v) => void updateSettings({ eventPopups: v })} />
-                  </Row>
-                  {(s.eventPopups ?? true) && (
-                    <Row title="Pop-up Duration" desc="How long each pop-up stays before it slides away">
-                      <div className="slider">
-                        <output>{s.eventPopupSeconds ?? 6} s</output>
-                        <input type="range" aria-label="Pop-up duration in seconds" min="2" max="30" step="1" value={s.eventPopupSeconds ?? 6} onChange={(e) => void updateSettings({ eventPopupSeconds: Number(e.target.value) })} />
-                      </div>
-                    </Row>
-                  )}
-                </Section>
-                <Section id="chat-events-settings" title="Events in Chat" desc="Show these as cards in chat. They always appear in the Events drop-down.">
-                  {CHAT_EVENT_ROWS.map(([key, title, desc]) => (
-                    <Row key={key} title={title} desc={desc}>
-                      <Toggle label={`${title} in chat`} on={s.chatEvents[key] ?? true} onChange={(v) => void updateSettings({ chatEvents: { ...s.chatEvents, [key]: v } })} />
-                    </Row>
-                  ))}
-                </Section>
-                <Section title="Emotes" desc="Extra emote sets, shown in chat and in the picker">
-                  <Row title="BetterTTV" desc="Twitch channel and global emotes">
-                    <Toggle label="BetterTTV" on={providers.bttv} onChange={(v) => setProvider('bttv', v)} />
-                  </Row>
-                  <Row title="7TV" desc="Twitch and Kick channel and global emotes">
-                    <Toggle label="7TV" on={providers.seventv} onChange={(v) => setProvider('seventv', v)} />
-                  </Row>
-                  <Row title="FrankerFaceZ" desc="Twitch channel and global emotes">
-                    <Toggle label="FrankerFaceZ" on={providers.ffz} onChange={(v) => setProvider('ffz', v)} />
-                  </Row>
-                </Section>
-              </>}
+              {cat === 'chat' && <ChatSettings target={focus?.cat === 'chat' ? focus.target : undefined} />}
 
               {cat === 'app' && <>
                 <Section title="Closing" desc="Choose what happens when you close the app">

@@ -163,6 +163,18 @@ export const SKINS: Skin[] = [
     })
   },
   {
+    id: 'solarized-dark', name: 'Solarized Dark', by: 'Solarized by Ethan Schoonover',
+    swatch: ['#002b36', '#073642', '#268bd2', '#2aa198'],
+    vars: make({
+      bg: '#002b36', bgDeep: '#00212b', window: 'linear-gradient(135deg, #00212b, #002b36 50%, #073642)',
+      solid: '#00252f', solid2: '#073642', accent: '#268bd2', accent2: '#4ba3e3', second: '#2aa198', second2: '#35c4b9',
+      // base1, a touch brighter so long chat stays easy to read
+      text: '#a3b1b1', muted: '#7f9399', onAccent: '#fdf6e3', warn: '#cb4b16', good: '#859900', bad: '#dc322f',
+      line: 'rgba(147, 161, 161, 0.16)',
+      win: ['#b58900', '#859900', '#dc322f', '#002b36']
+    })
+  },
+  {
     id: 'catppuccin-latte', name: 'Catppuccin Latte', by: 'catppuccin.com', light: true,
     swatch: ['#eff1f5', '#ccd0da', '#8839ef', '#1e66f5'],
     vars: {
@@ -189,6 +201,22 @@ export const SKINS: Skin[] = [
         line: 'rgba(92, 106, 114, 0.2)',
         hype: 'linear-gradient(90deg, rgba(167, 192, 128, 0.85), rgba(127, 187, 179, 0.75))',
         win: ['#dfa000', '#8da101', '#f85552', '#fdf6e3']
+      }),
+      '--surface': 'rgba(255, 255, 255, 0.45)',
+      '--surface-2': 'rgba(255, 255, 255, 0.7)'
+    }
+  },
+  {
+    id: 'tokyo-night-day', name: 'Tokyo Night Day', by: 'Tokyo Night by enkia', light: true,
+    swatch: ['#e1e2e7', '#c4c8da', '#9854f1', '#2e7de9'],
+    vars: {
+      ...make({
+        bg: '#e1e2e7', bgDeep: '#d0d5e3', window: 'linear-gradient(135deg, #d0d5e3, #e1e2e7 50%, #e4e0f0 80%, #dbe3f2)',
+        solid: '#eef0f4', solid2: '#d9dce6', accent: '#9854f1', accent2: '#a774f3', second: '#2e7de9', second2: '#007197',
+        text: '#3760bf', muted: '#6172b0', onAccent: '#ffffff', warn: '#b15c00', good: '#587539', bad: '#f52a65',
+        line: 'rgba(55, 96, 191, 0.18)',
+        hype: 'linear-gradient(90deg, rgba(187, 154, 247, 0.9), rgba(122, 162, 247, 0.85))',
+        win: ['#8c6c3e', '#587539', '#f52a65', '#ffffff']
       }),
       '--surface': 'rgba(255, 255, 255, 0.45)',
       '--surface-2': 'rgba(255, 255, 255, 0.7)'

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
-import { chatEventGroup, standaloneSource } from '../../shared/events'
+import { standaloneSource } from '../../shared/events'
+import { eventShown, inEventsTab } from '../../shared/event-prefs'
 import { PLATFORMS } from '../../shared/types'
 import { isReloginNotice, reloginDone } from '../../shared/relogin'
-import type { AlertSource, HistorySession, ObsState, StreamerbotState, PinnedMessage, PlatformUsers, RaidInfo, Bootstrap, ChatEventGroup, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
+import type { AlertSource, HistorySession, ObsState, StreamerbotState, PinnedMessage, PlatformUsers, RaidInfo, Bootstrap, ChatMessage, ConnectionState, HubBatch, HypeTrain, IntegrationState, Platform, Settings, StreamEvent, SecretState, UpdateState } from '../../shared/types'
 
 const MAX_MESSAGES = 3000
 const MAX_EVENTS = 1500
@@ -80,7 +81,7 @@ function apply(b: HubBatch): void {
   const pinned = b.pinned === undefined ? state.pinned : b.pinned
   const raid = b.raid === undefined ? state.raid : b.raid
   const integrations = b.integrations?.length ? { ...state.integrations, ...Object.fromEntries(b.integrations.map((i) => [i.source, i])) } : state.integrations
-  set({ messages, events, statuses, pronouns, hype, actionsVersion, integrations, pinned, raid, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.filter((e) => !e.history).length })
+  set({ messages, events, statuses, pronouns, hype, actionsVersion, integrations, pinned, raid, unreadEvents: eventsOpen ? 0 : state.unreadEvents + incoming.events.filter((e) => !e.history && (!state.settings || inEventsTab(state.settings, e))).length })
 }
 
 // must match the .relogin-done transition in theme.css
@@ -209,14 +210,16 @@ export function useInit(): void {
   }, [])
 }
 
-export function useFiltered(items: ChatMessage[], tab: Platform | 'all', on: Record<ChatEventGroup, boolean>): ChatMessage[] {
+export function useFiltered(items: ChatMessage[], tab: Platform | 'all', s: Pick<Settings, 'chatEvents' | 'platformPrefs' | 'ignoredUsers'>): ChatMessage[] {
+  const { chatEvents, platformPrefs, ignoredUsers } = s
+  const ignored = ignoredUsers ?? {}
   return useMemo(() => items.filter((m) => {
     if (m.divider) return true
     if (tab !== 'all' && m.platform !== tab && !(m.event && standaloneSource(m.event))) return false
-    const group = m.event && chatEventGroup(m.event.type)
-    // groups added after the settings file was saved default to on
-    return !group || (on[group] ?? true)
-  }), [items, tab, on])
+    // ignored chatters: their messages leave chat, their events (subs, gifts...) still show
+    if (!m.event && m.kind !== 'system' && m.author.id && `${m.platform}:${m.author.id}` in ignored) return false
+    return !m.event || eventShown({ chatEvents, platformPrefs }, m.event, 'chat')
+  }), [items, tab, chatEvents, platformPrefs, ignored])
 }
 
 export function connected(s: Partial<Record<Platform, ConnectionState>>, p: Platform): boolean {

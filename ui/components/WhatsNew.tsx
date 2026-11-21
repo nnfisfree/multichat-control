@@ -20,33 +20,38 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
-    icon: <PlatformIcon platform="tiktok" size={18} />,
-    title: 'TikTok LIVE (beta)',
-    text: 'TikTok chat, gifts, subs, follows and shares now show next to Twitch, YouTube and Kick. Type your @username, paste a free Euler Stream key, and the app joins your LIVE on its own. Still under development and read-only for now, so please report anything odd.',
-    show: { cat: 'connections', target: 'tiktok-settings' }
+    icon: <Icon.reply />,
+    title: 'Reply, copy and quick actions',
+    text: "Point at a message for Reply, Copy and a menu with Pin, the user card, Twitch's viewer card, a 60 second timeout, Ban and Delete. Works on Twitch, YouTube and Kick."
   },
   {
-    icon: <Icon.bolt />,
-    title: 'A comet under the tabs',
-    text: "A thin line in your platforms' colours shows connections coming up, keeps a calm glow once everything is connected, and turns red if a platform drops. Tabs now only show for connected platforms, with coloured icons.",
-    show: { cat: 'appearance', target: 'window-settings' }
+    icon: <Icon.star />,
+    title: 'Ignore or highlight people',
+    text: "Hide someone's messages from chat, or make them stand out in gold. Both lists live in Settings, where one click takes a name off again.",
+    show: { cat: 'chat', target: 'people-settings' }
+  },
+  {
+    icon: <Icon.all />,
+    title: 'Chat settings per platform',
+    text: 'Pick username colours for Twitch, YouTube and Kick, with colours per role, and choose for every kind of event whether it shows in chat, in the Events tab, or both. The Events badge only counts what you picked.',
+    show: { cat: 'chat', target: 'platform-settings' }
+  },
+  {
+    icon: <Icon.palette />,
+    title: 'Solarized Dark and Tokyo Night Day',
+    text: 'Two new skins: the classic deep teal Solarized, and the light, cool blue sibling of Tokyo Night.',
+    show: { cat: 'appearance', target: 'skins-settings' }
+  },
+  {
+    icon: <PlatformIcon platform="kick" size={18} />,
+    title: 'Kick stays connected',
+    text: 'Kick chat no longer drops for a few seconds every 45 minutes while its login renews.',
+    fixed: true
   },
   {
     icon: <Icon.plug />,
-    title: 'Tidier Connections',
-    text: 'Each account is one line until you click it, and the developer-app fields are gone for Twitch and Kick.',
-    show: { cat: 'connections' }
-  },
-  {
-    icon: <Icon.gem />,
-    title: 'Sponsor on GitHub',
-    text: 'The Support page has a Collaborators section, and GitHub sponsors appear on the Wall of Supporters by themselves. Two small icons under the message box lead to GitHub Sponsors and Buy Me a Coffee.',
-    show: { cat: 'about', target: 'support' }
-  },
-  {
-    icon: <Icon.events />,
-    title: 'Cleaner Bits cards',
-    text: 'Cheers show just the amount next to the BITS badge, in chat, pop-ups and Recent events.',
+    title: 'Buy Me a Coffee keeps its token',
+    text: "A hiccup on Buy Me a Coffee's side no longer shows as a disconnect, and no longer logs you out.",
     fixed: true
   }
 ]

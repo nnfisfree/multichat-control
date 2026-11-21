@@ -125,7 +125,7 @@ export class TwitchConnector implements Connector {
     this.sub = new EventSub({
       onSession: (id) => this.subscribeAll(id),
       onNotification: (type, id, e) => this.onEvent(type, id, e),
-      onState: (s, detail) => this.ctx.status({ status: s, account: this.displayName, mentions: this.mentions, detail, relogin: this.relogin })
+      onState: (s, detail) => this.ctx.status({ status: s, account: this.displayName, channel: this.login_ || undefined, mentions: this.mentions, detail, relogin: this.relogin })
     })
     this.sub.start()
     if (this.checkTimer) clearInterval(this.checkTimer)

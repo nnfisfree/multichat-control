@@ -1,6 +1,8 @@
 import { useEffect, type JSX } from 'react'
 import type { ActionResult, ChatMessage, ModerationRequest } from '../../shared/types'
 import { plainText } from '../../shared/parts'
+import { useStore } from '../lib/store'
+import { toggleUserMark, userKey } from '../lib/userMarks'
 
 interface Props {
   x: number
@@ -30,9 +32,14 @@ export function ContextMenu({ x, y, m, onClose, onReply, onResult, userOnly, onC
   }
   const user = { userId: m.author.id, userName: m.author.name }
   const self = m.author.isBroadcaster
+  const ignored = useStore((s) => userKey(m.platform, m.author.id) in (s.settings?.ignoredUsers ?? {}))
+  const highlighted = useStore((s) => userKey(m.platform, m.author.id) in (s.settings?.highlightedUsers ?? {}))
+  const mark = (list: 'ignoredUsers' | 'highlightedUsers', on: string, off: string) => (): void => {
+    onResult({ ok: true, message: toggleUserMark(list, m) ? on : off })
+  }
 
   return (
-    <div className="popover ctx" role="menu" style={{ left: Math.min(x, window.innerWidth - 210), top: Math.max(8, Math.min(y, window.innerHeight - 380)) }}>
+    <div className="popover ctx" role="menu" style={{ left: Math.min(x, window.innerWidth - 210), top: Math.max(8, Math.min(y, window.innerHeight - 440)) }}>
       <div className="ctx-name">{m.author.name}</div>
       {onCard && <button role="menuitem" onClick={() => onCard(m)}>View user card</button>}
       {/* held messages aren't in chat yet, so no reply/delete/pin, only Allow or Deny */}
@@ -52,7 +59,9 @@ export function ContextMenu({ x, y, m, onClose, onReply, onResult, userOnly, onC
         <button role="menuitem" onClick={mod({ kind: 'timeout', seconds: 600, ...user })}>Timeout 10 minutes</button>
         <button role="menuitem" className="danger" onClick={mod({ kind: 'ban', ...user })}>Ban</button>
         {m.platform === 'twitch' && <button role="menuitem" onClick={mod({ kind: 'shoutout', ...user })}>Shoutout</button>}
+        {m.author.id && <button role="menuitem" onClick={mark('ignoredUsers', `Ignoring ${m.author.name}.`, `${m.author.name} is no longer ignored.`)}>{ignored ? 'Stop ignoring' : 'Ignore user'}</button>}
       </>}
+      {m.author.id && <button role="menuitem" onClick={mark('highlightedUsers', `${m.author.name}'s messages will stand out.`, `${m.author.name} is no longer highlighted.`)}>{highlighted ? 'Remove highlight' : 'Highlight user'}</button>}
     </div>
   )
 }

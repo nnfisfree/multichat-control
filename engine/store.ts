@@ -1,4 +1,6 @@
-import { DEFAULT_SETTINGS, type Settings } from '../shared/types'
+import { DEFAULT_SETTINGS, type PlatformPrefs, type Settings } from '../shared/types'
+import { PLATFORM_EVENTS, PREF_PLATFORMS } from '../shared/event-prefs'
+import { chatEventGroup } from '../shared/events'
 import { core } from './core'
 
 /**
@@ -30,6 +32,20 @@ export async function loadStore(): Promise<void> {
     if (saved.sendTargets && typeof saved.sendTargets === 'object' && !('tiktok' in saved.sendTargets)) saved.sendTargets.tiktok = false
     const filter = saved.eventFilter?.platforms
     if (filter && typeof filter === 'object' && !('tiktok' in filter)) filter.tiktok = true
+    // Per-platform event switches arrived in 0.4.1. Carry over any "Events in chat" switch that was
+    // turned off, so Twitch, YouTube and Kick keep hiding what they hid before.
+    if (!('platformPrefs' in saved) && saved.chatEvents && typeof saved.chatEvents === 'object') {
+      const prefs: Partial<Record<string, PlatformPrefs>> = {}
+      for (const p of PREF_PLATFORMS) {
+        const events: NonNullable<PlatformPrefs['events']> = {}
+        for (const { type } of PLATFORM_EVENTS[p]) {
+          const group = chatEventGroup(type)
+          if (group && saved.chatEvents[group] === false) events[type] = { chat: false }
+        }
+        if (Object.keys(events).length) prefs[p] = { events }
+      }
+      saved.platformPrefs = prefs
+    }
     store.settings = { ...DEFAULT_SETTINGS, ...saved }
   } catch {
     // corrupt file: fall back to defaults, it gets overwritten on the next change

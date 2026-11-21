@@ -35,7 +35,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/chat.webp" width="800" alt="Multichat Control in the Sweet skin: Twitch, YouTube, Kick and TikTok chat merged in one window, a TikTok Galaxy gift card, a Super Chat pop-up at the top, a suspicious-user warning, follower counts for all four platforms in the title bar, and the live bitrate graph opened from the stream stats" />
+<img src="docs/media/chat.webp" width="800" alt="Multichat Control in the Sweet skin: Twitch, YouTube, Kick and TikTok chat merged in one window, a Kick gift pop-up at the top, a spam warning with Delete and Ban, the Reply, Copy and more-actions buttons on a message, a TikTok Galaxy gift, a Super Chat and a resub card" />
 
 <sub>Every image here is the built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -44,65 +44,8 @@ One small file, nothing else to install. It updates itself.
 <br />
 
 > [!TIP]
-> ### 🎉 New: TikTok LIVE
-> TikTok chat, gifts, subs, follows and shares now show up next to Twitch, YouTube and Kick. There's no TikTok login: type your **@username**, paste a free key, and the app joins your LIVE by itself every time you go live. Gifts show with their picture, their price in coins and roughly what you earn, and a streak like *Rose ×25* lands as one clean card. [How to set it up](#-get-started)
-
-## 🧭 Platforms at a glance
-
-<div align="center">
-
-| | <img src="https://cdn.simpleicons.org/twitch/9146ff" width="18" /> **Twitch** | <img src="https://cdn.simpleicons.org/youtube/ff0033" width="18" /> **YouTube** | <img src="https://cdn.simpleicons.org/kick/53fc18" width="18" /> **Kick** | <img src="https://cdn.simpleicons.org/tiktok/25f4ee" width="18" /> **TikTok LIVE** |
-|---|:---:|:---:|:---:|:---:|
-| **Read chat** | ✅ | ✅ | ✅ | ✅ |
-| **Send messages** | ✅ | ✅ | ✅ | 👀 read-only for now |
-| **Events** | subs, gifts, Bits, raids, rewards, Power-ups, Hype Train | memberships, Super Chats, Super Stickers | subs, gifts, KICKs, raids, rewards | gifts with coin value, subs, follows, shares |
-| **Moderation** | delete, timeout, ban, AutoMod, warnings | delete, timeout, ban | delete, timeout, ban | — |
-| **Emotes** | Twitch, 7TV, BTTV, FFZ | emoji | Kick, 7TV | stickers in chat |
-| **Log in** | one click | one click (Google) | one click | @username + free key |
-
-</div>
-
-## ✨ Why it exists
-
-Streaming to several platforms usually means juggling browser tabs, or running a large bot suite just to read chat. Multichat Control is built for the moment you're live: **one merged chat, one list of events, and real controls within a click.**
-
-<table>
-<tr>
-<td width="33%" valign="top" align="center">
-
-### 🪶 Light
-An **8 MB exe**. It uses the WebView2 already in Windows 10 and 11 instead of shipping its own browser.
-
-</td>
-<td width="33%" valign="top" align="center">
-
-### 🔒 Yours
-No server, no bot account, no OBS required. You log in with **your own accounts**, and everything stays on your PC.
-
-</td>
-<td width="33%" valign="top" align="center">
-
-### 🆓 Free forever
-**Open source** under MIT. Every feature for everyone, no paywalls, no subscriptions.
-
-</td>
-</tr>
-</table>
-
-<details>
-<summary><b>How much lighter than version 0.1?</b></summary>
-
-<br />
-
-Version 0.2 was rebuilt on [Tauri](https://tauri.app). Instead of carrying its own copy of Chromium, it uses Microsoft Edge WebView2, which Windows already has.
-
-| | 0.1 | 0.2 and later |
-|---|---|---|
-| Download | 150 MB zip | **an 8 MB exe** |
-| Beside the app | ~70 files and folders | **just `user-data`** |
-| Memory while running | ~300 MB | **~230 MB** |
-
-</details>
+> ### 🎉 New in 0.4.1
+> **Point at any message** for Reply, Copy and a menu of quick actions: pin, user card, timeout, ban, delete, **ignore** or **highlight** the person. **Settings → Chat** now has a page per platform with **username colours** (per role too) and a switch for every kind of event: in chat, in the Events tab, or both. Plus two new skins, **Solarized Dark** and **Tokyo Night Day**, and steadier Kick and Buy Me a Coffee connections. TikTok LIVE (beta) is read-only next to them. [How to set it up](#-get-started)
 
 ## 🚀 Features
 
@@ -118,7 +61,10 @@ Version 0.2 was rebuilt on [Tauri](https://tauri.app). Instead of carrying its o
 - **Click any name for a user card**: account age, follow and sub, badges and everything they said in your channel
 - **Users in Chat** for every platform, grouped Broadcaster · Moderators · VIPs · Users, with live viewer counts
 - **Previews for videos and clips**: YouTube links and Twitch, Kick or YouTube clips get a card with picture, length, title and channel
-- Reply, delete, time out (even for 1 second, to clear messages), ban or shout out
+- **Point at a message** for Reply, Copy and a ⋮ menu: pin, user card, Twitch's viewer card, timeout, ban, delete
+- **Ignore** someone to hide their messages, or **highlight** them in gold, on this PC only
+- **Username colours per platform**: their own, the platform colour, random per person or one colour, plus colours per role
+- Right-click for more: time out for 1 second (clears their messages), 1 or 10 minutes, or shout out
 
 </td>
 <td width="50%" valign="top">
@@ -131,6 +77,7 @@ Version 0.2 was rebuilt on [Tauri](https://tauri.app). Instead of carrying its o
 - **Resub months at a glance**: SUB ×14 on the pop-up, months and streak in Recent events
 - **The supporter's message always shows**: resubs, cheers, Super Chats and tips
 - **Recent events from every platform**, in time order, kept between sessions, with filters
+- **You choose where each event shows**, per platform: in chat, in the Events tab, or both. The Events badge only counts what you picked
 - **Test alerts** from Streamer.bot, StreamElements and Streamlabs tagged **TEST** and never saved
 - **Twitch Power-ups as on Twitch**: RGB Message Effects, giant emotes, On-Screen Celebrations
 - Gift bombs, Hype Train banner, and animated icons on every badge
@@ -172,7 +119,7 @@ Version 0.2 was rebuilt on [Tauri](https://tauri.app). Instead of carrying its o
 <td valign="top">
 
 ### 🎨 Look and feel
-- **12 skins**, dark and light, with a big live preview: Sweet, POS Club, Myst Bourne, Dracula, Catppuccin, Tokyo Night, Kanagawa, Rosé Pine, OLED Black, Butterfly, Everforest Light
+- **14 skins**, dark and light, with a big live preview: Sweet, POS Club, Myst Bourne, Dracula, Catppuccin, Tokyo Night, Kanagawa, Rosé Pine, Solarized Dark, OLED Black, Butterfly, Catppuccin Latte, Everforest Light, Tokyo Night Day
 - **A comet line** under the tabs while platforms connect, that turns red if one drops
 - **Wobbly window**, inspired by KDE Plasma: it bends like jelly while you drag it
 - **Remembers its size and place**, monitor included
@@ -200,20 +147,15 @@ Version 0.2 was rebuilt on [Tauri](https://tauri.app). Instead of carrying its o
 <td align="center" colspan="2"><img src="docs/media/popups.webp" alt="Event pop-ups sliding in at the top of chat, one at a time, each in the colour of its platform: a TikTok gift in cyan, Twitch cheers in purple, Kick gifted subs in green" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
 </tr>
 <tr>
-<td align="center" width="50%"><img src="docs/media/tiktok.webp" alt="The TikTok tab: TikTok chat with gift cards for a Rose streak and a TikTok gift, each with its price in coins and approximate value, and the message box saying TikTok is read-only for now" /><br /><b>🎵 TikTok LIVE chat and gifts, with their value</b></td>
-<td align="center" width="50%"><img src="docs/media/moderation.webp" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and spam bots offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots</b></td>
+<td align="center" width="50%"><img src="docs/media/quickactions.webp" alt="Pointing at a Twitch message shows Reply, Copy and a more-actions button; its menu offers Pin message, View user card, Timeout user (60s), Ban user, Ignore user, Highlight user and Delete message" /><br /><b>Reply, copy and quick actions on every message</b></td>
+<td align="center" width="50%"><img src="docs/media/platforms.webp" alt="Settings, Chat, Platforms on Twitch: Show Pronouns and Show GIFs, username colour with a preview of sample names, Role Colours, and the events table with a Chat and an Events tab switch for each kind of event" /><br /><b>Username colours and event switches per platform</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/raid.webp" alt="Raid bar at the top of chat: the raided channel's picture with a LIVE tag, its game, viewers and title, a countdown, Raid Now and a red Cancel button" /><br /><b>Raid with everything in view</b></td>
-<td align="center"><img src="docs/media/usercard.webp" alt="User card with the viewer's role, account age, follow and subscription, moderation buttons and their messages" /><br /><b>Know who you're talking to</b></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/media/streamerbot.webp" alt="Typing /sb S suggests the Streamer.bot actions that match, in the commands list" /><br /><b>Run Streamer.bot actions from the message box</b></td>
+<td align="center"><img src="docs/media/moderation.webp" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and spam bots offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots</b></td>
 <td align="center"><img src="docs/media/stats.webp" alt="The full stream stats: encoder, resolutions, CPU, memory, FPS, render and encoding lag, stream and recording status, with a live bitrate graph" /><br /><b>Stream stats with a live graph</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/skins.webp" alt="Settings, Appearance: the current skin's preview above compact skin chips split into Dark and Light" /><br /><b>Twelve skins, one click each</b></td>
-<td align="center"><img src="docs/media/support.webp" alt="The Support page: a golden Collaborators card for emaspa with his projects, and the Wall of Supporters" /><br /><b>Collaborators and the Wall of Supporters</b></td>
+<td align="center" colspan="2"><img src="docs/media/skins.webp" width="70%" alt="Settings, Appearance in the new Solarized Dark skin: the current skin's preview above fourteen skin chips split into Dark and Light, including Solarized Dark and Tokyo Night Day" /><br /><b>Fourteen skins, one click each</b></td>
 </tr>
 </table>
 

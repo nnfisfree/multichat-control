@@ -8,6 +8,8 @@ const STATE_FILE = 'bmc-state.json'
 
 // Tips get checked often; memberships and shop purchases change less, see below.
 const TIPS_EVERY = 15_000
+// a token is only treated as gone after this many 401/403 answers in a row
+const REFUSALS_BEFORE_LOGOUT = 3
 const SUBS_EVERY = 60_000
 // Full scan of every member's renewal date. Page 1 alone is checked every minute.
 const FULL_SCAN_EVERY = 5 * 60_000
@@ -102,6 +104,8 @@ export class BuyMeACoffee implements AlertService {
   private lastSubs = 0
   private lastFullScan = 0
   private failures = 0
+  // 401/403 in a row; BMC's servers answer these during outages too, so one isn't proof
+  private refused = 0
   // set after this session's first pass; anything new after that is live
   private warm = false
 
@@ -211,16 +215,22 @@ export class BuyMeACoffee implements AlertService {
       if (changed) await this.save()
       this.warm = true
       this.failures = 0
+      this.refused = 0
       this.ctx.status({ status: 'connected', account: 'Buy Me a Coffee' })
       this.next(run, TIPS_EVERY)
     } catch (err) {
       if (run !== this.run) return
-      if (err instanceof HttpError && (err.status === 401 || err.status === 403)) {
-        void core.logout('buymeacoffee')
-        return this.ctx.status({ status: 'needs-login', detail: "Buy Me a Coffee didn't accept the token any more. Connect again with a new one." })
+      const refused = err instanceof HttpError && (err.status === 401 || err.status === 403)
+      this.refused = refused ? this.refused + 1 : 0
+      // Only a token refused again and again (minutes apart) is really gone. Even then it stays
+      // saved, so pressing Reconnect is enough if BMC was just having a bad day.
+      if (this.refused >= REFUSALS_BEFORE_LOGOUT) {
+        return this.ctx.status({ status: 'error', account: 'Buy Me a Coffee', detail: "Buy Me a Coffee didn't accept the token several times in a row. Press Reconnect, or connect again with a new token." })
       }
-      // rate limited (429) or down: back off, 30s doubling up to 5 min
-      const wait = Math.min(5 * 60_000, 30_000 * 2 ** Math.min(this.failures++, 4))
+      // One failed check (BMC's 502s) doesn't count as a disconnect: try again soon, quietly.
+      // After that: back off, 30s doubling up to 5 min, and say so.
+      if (this.failures++ === 0) return this.next(run, 15_000)
+      const wait = Math.min(5 * 60_000, 30_000 * 2 ** Math.min(this.failures - 2, 4))
       this.ctx.status({ status: 'reconnecting', account: 'Buy Me a Coffee', detail: message(err) })
       this.next(run, wait)
     }
