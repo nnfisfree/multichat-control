@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type JSX } from 'react'
-import { updateSettings } from '../lib/store'
+import { updateSettings, useStore } from '../lib/store'
 import { YOUTUBE_NOTICE_EVENT, type YoutubeNoticeDetail } from '../lib/login'
 import { Icon, PlatformIcon } from './Icons'
 
@@ -13,6 +13,7 @@ const REPO = 'https://github.com/nnfisfree/multichat-control'
 export function YoutubeNotice(): JSX.Element | null {
   const answer = useRef<YoutubeNoticeDetail | null>(null)
   const [open, setOpen] = useState(false)
+  const linux = useStore((s) => s.boot?.platform === 'linux')
   const [hide, setHide] = useState(false)
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export function YoutubeNotice(): JSX.Element | null {
           </li>
           <li>
             <span className="wn-icon" aria-hidden="true"><Icon.check /></span>
-            <p><b>Your login stays with you.</b> It's saved on this PC, encrypted by Windows, and is never sent to us or anyone else. You can check every line of the <button className="linkish" onClick={() => void window.nnf.openExternal(REPO)}>source code</button>, and remove access any time in your Google account.</p>
+            <p><b>Your login stays with you.</b> It's saved on this PC, {linux ? 'encrypted with a key kept in your system keyring' : 'encrypted by Windows'}, and is never sent to us or anyone else. You can check every line of the <button className="linkish" onClick={() => void window.nnf.openExternal(REPO)}>source code</button>, and remove access any time in your Google account.</p>
           </li>
         </ul>
 

@@ -19,7 +19,9 @@ export function UpdateBanner(): JSX.Element | null {
           <button className="linkish" onClick={() => setNotes(!notes)}>{notes ? 'Hide' : 'What\'s new'}</button>
           {u.info.canInstall
             ? <button className="btn" onClick={() => void window.nnf.updates.download()}>Update now</button>
-            : <button className="btn" onClick={() => void window.nnf.updates.openPage()}>Download</button>}
+            : u.info.managed
+              ? <span className="update-text">Update it with your package manager.</span>
+              : <button className="btn" onClick={() => void window.nnf.updates.openPage()}>Download</button>}
           <button className="btn ghost" onClick={() => setDismissed(v)}>Later</button>
         </>}
         {u.status === 'downloading' && <>

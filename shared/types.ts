@@ -322,6 +322,8 @@ export interface UpdateInfo {
   page: string
   /** false when this copy can't self-update; we link to the download page instead. */
   canInstall: boolean
+  /** Installed by a package manager (Linux AUR), which handles updates. */
+  managed?: boolean
   size?: number
 }
 
@@ -554,6 +556,8 @@ export interface Bootstrap {
   builtInKick: boolean
   dataDir: string
   version: string
+  /** Which OS we run on, for the few settings and words that differ. */
+  platform: 'windows' | 'linux'
 }
 
 export interface HubBatch {
@@ -639,6 +643,8 @@ export interface NnfApi {
     disconnect(): Promise<SecretState>
   }
   openExternal(url: string): Promise<void>
+  /** Installed font families, for systems where the webview can't list them itself (Linux). */
+  systemFonts(): Promise<string[]>
   showPanel(bounds: PanelBounds): Promise<ActionResult>
   hidePanel(): Promise<void>
   window(action: 'minimize' | 'maximize' | 'close'): void

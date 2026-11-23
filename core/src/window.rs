@@ -35,10 +35,13 @@ pub fn show(app: &AppHandle) {
 /// Windows itself showing a hidden window). When it drifts, hide()/show() silently do nothing, which
 /// left the X button dead with "close to tray" on. Flipping the state and back forces Tauri to act.
 /// Must run on the main thread, where hide()/show() take effect immediately.
+///
+/// Windows only: GTK applies show/hide a moment later, so the check would always see the old state
+/// and flash the window. GTK also doesn't have the drift this works around.
 fn set_shown(w: &WebviewWindow, visible: bool) {
     let flip = |v: bool| if v { w.show() } else { w.hide() };
     let _ = flip(visible);
-    if w.is_visible().unwrap_or(visible) != visible {
+    if cfg!(windows) && w.is_visible().unwrap_or(visible) != visible {
         log("window", &format!("{} did nothing, so the window state was resynced", if visible { "show" } else { "hide" }));
         let _ = flip(!visible);
         let _ = flip(visible);

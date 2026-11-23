@@ -28,7 +28,7 @@ import { loadStore, store } from './store'
 import { StreamerbotLink } from './streamerbot'
 
 /** Passed in from Rust on startup. */
-interface AppInfo { demo: boolean; version: string; dataDir: string }
+interface AppInfo { demo: boolean; version: string; dataDir: string; platform: 'windows' | 'linux' }
 
 /** The UI listens for this to show the close / keep-in-tray prompt. */
 export const CLOSE_ASK_EVENT = 'nnf:close-ask'
@@ -199,6 +199,7 @@ export async function startEngine(): Promise<void> {
       builtInKick: builtIn.kick,
       dataDir: info.dataDir,
       version: info.version,
+      platform: info.platform,
       update,
       obs: obsState,
       streamerbot: sbState,
@@ -295,6 +296,7 @@ export async function startEngine(): Promise<void> {
       }
     },
     openExternal: async (url) => { await core.openUrl(url) },
+    systemFonts: () => invoke<string[]>('system_fonts').catch(() => []),
     showPanel: (b: PanelBounds) => invoke('panel_show', { bounds: b, channel: twitch?.channelLogin() ?? null }),
     hidePanel: () => invoke('panel_hide'),
     obs: {

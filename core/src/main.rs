@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod auth;
+mod fonts;
 mod kick;
 #[cfg(windows)]
 mod legacy;
@@ -115,6 +116,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            fonts::system_fonts,
             storage::file_read,
             storage::file_write,
             storage::file_append,

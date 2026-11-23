@@ -546,13 +546,17 @@ function UpdatesRow(): JSX.Element {
 
 const BUNDLED_FONTS = ['Segoe UI', 'Inter', 'Rajdhani', 'Orbitron']
 
-/** Installed fonts where the OS lets us list them. The bundled fonts always work. */
+/** Installed fonts: from the webview where it can list them (WebView2), else from the system
+ * (fontconfig on Linux, where WebKitGTK has no queryLocalFonts). The bundled fonts always work. */
 function useFonts(): string[] {
   const [fonts, setFonts] = useState(BUNDLED_FONTS)
   useEffect(() => {
     const query = (window as unknown as { queryLocalFonts?: () => Promise<{ family: string }[]> }).queryLocalFonts
-    query?.().then((list) => {
-      setFonts([...BUNDLED_FONTS, ...[...new Set(list.map((f) => f.family))].filter((f) => !BUNDLED_FONTS.includes(f)).sort()])
+    const families = query
+      ? query().then((list) => list.map((f) => f.family))
+      : window.nnf.systemFonts()
+    families.then((list) => {
+      setFonts([...BUNDLED_FONTS, ...[...new Set(list)].filter((f) => !BUNDLED_FONTS.includes(f)).sort()])
     }).catch(() => {})
   }, [])
   return fonts
@@ -725,13 +729,13 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                       <input type="range" aria-label="Window opacity" min="0" max="100" step="1" value={percent} onChange={(e) => void updateSettings({ windowOpacity: Number(e.target.value) / 100 })} />
                     </div>
                   </Row>
-                  <Row title="Wobbly Window" desc="The window bends like jelly while you drag it by the title bar, and settles when you let go. Inspired by the Wobbly Windows effect built into KDE Plasma, the Linux desktop.">
+                  {boot.platform !== 'linux' && <Row title="Wobbly Window" desc="The window bends like jelly while you drag it by the title bar, and settles when you let go. Inspired by the Wobbly Windows effect built into KDE Plasma, the Linux desktop.">
                     <Toggle label="Wobbly window" on={s.windowWobble} onChange={(v) => void updateSettings({ windowWobble: v })} />
-                  </Row>
+                  </Row>}
                   <Row title="Animated Connection Line" desc="Once everything is connected, the line under the tabs keeps a soft glow in your platforms' colours, with a slow comet now and then. Off: it fades away after connecting. A platform that drops always turns its part of the line red.">
                     <Toggle label="Animated connection line" on={s.connectionLine} onChange={(v) => void updateSettings({ connectionLine: v })} />
                   </Row>
-                  {s.windowWobble && (
+                  {s.windowWobble && boot.platform !== 'linux' && (
                     <Row title="Wobble Intensity" desc="Low is a light sway, high is soft jelly">
                       <div className="slider">
                         <output>{s.wobbleIntensity}%</output>
