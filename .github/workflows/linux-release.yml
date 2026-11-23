@@ -12,6 +12,11 @@ name: Linux release
 on:
   release:
     types: [published]
+  # TEMPORARY: test builds of the Linux port before it's merged. Each push to linux-port builds the
+  # AppImage and keeps it as a workflow artifact (nothing gets attached to a release). Remove this
+  # trigger when merging to main.
+  push:
+    branches: [linux-port]
   workflow_dispatch:
     inputs:
       tag:
@@ -22,8 +27,9 @@ permissions:
   contents: write
 
 concurrency:
-  group: linux-release-${{ github.event.release.tag_name || inputs.tag }}
-  cancel-in-progress: false
+  group: linux-release-${{ github.event.release.tag_name || inputs.tag || github.ref }}
+  # a newer push replaces a test build that's still running; release builds always finish
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   appimage:
@@ -34,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.TAG || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -51,6 +57,7 @@ jobs:
         run: |
           if [ -n "$ENV_LOCAL" ]; then printf '%s\n' "$ENV_LOCAL" > .env.local; else echo "::warning::No ENV_LOCAL secret: built-in logins are left out."; fi
       - name: Check versions match the tag
+        if: env.TAG != ''
         run: |
           v=$(node -p "require('./package.json').version")
           [ "v$v" = "$TAG" ] || { echo "::error::package.json says $v, tag is $TAG"; exit 1; }
@@ -61,6 +68,8 @@ jobs:
       - name: Name it and check it for local paths
         run: |
           v=${TAG#v}
+          # test builds: package version plus the commit
+          [ -n "$v" ] || v="$(node -p "require('./package.json').version")-${GITHUB_SHA::7}"
           src=$(ls core/target/release/bundle/appimage/*.AppImage | head -1)
           out="Multichat-Control-$v-x86_64.AppImage"
           mv "$src" "$out"
@@ -72,7 +81,17 @@ jobs:
           rm -f .env.local
           ls -la "$out"
           echo "APPIMAGE_FILE=$out" >> "$GITHUB_ENV"
+      - name: Keep the test build
+        if: env.TAG == ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.APPIMAGE_FILE }}
+          path: ${{ env.APPIMAGE_FILE }}
+          retention-days: 14
+          # an AppImage is already compressed
+          compression-level: 0
       - name: Attach to the release
+        if: env.TAG != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$TAG" "$APPIMAGE_FILE" --clobber
