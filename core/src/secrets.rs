@@ -1,13 +1,19 @@
-//! Saved logins and keys in `secrets.json`, encrypted with DPAPI so only this Windows user on this
-//! machine can read them. They never leave Rust: the engine only learns whether a secret exists,
-//! never its value.
+//! Saved logins and keys in `secrets.json`. They never leave Rust: the engine only learns whether a
+//! secret exists, never its value.
 //!
-//! Logins saved by the old Electron build (0.1.x) get picked up too, so nobody has to log in again.
-//! Electron used AES-256-GCM with a key that's itself DPAPI-protected and stored in
+//! Windows: each value is encrypted with DPAPI, so only this Windows user on this machine can read it.
+//! Linux: each value is encrypted with AES-256-GCM. The key is random and lives in the desktop's
+//! keyring (Secret Service: GNOME Keyring, KWallet, KeePassXC...). Without a keyring it goes into
+//! `secrets.key` next to `secrets.json`, readable only by this user.
+//!
+//! Logins saved by the old Electron build (0.1.x, Windows only) get picked up too, so nobody has to
+//! log in again. Electron used AES-256-GCM with a key that's itself DPAPI-protected and stored in
 //! `session/Local State`. Each one is converted to our format the first time it's read.
 
 use crate::paths::data_dir;
-use crate::storage::{log, write_atomic};
+#[cfg(windows)]
+use crate::storage::log;
+use crate::storage::write_atomic;
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use serde::Serialize;
@@ -15,7 +21,16 @@ use std::collections::BTreeMap;
 use std::sync::Mutex;
 
 /// Prefix on values written by this version.
+#[cfg(windows)]
 const PREFIX: &str = "dpapi:";
+#[cfg(not(windows))]
+const PREFIX: &str = "aes:";
+
+/// Shown when a secret can't be encrypted.
+#[cfg(windows)]
+const UNAVAILABLE: &str = "Windows secure storage is unavailable.";
+#[cfg(not(windows))]
+const UNAVAILABLE: &str = "Secure storage is unavailable: the system keyring couldn't be reached and no key file could be written.";
 
 static LOCK: Mutex<()> = Mutex::new(());
 
@@ -29,9 +44,21 @@ fn load() -> BTreeMap<String, String> {
 
 fn save(map: &BTreeMap<String, String>) {
     if let Ok(text) = serde_json::to_string_pretty(map) {
-        let _ = write_atomic(&file(), &text);
+        if write_atomic(&file(), &text).is_ok() {
+            private(&file());
+        }
     }
 }
+
+/// Only this user may read the file.
+#[cfg(unix)]
+fn private(path: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+}
+
+#[cfg(not(unix))]
+fn private(_: &std::path::Path) {}
 
 #[cfg(windows)]
 mod dpapi {
@@ -61,13 +88,154 @@ mod dpapi {
     }
 }
 
-#[cfg(not(windows))]
-mod dpapi {
+#[cfg(target_os = "linux")]
+mod vault {
+    //! The AES key: in the keyring if there is one, otherwise in a private file.
+    use super::PREFIX;
+    use crate::paths::data_dir;
+    use crate::storage::log;
+    use base64::engine::general_purpose::STANDARD as B64;
+    use base64::Engine;
+    use std::sync::Mutex;
+
+    const SERVICE: &str = "multichat-control";
+    const ACCOUNT: &str = "secrets-key";
+
+    /// Cached once found, so the keyring is only asked once per run.
+    static KEY: Mutex<Option<[u8; 32]>> = Mutex::new(None);
+
+    fn key_file() -> std::path::PathBuf {
+        data_dir().join("secrets.key")
+    }
+
+    fn decode(text: &str) -> Option<[u8; 32]> {
+        B64.decode(text.trim()).ok()?.try_into().ok()
+    }
+
+    enum Keyring {
+        Found([u8; 32]),
+        Empty,
+        /// No Secret Service running, or it refused (locked and the unlock was cancelled).
+        Unavailable(String),
+    }
+
+    fn entry() -> Result<keyring::Entry, keyring::Error> {
+        keyring::Entry::new(SERVICE, ACCOUNT)
+    }
+
+    fn from_keyring() -> Keyring {
+        match entry().and_then(|e| e.get_password()) {
+            Ok(text) => decode(&text).map(Keyring::Found).unwrap_or(Keyring::Empty),
+            Err(keyring::Error::NoEntry) => Keyring::Empty,
+            Err(e) => Keyring::Unavailable(e.to_string()),
+        }
+    }
+
+    fn to_keyring(key: &[u8; 32]) -> bool {
+        let text = B64.encode(key);
+        // only trust it once it reads back
+        entry().and_then(|e| e.set_password(&text)).is_ok() && matches!(from_keyring(), Keyring::Found(k) if k == *key)
+    }
+
+    /// Anything already encrypted with a key we might not be able to reach right now.
+    fn has_saved() -> bool {
+        super::load().values().any(|v| v.starts_with(PREFIX))
+    }
+
+    fn find() -> Option<[u8; 32]> {
+        let keyring = from_keyring();
+        if let Keyring::Found(k) = keyring {
+            return Some(k);
+        }
+        // a key file from a run without a keyring keeps being used, so nothing gets lost
+        if let Some(k) = std::fs::read_to_string(key_file()).ok().and_then(|t| decode(&t)) {
+            return Some(k);
+        }
+        if let Keyring::Unavailable(e) = &keyring {
+            // the key may well be in there, just out of reach: don't replace it and lose every login
+            if has_saved() {
+                log("secrets", &format!("the system keyring can't be reached ({e}), so saved logins can't be read this time"));
+                return None;
+            }
+        }
+        let mut key = [0u8; 32];
+        rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut key);
+        if matches!(keyring, Keyring::Empty) && to_keyring(&key) {
+            log("secrets", "new encryption key saved in the system keyring");
+            return Some(key);
+        }
+        if write_private(&key_file(), B64.encode(key).as_bytes()).is_err() {
+            return None;
+        }
+        log("secrets", "no system keyring available: the encryption key is kept in secrets.key, readable only by you");
+        Some(key)
+    }
+
+    /// Created 0600 from the start, so the key is never readable by others even for a moment.
+    fn write_private(path: &std::path::Path, data: &[u8]) -> std::io::Result<()> {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut f = std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(path)?;
+        f.write_all(data)?;
+        f.sync_all()
+    }
+
+    fn key() -> Option<[u8; 32]> {
+        let mut cached = KEY.lock().unwrap();
+        if cached.is_none() {
+            *cached = find();
+        }
+        *cached
+    }
+
+    /// Fetches the key early, off the main thread, so a keyring unlock prompt never stalls the window.
+    pub fn warm() {
+        std::thread::spawn(|| {
+            let _ = key();
+        });
+    }
+
+    /// 12-byte nonce, then the AES-GCM ciphertext.
+    pub fn protect(data: &[u8]) -> Option<Vec<u8>> {
+        use aes_gcm::aead::{Aead, KeyInit};
+        use aes_gcm::{Aes256Gcm, Nonce};
+        let cipher = Aes256Gcm::new_from_slice(&key()?).ok()?;
+        let mut nonce = [0u8; 12];
+        rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut nonce);
+        let mut out = nonce.to_vec();
+        out.extend(cipher.encrypt(Nonce::from_slice(&nonce), data).ok()?);
+        Some(out)
+    }
+
+    pub fn unprotect(data: &[u8]) -> Option<Vec<u8>> {
+        use aes_gcm::aead::{Aead, KeyInit};
+        use aes_gcm::{Aes256Gcm, Nonce};
+        if data.len() < 12 + 16 {
+            return None;
+        }
+        let (nonce, body) = data.split_at(12);
+        let cipher = Aes256Gcm::new_from_slice(&key()?).ok()?;
+        cipher.decrypt(Nonce::from_slice(nonce), body).ok()
+    }
+}
+
+#[cfg(windows)]
+use dpapi as vault;
+
+/// Gets the key ready at startup. Only Linux has anything to unlock.
+pub fn warm() {
+    #[cfg(target_os = "linux")]
+    vault::warm();
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
+mod vault {
     pub fn protect(_: &[u8]) -> Option<Vec<u8>> { None }
     pub fn unprotect(_: &[u8]) -> Option<Vec<u8>> { None }
 }
 
 /// Electron's AES key from `session/Local State`, unlocked with DPAPI.
+#[cfg(windows)]
 fn electron_key() -> Option<Vec<u8>> {
     let text = std::fs::read_to_string(data_dir().join("session").join("Local State")).ok()?;
     let json: serde_json::Value = serde_json::from_str(&text).ok()?;
@@ -77,6 +245,7 @@ fn electron_key() -> Option<Vec<u8>> {
 }
 
 /// One Electron-encrypted value: "v10", a 12-byte nonce, then the AES-GCM ciphertext.
+#[cfg(windows)]
 fn electron_decrypt(raw: &[u8], key: &[u8]) -> Option<String> {
     use aes_gcm::aead::{Aead, KeyInit};
     use aes_gcm::{Aes256Gcm, Nonce};
@@ -90,15 +259,16 @@ fn electron_decrypt(raw: &[u8], key: &[u8]) -> Option<String> {
 }
 
 fn encrypt(value: &str) -> Option<String> {
-    dpapi::protect(value.as_bytes()).map(|b| format!("{PREFIX}{}", B64.encode(b)))
+    vault::protect(value.as_bytes()).map(|b| format!("{PREFIX}{}", B64.encode(b)))
 }
 
 fn decrypt(stored: &str) -> Option<String> {
     let b = B64.decode(stored.strip_prefix(PREFIX)?).ok()?;
-    String::from_utf8(dpapi::unprotect(&b)?).ok()
+    String::from_utf8(vault::unprotect(&b)?).ok()
 }
 
 /// One-time conversion of everything the Electron build saved. Runs on startup.
+#[cfg(windows)]
 pub fn migrate_electron() {
     let _guard = LOCK.lock().unwrap();
     let mut map = load();
@@ -135,7 +305,7 @@ pub fn set(key: &str, value: Option<&str>) -> Result<(), String> {
     let mut map = load();
     match value.filter(|v| !v.is_empty()) {
         Some(v) => {
-            map.insert(key.to_string(), encrypt(v).ok_or("Windows secure storage is unavailable.")?);
+            map.insert(key.to_string(), encrypt(v).ok_or(UNAVAILABLE)?);
         }
         None => {
             map.remove(key);

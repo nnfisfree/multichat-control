@@ -70,6 +70,7 @@ pub fn watch_close(window: &WebviewWindow) {
 /// Chosen opacity, 0-255. Kept here so we can reapply it whenever Windows drops it.
 static ALPHA: AtomicU8 = AtomicU8::new(255);
 
+#[cfg(windows)]
 pub fn alpha() -> u8 {
     ALPHA.load(Ordering::Relaxed)
 }
@@ -86,17 +87,35 @@ pub fn window_opacity(app: AppHandle, value: f64) {
 
 /// Set while the wobbly effect is drawing the window: the real window is then almost fully
 /// transparent (but still takes clicks) underneath the effect's snapshot.
+#[cfg(windows)]
 static VEILED: AtomicBool = AtomicBool::new(false);
 
 /// Applies the opacity, re-adding WS_EX_LAYERED if Windows dropped it.
+#[cfg(windows)]
 fn apply_opacity(w: &WebviewWindow) {
-    #[cfg(windows)]
     if let Ok(hwnd) = w.hwnd() {
         apply_alpha(hwnd.0 as isize);
     }
-    #[cfg(not(windows))]
-    let _ = w;
 }
+
+/// GTK sets it on the whole window. Needs a compositor (Cinnamon, KDE, GNOME all have one);
+/// without one the window just stays opaque. GTK calls have to be made on the main thread.
+#[cfg(target_os = "linux")]
+fn apply_opacity(w: &WebviewWindow) {
+    let win = w.clone();
+    let _ = w.run_on_main_thread(move || {
+        use gtk::prelude::*;
+        if let Ok(gw) = win.gtk_window() {
+            let alpha = ALPHA.load(Ordering::Relaxed) as f64 / 255.0;
+            if (gw.opacity() - alpha).abs() > 0.002 {
+                gw.set_opacity(alpha);
+            }
+        }
+    });
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
+fn apply_opacity(_: &WebviewWindow) {}
 
 /// Hides the window under the wobbly effect's snapshot, or brings it back. Stays clickable.
 #[cfg(windows)]

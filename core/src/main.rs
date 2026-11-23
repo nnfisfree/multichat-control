@@ -3,6 +3,7 @@
 
 mod auth;
 mod kick;
+#[cfg(windows)]
 mod legacy;
 mod panel;
 mod paths;
@@ -21,7 +22,7 @@ mod youtube;
 use serde::Serialize;
 use tauri::{Emitter, WebviewUrl, WebviewWindowBuilder};
 
-/// WebView2 flags. Tauri's defaults are repeated here because passing any flags replaces them.
+/// WebView2 flags (Windows only; WebKitGTK ignores them). Tauri's defaults are repeated here because passing any flags replaces them.
 /// Chat has to keep running while the window is hidden or in the tray, so nothing gets throttled,
 /// and helper processes are merged where possible to save memory.
 pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
@@ -43,7 +44,10 @@ struct AppInfo {
     demo: bool,
     version: String,
     data_dir: String,
+    platform: &'static str,
 }
+
+const PLATFORM: &str = if cfg!(windows) { "windows" } else { "linux" };
 
 #[tauri::command]
 fn app_info(app: tauri::AppHandle) -> AppInfo {
@@ -51,10 +55,23 @@ fn app_info(app: tauri::AppHandle) -> AppInfo {
         demo: std::env::args().any(|a| a == "--demo"),
         version: app.package_info().version.to_string(),
         data_dir: paths::data_dir().to_string_lossy().into_owned(),
+        platform: PLATFORM,
+    }
+}
+
+/// WebKitGTK's DMA-BUF renderer leaves the window blank on NVIDIA (and some other drivers), so
+/// it's off unless the user has set the variable themselves. Must run before GTK starts.
+#[cfg(target_os = "linux")]
+fn webkit_defaults() {
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        // SAFETY: still single-threaded, nothing else reads the environment yet
+        unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
     }
 }
 
 fn main() {
+    #[cfg(target_os = "linux")]
+    webkit_defaults();
     // no WebView2 means no window at all, so say so and offer Microsoft's installer
     if !webview2::ensure() {
         return;
@@ -67,8 +84,12 @@ fn main() {
         }))
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            legacy::remove_electron_leftovers();
-            secrets::migrate_electron();
+            #[cfg(windows)]
+            {
+                legacy::remove_electron_leftovers();
+                secrets::migrate_electron();
+            }
+            secrets::warm();
             updater::remove_old_exe();
             let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Multichat Control")

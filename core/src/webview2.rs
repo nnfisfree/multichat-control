@@ -1,10 +1,15 @@
 //! The window is drawn by Edge WebView2, which ships with Windows 10 and 11. On the odd machine
 //! without it we say so plainly and offer Microsoft's installer, instead of failing to start
 //! without a word.
+//!
+//! Linux uses the system's WebKitGTK instead, which the package (or AppImage) brings along, so
+//! there's nothing to check up front: only a start-up failure gets reported.
 
 /// Microsoft's direct link to the WebView2 Evergreen Bootstrapper.
+#[cfg(windows)]
 const INSTALLER: &str = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
 /// WebView2's client id in the registry, per Microsoft's docs for this check.
+#[cfg(windows)]
 const CLIENT: &str = r"Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
 
 #[cfg(windows)]
@@ -50,6 +55,7 @@ mod win {
     }
 }
 
+#[cfg(any(windows, target_os = "linux"))]
 const TITLE: &str = "Multichat Control";
 
 /// Dev builds can pretend it's missing, to test the message.
@@ -84,4 +90,20 @@ pub fn failed(error: &str) {
     crate::storage::log("app", &format!("could not start: {error}"));
     #[cfg(windows)]
     win::tell(TITLE, &format!("The app couldn't start.\n\n{error}\n\nIf this keeps happening, reinstalling Microsoft Edge WebView2 usually fixes it:\n{INSTALLER}"));
+    #[cfg(target_os = "linux")]
+    gtk_tell(&format!("The app couldn't start.\n\n{error}\n\nIf this keeps happening, make sure WebKitGTK 4.1 (webkit2gtk-4.1) is installed and up to date."));
+}
+
+#[cfg(target_os = "linux")]
+fn gtk_tell(text: &str) {
+    use gtk::prelude::*;
+    eprintln!("{TITLE}: {text}");
+    // no display to show it on: the line above (and the log) is all we can do
+    if gtk::init().is_err() {
+        return;
+    }
+    let dialog = gtk::MessageDialog::new(None::<&gtk::Window>, gtk::DialogFlags::MODAL, gtk::MessageType::Error, gtk::ButtonsType::Ok, text);
+    dialog.set_title(TITLE);
+    dialog.run();
+    dialog.close();
 }

@@ -6,6 +6,12 @@
 //! and the saved placement all keep working). The snapshot is drawn onto a 4x4 Bezier patch whose
 //! control points hang on springs, in a click-through layered window that follows along. Once the
 //! jelly settles the real window is uncloaked exactly where the snapshot ended up.
+//!
+//! Windows only. Elsewhere the setting is hidden and these are no-ops (KDE users have the real
+//! thing built into Plasma).
+
+// the effect itself is only reachable from the Windows code below
+#![cfg_attr(not(windows), allow(dead_code, unused_imports))]
 
 use crate::storage::log;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};

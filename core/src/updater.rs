@@ -1,11 +1,16 @@
 //! Updates from the project's GitHub releases. Only GitHub is contacted, and a download only gets
 //! installed if it matches the SHA-256 GitHub publishes for it.
 //!
-//! The app is a single exe, so "installing" means: download the new exe next to the old one, swap
-//! them (Windows lets you rename a running exe), start the new one and exit. The old exe gets
-//! deleted on the next start.
+//! The app is a single file, so "installing" means: download the new one next to the old one, swap
+//! them, start the new one and exit.
+//!
+//! Windows: the exe. Windows lets you rename a running exe; the old one gets deleted on the next start.
+//! Linux: the AppImage. Renaming over it is atomic and the running copy keeps its own (now unlinked)
+//! file. Installed from a package (AUR) there's no AppImage, and updates come from the package manager.
 
-use crate::paths::{data_dir, exe_dir};
+use crate::paths::data_dir;
+#[cfg(windows)]
+use crate::paths::exe_dir;
 use crate::storage::log;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -18,7 +23,29 @@ use tauri_plugin_opener::OpenerExt;
 const UPDATE_REPO: &str = "nnfisfree/multichat-control";
 const FIRST_CHECK: Duration = Duration::from_secs(20);
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
+#[cfg(windows)]
 const EXE: &str = "Multichat-Control.exe";
+/// End of the release asset's name for this platform (compared lowercase).
+const ASSET_SUFFIX: &str = if cfg!(windows) { "-portable.exe" } else { "-x86_64.appimage" };
+
+/// Where a downloaded update waits until it's installed. None when this copy can't update itself.
+#[cfg(windows)]
+fn staging() -> Option<PathBuf> {
+    Some(exe_dir().join(format!("{EXE}.new")))
+}
+
+#[cfg(target_os = "linux")]
+fn staging() -> Option<PathBuf> {
+    let app = crate::paths::appimage()?;
+    let mut name = app.file_name()?.to_os_string();
+    name.push(".new");
+    Some(app.with_file_name(name))
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
+fn staging() -> Option<PathBuf> {
+    None
+}
 
 struct Found { url: String, sha256: String }
 
@@ -102,15 +129,18 @@ async fn check(app: &AppHandle, manual: bool) -> Value {
             .filter(|r| newer(r["tag_name"].as_str().unwrap_or(""), current))
             .max_by(|a, b| if newer(a["tag_name"].as_str().unwrap_or(""), b["tag_name"].as_str().unwrap_or("")) { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less });
         let Some(r) = newest else { return Ok(None) };
-        let asset = r["assets"].as_array().and_then(|a| a.iter().find(|x| x["name"].as_str().is_some_and(|n| n.to_ascii_lowercase().ends_with("-portable.exe")))).cloned();
+        let asset = r["assets"].as_array().and_then(|a| a.iter().find(|x| x["name"].as_str().is_some_and(|n| n.to_ascii_lowercase().ends_with(ASSET_SUFFIX)))).cloned();
         let sha = asset.as_ref().and_then(|a| a["digest"].as_str()).and_then(|d| d.strip_prefix("sha256:")).map(str::to_ascii_lowercase).filter(|s| s.len() == 64);
         let url = asset.as_ref().and_then(|a| a["browser_download_url"].as_str()).map(String::from);
         let info = json!({
             "version": r["tag_name"].as_str().unwrap_or("").trim_start_matches(['v', 'V']),
             "notes": r["body"].as_str().unwrap_or("").chars().take(20000).collect::<String>(),
             "page": r["html_url"],
-            // only assets with a GitHub checksum are allowed to auto-install
-            "canInstall": url.is_some() && sha.is_some(),
+            // only assets with a GitHub checksum are allowed to auto-install, and only into a copy
+            // that can replace itself
+            "canInstall": url.is_some() && sha.is_some() && staging().is_some(),
+            // installed by a package manager, which handles updates itself
+            "managed": staging().is_none(),
             "size": asset.as_ref().map(|a| a["size"].clone()).unwrap_or(Value::Null),
         });
         Ok(Some((info, Found { url: url.unwrap_or_default(), sha256: sha.unwrap_or_default() })))
@@ -173,7 +203,9 @@ pub async fn update_download(app: AppHandle) -> Result<(), String> {
     let Some((url, sha)) = found.filter(|(u, s)| !u.is_empty() && !s.is_empty()) else {
         return fail(&app, "This update has to be installed from the download page.");
     };
-    let target = exe_dir().join(format!("{EXE}.new"));
+    let Some(target) = staging() else {
+        return fail(&app, "This copy was installed by your package manager, so update it there.");
+    };
     if std::fs::write(&target, b"").is_err() {
         return fail(&app, "The app is in a protected folder, so it can't update itself. Use the download page, or move the app to a folder like Documents.");
     }
@@ -193,7 +225,8 @@ pub async fn update_download(app: AppHandle) -> Result<(), String> {
         }
         let got: String = hash.finalize().iter().map(|b| format!("{b:02x}")).collect();
         if got != sha { return Err("The download doesn't match GitHub's checksum, so it was discarded.".into()); }
-        std::fs::write(&target, &bytes).map_err(|e| e.to_string())
+        std::fs::write(&target, &bytes).map_err(|e| e.to_string())?;
+        executable(&target).map_err(|e| e.to_string())
     }.await;
     match result {
         Ok(()) => {
@@ -209,7 +242,19 @@ pub async fn update_download(app: AppHandle) -> Result<(), String> {
     }
 }
 
+#[cfg(unix)]
+fn executable(path: &std::path::Path) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
+}
+
+#[cfg(not(unix))]
+fn executable(_: &std::path::Path) -> std::io::Result<()> {
+    Ok(())
+}
+
 /// Swaps in the new exe, starts it and exits. The engine flushes pending writes first.
+#[cfg(windows)]
 #[tauri::command]
 pub fn update_install(app: AppHandle) -> Result<(), String> {
     let Some(new) = updater().lock().unwrap().ready.clone() else { return Err("No update is ready.".into()) };
@@ -228,6 +273,58 @@ pub fn update_install(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Swaps in the new AppImage and restarts into it. The new copy is started only once this one has
+/// exited, so the single-instance check doesn't just hand it back to us.
+#[cfg(not(windows))]
+#[tauri::command]
+pub fn update_install(app: AppHandle) -> Result<(), String> {
+    let Some(new) = updater().lock().unwrap().ready.clone() else { return Err("No update is ready.".into()) };
+    // the download sits next to the file it replaces
+    let Some(current) = new.to_str().and_then(|p| p.strip_suffix(".new")).map(PathBuf::from) else {
+        return Err("This copy can't update itself.".into());
+    };
+    std::fs::rename(&new, &current).map_err(|e| e.to_string())?;
+    log("update", "installed; restarting");
+    relaunch(&current).map_err(|e| e.to_string())?;
+    crate::window::request_quit(&app);
+    Ok(())
+}
+
+/// Starts `path` once this process is gone. Variables our AppImage runtime set up point into its
+/// mount, which vanishes when we exit, so they're dropped (the new AppImage sets its own).
+#[cfg(not(windows))]
+fn relaunch(path: &std::path::Path) -> std::io::Result<()> {
+    let mut cmd = std::process::Command::new("/bin/sh");
+    cmd.arg("-c")
+        .arg(r#"while kill -0 "$1" 2>/dev/null; do sleep 0.2; done; exec "$2""#)
+        .arg("sh")
+        .arg(std::process::id().to_string())
+        .arg(path)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    if let Some(mount) = std::env::var_os("APPDIR").map(PathBuf::from) {
+        for (name, value) in std::env::vars_os() {
+            let kept: Vec<PathBuf> = std::env::split_paths(&value).filter(|p| !p.starts_with(&mount)).collect();
+            if kept.len() == std::env::split_paths(&value).count() {
+                continue;
+            }
+            if kept.is_empty() {
+                cmd.env_remove(&name);
+            } else if let Ok(joined) = std::env::join_paths(kept) {
+                cmd.env(&name, joined);
+            }
+        }
+    }
+    for name in ["APPDIR", "APPIMAGE", "ARGV0", "OWD"] {
+        cmd.env_remove(name);
+    }
+    // its own process group, so it outlives us
+    use std::os::unix::process::CommandExt;
+    cmd.process_group(0);
+    cmd.spawn().map(|_| ())
+}
+
 #[tauri::command]
 pub fn update_open_page(app: AppHandle) {
     let page = updater().lock().unwrap().state["info"]["page"].as_str().map(String::from)
@@ -238,8 +335,17 @@ pub fn update_open_page(app: AppHandle) {
 }
 
 /// Deletes the exe a previous update replaced.
+#[cfg(windows)]
 pub fn remove_old_exe() {
     if let Ok(exe) = std::env::current_exe() {
         let _ = std::fs::remove_file(exe.with_extension("exe.old"));
+    }
+}
+
+/// Deletes a download that never got installed (the app closed before restarting into it).
+#[cfg(not(windows))]
+pub fn remove_old_exe() {
+    if let Some(stale) = staging() {
+        let _ = std::fs::remove_file(stale);
     }
 }

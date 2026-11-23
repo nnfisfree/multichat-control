@@ -196,10 +196,22 @@ fn target(w: &WebviewWindow, p: &Placement) -> Option<(i32, i32, u32, u32)> {
     Some(centred_on(&main, p))
 }
 
+/// Wayland doesn't let apps place their own windows (the compositor decides), so only the size and
+/// maximized state can come back there. GDK picks Wayland whenever it can, unless told otherwise.
+fn can_position() -> bool {
+    if !cfg!(target_os = "linux") {
+        return true;
+    }
+    let backend = std::env::var("GDK_BACKEND").unwrap_or_default();
+    std::env::var_os("WAYLAND_DISPLAY").is_none() || backend.split(',').next() == Some("x11")
+}
+
 /// Restores last session's placement. Runs before the window is first shown.
 pub fn restore(w: &WebviewWindow) {
     let Some(p) = load() else { return };
-    if let Some((x, y, width, height)) = target(w, &p) {
+    if !can_position() {
+        let _ = w.set_size(PhysicalSize::new(p.width, p.height));
+    } else if let Some((x, y, width, height)) = target(w, &p) {
         // Move first so Windows switches the window to that monitor's DPI, then set the size, then
         // the position again, so neither one gets rescaled afterwards.
         let _ = w.set_position(PhysicalPosition::new(x, y));
