@@ -55,7 +55,14 @@ jobs:
         env:
           ENV_LOCAL: ${{ secrets.ENV_LOCAL }}
         run: |
-          if [ -n "$ENV_LOCAL" ]; then printf '%s\n' "$ENV_LOCAL" > .env.local; else echo "::warning::No ENV_LOCAL secret: built-in logins are left out."; fi
+          if [ -z "$ENV_LOCAL" ]; then echo "::warning::No ENV_LOCAL secret: built-in logins are left out."; exit 0; fi
+          # GitHub hides a multi-line secret unreliably, and a failing build script prints its
+          # cargo:rustc-env lines, so hide every value on its own before anything else runs
+          printf '%s\n' "$ENV_LOCAL" | tr -d '\r' | while IFS='=' read -r key value; do
+            value=$(printf '%s' "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//')
+            [ -n "$value" ] && echo "::add-mask::$value"
+          done
+          printf '%s\n' "$ENV_LOCAL" > .env.local
       - name: Check versions match the tag
         if: env.TAG != ''
         run: |
