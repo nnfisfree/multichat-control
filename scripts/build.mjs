@@ -15,7 +15,9 @@ const remap = [[cargoHome, 'cargo'], [rustupHome, 'rustup'], [root, 'src'], [hom
 const flags = remap.map(([from, to]) => `--remap-path-prefix=${from}=${to}`).join(' ')
 
 const extra = process.argv.slice(2)
-const result = spawnSync('npx', ['tauri', 'build', '--no-bundle', ...extra], {
+// Windows ships the bare exe. Linux ships an AppImage (settings in core/tauri.linux.conf.json).
+const bundle = process.platform === 'linux' ? ['--bundles', 'appimage'] : ['--no-bundle']
+const result = spawnSync('npx', ['tauri', 'build', ...bundle, ...extra], {
   cwd: root,
   stdio: 'inherit',
   shell: true,

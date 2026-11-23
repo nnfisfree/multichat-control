@@ -1,0 +1,51 @@
+# Maintainer: nnfisfree
+#
+# Template for the AUR package multichat-control-bin, which lives in its own AUR git repo
+# (ssh://aur@aur.archlinux.org/multichat-control-bin.git). Copy this there, bump pkgver, then:
+#   updpkgsums && makepkg --printsrcinfo > .SRCINFO && makepkg -si
+#
+# It takes the program out of the release AppImage and runs it on the system's own WebKitGTK.
+# Installed this way the app doesn't update itself (no $APPIMAGE); pacman/yay do that.
+
+pkgname=multichat-control-bin
+_appname=Multichat-Control
+pkgver=0.4.1
+pkgrel=1
+pkgdesc="Lightweight multi-platform stream chat for Twitch, YouTube, Kick and TikTok LIVE"
+arch=('x86_64')
+url="https://github.com/nnfisfree/multichat-control"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'gst-plugins-base' 'gst-plugins-good')
+optdepends=(
+  'gnome-keyring: keeps your logins encrypted with a key in the system keyring (or KWallet / KeePassXC with Secret Service)'
+  'gst-libav: more video formats in link previews'
+)
+provides=('multichat-control')
+conflicts=('multichat-control')
+options=('!strip' '!debug')
+source=("${_appname}-${pkgver}-x86_64.AppImage::${url}/releases/download/v${pkgver}/${_appname}-${pkgver}-x86_64.AppImage"
+        "LICENSE::https://raw.githubusercontent.com/nnfisfree/multichat-control/v${pkgver}/LICENSE")
+noextract=("${_appname}-${pkgver}-x86_64.AppImage")
+sha256sums=('SKIP'
+            'SKIP')
+
+prepare() {
+  chmod +x "${_appname}-${pkgver}-x86_64.AppImage"
+  rm -rf squashfs-root
+  "./${_appname}-${pkgver}-x86_64.AppImage" --appimage-extract >/dev/null
+}
+
+package() {
+  cd squashfs-root
+  install -Dm755 "usr/bin/${_appname}" "${pkgdir}/usr/bin/multichat-control"
+  local desktop
+  desktop=$(find usr/share/applications -name '*.desktop' | head -1)
+  install -Dm644 "${desktop}" "${pkgdir}/usr/share/applications/multichat-control.desktop"
+  sed -i "s|^Exec=.*|Exec=multichat-control|; s|^Icon=.*|Icon=multichat-control|" "${pkgdir}/usr/share/applications/multichat-control.desktop"
+  local size
+  for size in 32x32 128x128 256x256@2; do
+    [ -f "usr/share/icons/hicolor/${size}/apps/${_appname}.png" ] &&
+      install -Dm644 "usr/share/icons/hicolor/${size}/apps/${_appname}.png" "${pkgdir}/usr/share/icons/hicolor/${size}/apps/multichat-control.png"
+  done
+  install -Dm644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
