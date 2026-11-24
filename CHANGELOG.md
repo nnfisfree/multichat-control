@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2
+
+**Fixed**
+
+- **Rewards & Power-ups no longer flickers.** After a recent WebView2 update, pointing at the rewards made the panel flicker and could leave it blank. The app now keeps the panel and the chat from drawing over each other.
+- **The panel's popover stays in place.** Twitch's page could push the rewards popover out of position when it redrew. It now stays at the top of the panel on its own.
+- **Opacity back to 100% is fully opaque again right away.** Before, the window only stopped being see-through after a restart.
+
 ## 0.4.1
 
 **New**

@@ -114,8 +114,12 @@ fn apply_alpha(hwnd: isize) {
     unsafe {
         let style = GetWindowLongPtrW(h, GWL_EXSTYLE);
         let layered = style & WS_EX_LAYERED as isize != 0;
-        // fully opaque and never layered, nothing to do
-        if alpha == 255 && !layered {
+        // fully opaque: drop the layered style too, so going back to 100% really is a normal window
+        // again (a layered window at 255 still goes through Windows' layered redirection)
+        if alpha == 255 {
+            if layered {
+                SetWindowLongPtrW(h, GWL_EXSTYLE, style & !(WS_EX_LAYERED as isize));
+            }
             return;
         }
         if !layered {

@@ -55,18 +55,22 @@ const main = () => {
       box.appendChild(b)
     }
   }
+  // Marks are data attributes, not classes: React rewrites className whenever it re-renders (Twitch's
+  // transition wrapper does on hover), which wiped a class and let that wrapper's transform push the
+  // popover out of place, leaving the safety net below to shift it back.
+  const mark = (n, v) => { if (n.getAttribute('data-nnf') !== v) n.setAttribute('data-nnf', v) }
   const isolate = (dialog, content) => {
-    if (!dialog.classList.contains('nnf-root')) {
-      document.querySelectorAll('.nnf-root, .nnf-flat, .nnf-fill').forEach((e) => e.classList.remove('nnf-root', 'nnf-flat', 'nnf-fill'))
-      dialog.classList.add('nnf-root')
+    if (dialog.getAttribute('data-nnf') !== 'root') {
+      document.querySelectorAll('[data-nnf]').forEach((e) => e.removeAttribute('data-nnf'))
+      mark(dialog, 'root')
       dialog.style.removeProperty('translate')
       state.dx = 0
       state.dy = 0
-      for (let n = dialog.parentElement; n && n !== document.body; n = n.parentElement) n.classList.add('nnf-flat')
     }
-    // Twitch rebuilds the popover's contents after opening, so reapply the stretch every time. Only
-    // the chain down to the rewards content gets stretched, so nothing else can cover the tiles.
-    for (let n = content; n && n !== dialog; n = n.parentElement) n.classList.add('nnf-fill')
+    // Twitch re-renders these wrappers, so reapply both chains every time. Only the chain down to the
+    // rewards content gets stretched, so nothing else can cover the tiles.
+    for (let n = dialog.parentElement; n && n !== document.body; n = n.parentElement) mark(n, 'flat')
+    for (let n = content; n && n !== dialog; n = n.parentElement) mark(n, 'fill')
     // Safety net: the popover has to sit at the panel's top-left. If Twitch's layout still pushes
     // it somewhere else (we've seen it end up below the visible area), shift it back.
     const r = dialog.getBoundingClientRect()

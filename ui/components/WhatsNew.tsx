@@ -1,6 +1,6 @@
 import { useState, type JSX, type ReactNode } from 'react'
 import { updateSettings, useStore } from '../lib/store'
-import { Icon, PlatformIcon } from './Icons'
+import { Icon } from './Icons'
 import type { SettingsFocus } from './Settings'
 
 /**
@@ -20,38 +20,15 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
-    icon: <Icon.reply />,
-    title: 'Reply, copy and quick actions',
-    text: "Point at a message for Reply, Copy and a menu with Pin, the user card, Twitch's viewer card, a 60 second timeout, Ban and Delete. Works on Twitch, YouTube and Kick."
-  },
-  {
-    icon: <Icon.star />,
-    title: 'Ignore or highlight people',
-    text: "Hide someone's messages from chat, or make them stand out in gold. Both lists live in Settings, where one click takes a name off again.",
-    show: { cat: 'chat', target: 'people-settings' }
-  },
-  {
-    icon: <Icon.all />,
-    title: 'Chat settings per platform',
-    text: 'Pick username colours for Twitch, YouTube and Kick, with colours per role, and choose for every kind of event whether it shows in chat, in the Events tab, or both. The Events badge only counts what you picked.',
-    show: { cat: 'chat', target: 'platform-settings' }
-  },
-  {
-    icon: <Icon.palette />,
-    title: 'Solarized Dark and Tokyo Night Day',
-    text: 'Two new skins: the classic deep teal Solarized, and the light, cool blue sibling of Tokyo Night.',
-    show: { cat: 'appearance', target: 'skins-settings' }
-  },
-  {
-    icon: <PlatformIcon platform="kick" size={18} />,
-    title: 'Kick stays connected',
-    text: 'Kick chat no longer drops for a few seconds every 45 minutes while its login renews.',
+    icon: <Icon.gem />,
+    title: 'Rewards & Power-ups stays steady',
+    text: 'The Rewards & Power-ups panel no longer flickers when you point at the rewards, and no longer goes blank. It started after a recent WebView2 update.',
     fixed: true
   },
   {
-    icon: <Icon.plug />,
-    title: 'Buy Me a Coffee keeps its token',
-    text: "A hiccup on Buy Me a Coffee's side no longer shows as a disconnect, and no longer logs you out.",
+    icon: <Icon.eyeOff />,
+    title: 'Window opacity back to 100%',
+    text: 'Setting the window opacity back to 100% (or pressing Ctrl+Shift+O) now makes the window fully opaque again right away, not only after a restart.',
     fixed: true
   }
 ]

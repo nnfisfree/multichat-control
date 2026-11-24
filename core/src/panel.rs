@@ -88,7 +88,7 @@ fn skin_css(c: &Colors) -> String {
   --color-text-button-text: {hover} !important;
 }}
 html.nnf-rewards, html.nnf-rewards body {{ background: {base} !important; }}
-html.nnf-rewards .nnf-root .reward-center__content {{ background: {window} !important; }}
+html.nnf-rewards [data-nnf=root] .reward-center__content {{ background: {window} !important; }}
 #nnf-notice {{ background: {window} !important; color: {text} !important; }}
 #nnf-notice button {{ background: {accent} !important; color: {on} !important; }}
 #nnf-notice button:hover {{ background: {hover} !important; }}
@@ -284,6 +284,12 @@ pub async fn panel_show(app: AppHandle, bounds: Bounds, channel: Option<String>)
         }
     };
     let _ = w.set_bounds(rect);
+    #[cfg(windows)]
+    if let Some(main) = app.get_window("main") {
+        if let Ok(h) = main.hwnd() {
+            clip_webviews(h.0 as isize);
+        }
+    }
     if channel_changed && !first_show {
         let _ = w.navigate(url);
     }
@@ -296,6 +302,33 @@ pub async fn panel_show(app: AppHandle, bounds: Bounds, channel: Option<String>)
         sync_page(&w);
     }
     ActionResult { ok: true, message: None }
+}
+
+/// The panel's webview overlaps the main one, and wry creates both containers without
+/// WS_CLIPSIBLINGS. Since WebView2 158 the main webview then paints over the panel whenever it
+/// redraws, so hovering the rewards flickered and could leave the panel blank. Clipping siblings
+/// keeps each webview to its own area. (Not WS_CLIPCHILDREN on the window itself: that delays
+/// opacity changes by seconds.)
+#[cfg(windows)]
+fn clip_webviews(top: isize) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetClassNameW, GetWindow, GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_STYLE, GW_CHILD, GW_HWNDNEXT,
+        SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, WS_CLIPSIBLINGS,
+    };
+    let clip = WS_CLIPSIBLINGS as isize;
+    unsafe {
+        let mut child = GetWindow(top as _, GW_CHILD);
+        while !child.is_null() {
+            let mut name = [0u16; 32];
+            let n = GetClassNameW(child, name.as_mut_ptr(), name.len() as i32);
+            let style = GetWindowLongPtrW(child, GWL_STYLE);
+            if String::from_utf16_lossy(&name[..n.max(0) as usize]) == "WRY_WEBVIEW" && style & clip == 0 {
+                SetWindowLongPtrW(child, GWL_STYLE, style | clip);
+                SetWindowPos(child, std::ptr::null_mut(), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            }
+            child = GetWindow(child, GW_HWNDNEXT);
+        }
+    }
 }
 
 #[tauri::command]
