@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.0
+
+**New**
+
+- **StreamElements and Streamlabs.** Pick yours in Settings → Connections → Alerts & Donations and click Log in. A window opens on the service's own website; sign in to your own account (one click with Login with Twitch) and the window closes by itself once everything works. Your last 30 days of tips, subs, gifts, cheers, raids and follows show up in Events, and new alerts arrive live. Nothing goes through anyone else's account or server.
+- **The platforms stay first.** A sub, gift or cheer that Twitch, YouTube or Kick already reported is not listed twice. StreamElements and Streamlabs add what only they know (tips, merch, charity) and anything that happened while the app was closed, quietly, as past events.
+- **Gift bombs in one line.** A gift bomb is one entry showing how many and which tier, like "5x Tier 1" (Kick: "5x Sub", YouTube: the membership level), on every platform. The single gifts inside it are folded into it.
+- **Up arrow history.** Press Up in the message box to bring back what you sent earlier, Down to go forward again. Messages and commands, every platform you can type in, for the current session only.
+- **A frame for the open tab.** The tab you're reading sits in a rounded frame whose colours keep circling round it, and it glides over when you switch tabs.
+- **A colourful comet.** The comet on the connection line carries the colours of your connected chat platforms and fades into white.
+- **Your streaming app, by name.** While no streaming app is connected, the bar under the message box says "Waiting for your streaming app…" and takes turns showing the OBS, Streamlabs Desktop and Meld Studio logos. Once one connects it shows the app and its version with a green check, like "OBS Studio 33.0.3".
+- **A smaller Connections menu** with each service's official logo and its status under its name. The status button matches its width, and the tab bar squeezes itself (status button first, then tab names) so nothing goes off screen however many platforms are connected.
+- **Official logos in Settings** for StreamElements, Streamlabs, Streamer.bot and your streaming app.
+- **New skin: Carbonfox**, a graphite-black dark skin from the Nightfox family.
+- **Catppuccin Mocha is the default skin for new installs.** Your current skin stays as it is.
+
+**Fixed**
+
+- Test alerts are never kept: a StreamElements test that turned up in the past 30 days could be saved as a real event.
+- The Streamlabs Desktop setup steps point to its new place: Settings → Mobile → Third Party Connections → Allow third party connections.
+- The comet no longer reaches past the edge of the window.
+
 ## 0.4.2
 
 **Fixed**

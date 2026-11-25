@@ -35,6 +35,8 @@ export class ObsLink {
   private seq = 0
   private state: ObsState = { status: 'off' }
   private setup: { at: number; encoder?: string; output?: ObsStats['output'] } | null = null
+  // OBS's own version ("33.0.3"), asked once per connection
+  private version: string | undefined
 
   /** Stream encoder from the current profile, plus output size and fps. */
   private async readSetup(): Promise<void> {
@@ -128,6 +130,8 @@ export class ObsLink {
       } else if (msg.op === 2) {
         this.attempt = 0
         this.set({ status: 'connected', stats: this.state.stats })
+        this.version = undefined
+        void this.request('GetVersion').then((v) => { if (run === this.run && v?.obsVersion) this.version = String(v.obsVersion) })
         void this.refresh(run)
         this.poll = setInterval(() => void this.refresh(run), POLL_MS)
       } else if (msg.op === 7) {
@@ -185,6 +189,7 @@ export class ObsLink {
       since > 0 && prev !== undefined && b >= prev ? Math.round(((b - prev) * 8) / since / 1000) : undefined
     const out: ObsStats = {
       app: 'obs',
+      version: this.version,
       at: now,
       cpu: Number(stats.cpuUsage) || 0,
       memoryMb: Number(stats.memoryUsage) || 0,

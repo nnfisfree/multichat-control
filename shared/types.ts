@@ -466,7 +466,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sbEnabled: false,
   sbPort: 8080,
   // new installs start on Sweet; engine/store.ts keeps POS Club for anyone upgrading
-  theme: 'sweet',
+  theme: 'catppuccin',
   youtubeNoticeSeen: false,
   platformPrefs: {},
   ignoredUsers: {},
@@ -488,6 +488,8 @@ export const STREAM_APPS: Record<StreamApp, string> = { obs: 'OBS Studio', strea
  */
 export interface ObsStats {
   app: StreamApp
+  /** The streaming app's version ("33.0.3"), when it could be read. */
+  version?: string
   cpu: number
   memoryMb: number
   diskMb: number

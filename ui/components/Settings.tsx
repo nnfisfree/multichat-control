@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
 import { ALERTS_READY } from '../../shared/app-config'
 import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, EULER_KEY_URL, PLATFORM_LABEL, type CloseAction, type IntegrationState, type Platform, STREAM_APPS, type StreamApp } from '../../shared/types'
-import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamerbotLogo } from './Icons'
+import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamElementsLogo, StreamerbotLogo, StreamlabsLogo } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
 import { login as startLogin } from '../lib/login'
 import { About } from './About'
@@ -218,7 +218,8 @@ function AlertsPicker(): JSX.Element {
               ? <button key={v} role="radio" aria-checked={false} disabled className="soon" title={`${ALERT_SOURCE_LABEL[v]} is coming soon: waiting for ${ALERT_SOURCE_LABEL[v]} to approve the app`}>
                   {ALERT_SOURCE_LABEL[v]} <small>Soon..</small>
                 </button>
-              : <button key={v} role="radio" aria-checked={choice === v} className={choice === v ? 'on' : ''} onClick={() => { setErr(''); void updateSettings({ alertService: v }) }}>
+              : <button key={v} role="radio" aria-checked={choice === v} className={choice === v ? 'on with-logo' : 'with-logo'} onClick={() => { setErr(''); void updateSettings({ alertService: v }) }}>
+                  {v === 'streamelements' ? <StreamElementsLogo size={15} /> : v === 'streamlabs' ? <StreamlabsLogo size={15} /> : null}
                   {v === 'none' ? 'None' : ALERT_SOURCE_LABEL[v]}
                 </button>
           ))}
@@ -235,6 +236,9 @@ function AlertsPicker(): JSX.Element {
           </>
         )}
       </header>
+      {choice !== 'none' && st?.status === 'authorizing' && (
+        <div className="notice" role="status">Log in to your own {ALERT_SOURCE_LABEL[choice]} account in the window that just opened. It closes by itself once your last 30 days and live alerts work.</div>
+      )}
       {st?.detail && st.status !== 'needs-setup' && <div className={st.status === 'error' || st.status === 'needs-login' ? 'notice bad' : 'notice'} role="status">{st.detail}</div>}
       {err && err !== st?.detail && <div className="notice bad" role="alert">{err}</div>}
     </article>
@@ -324,11 +328,11 @@ const APP_SETUP: Record<StreamApp, { steps: ReactNode[]; note?: string }> = {
   },
   streamlabs: {
     steps: [
-      <>In Streamlabs Desktop, open <b>Settings → Remote Control</b>.</>,
-      <>Click the <b>QR code</b> to turn Remote Control on, then click <b>Show details</b>.</>,
+      <>In Streamlabs Desktop, open <b>Settings → Mobile</b>.</>,
+      <>Under <b>Third Party Connections</b>, turn on <b>Allow third party connections</b>. The connection info shows up below it.</>,
       <>Copy the <b>API Token</b> and paste it below. Leave the port at 59650 unless you changed it.</>
     ],
-    note: 'Streamlabs shares CPU, FPS, bitrate and dropped frames, but not memory, disk, render times or the encoder. Keep the token private: Remote Control also lets devices on your network connect with it.'
+    note: 'Streamlabs shares CPU, FPS, bitrate and dropped frames, but not memory, disk, render times or the encoder. Keep the token private: it also lets other apps on your network connect to Streamlabs.'
   },
   meld: {
     steps: [
@@ -364,7 +368,7 @@ function ObsSettings(): JSX.Element {
   useEffect(() => {
     if (checking === null) return
     const t = setTimeout(() => {
-      const why = app === 'obs' ? 'Is OBS open, with Enable WebSocket server ticked?' : app === 'streamlabs' ? 'Is Streamlabs Desktop open, with Remote Control turned on?' : 'Is Meld Studio open?'
+      const why = app === 'obs' ? 'Is OBS open, with Enable WebSocket server ticked?' : app === 'streamlabs' ? 'Is Streamlabs Desktop open, with Allow third party connections turned on (Settings → Mobile)?' : 'Is Meld Studio open?'
       setResult({ ok: false, text: `${name} didn't answer on port ${port}. ${why}` })
       setChecking(null)
     }, 8000)
@@ -390,7 +394,7 @@ function ObsSettings(): JSX.Element {
   const secretLabel = app === 'streamlabs' ? 'API token' : 'Server password'
   return (
     <div id="obs-settings">
-      <Row title="Show Stream Stats" desc="Bitrate, dropped frames, FPS and CPU from your streaming app, in the row under the message box. Only reads: the app never changes anything there.">
+      <Row title="Show Stream Stats" icon={<StreamAppLogo app={app} size={16} />} desc="Bitrate, dropped frames, FPS and CPU from your streaming app, in the row under the message box. Only reads: the app never changes anything there.">
         <Toggle label="Show stream stats" on={s.obsEnabled} onChange={(v) => { void updateSettings({ obsEnabled: v }); if (v) setChecking(Date.now()) }} />
       </Row>
       {s.obsEnabled && <>
@@ -480,7 +484,7 @@ function StreamerbotSettings(): JSX.Element {
   const state = !s.sbEnabled ? 'Off' : sb.status === 'connected' ? `Connected · ${count} action${count === 1 ? '' : 's'}` : sb.status === 'error' ? 'Needs attention' : 'Waiting for Streamer.bot…'
   return (
     <div id="streamerbot-settings">
-      <Row title="Use Streamer.bot" desc="Run your Streamer.bot actions from the / commands list, or by typing /sb and the action's name. The list follows what you set up in Streamer.bot.">
+      <Row title="Use Streamer.bot" icon={<StreamerbotLogo size={16} />} desc="Run your Streamer.bot actions from the / commands list, or by typing /sb and the action's name. The list follows what you set up in Streamer.bot.">
         <Toggle label="Use Streamer.bot" on={s.sbEnabled} onChange={(v) => { void updateSettings({ sbEnabled: v }); if (v) setChecking(Date.now()) }} />
       </Row>
       {s.sbEnabled && (

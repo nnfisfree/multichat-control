@@ -58,6 +58,17 @@ const make = (p: Palette): Record<string, string> => ({
 // The first skin is the default for new installs and the fallback for unknown ids.
 export const SKINS: Skin[] = [
   {
+    id: 'catppuccin', name: 'Catppuccin Mocha', by: 'catppuccin.com',
+    swatch: ['#1e1e2e', '#313244', '#cba6f7', '#89b4fa'],
+    vars: make({
+      bg: '#1e1e2e', bgDeep: '#11111b', window: 'linear-gradient(135deg, #181825, #1e1e2e 55%, #24243a)',
+      solid: '#181825', solid2: '#252537', accent: '#cba6f7', accent2: '#ddc4fb', second: '#89b4fa', second2: '#89dceb',
+      text: '#cdd6f4', muted: '#a6adc8', onAccent: '#11111b', warn: '#fab387', good: '#a6e3a1', bad: '#f38ba8',
+      line: 'rgba(205, 214, 244, 0.14)',
+      win: ['#f9e2af', '#a6e3a1', '#f38ba8', '#11111b']
+    })
+  },
+  {
     id: 'sweet', name: 'Sweet', by: 'Sweet by EliverLara',
     swatch: ['#161925', '#1f2233', '#c74ded', '#00c1e4'],
     vars: make({
@@ -119,17 +130,6 @@ export const SKINS: Skin[] = [
     })
   },
   {
-    id: 'catppuccin', name: 'Catppuccin Mocha', by: 'catppuccin.com',
-    swatch: ['#1e1e2e', '#313244', '#cba6f7', '#89b4fa'],
-    vars: make({
-      bg: '#1e1e2e', bgDeep: '#11111b', window: 'linear-gradient(135deg, #181825, #1e1e2e 55%, #24243a)',
-      solid: '#181825', solid2: '#252537', accent: '#cba6f7', accent2: '#ddc4fb', second: '#89b4fa', second2: '#89dceb',
-      text: '#cdd6f4', muted: '#a6adc8', onAccent: '#11111b', warn: '#fab387', good: '#a6e3a1', bad: '#f38ba8',
-      line: 'rgba(205, 214, 244, 0.14)',
-      win: ['#f9e2af', '#a6e3a1', '#f38ba8', '#11111b']
-    })
-  },
-  {
     id: 'tokyo-night', name: 'Tokyo Night', by: 'Tokyo Night by enkia',
     swatch: ['#1a1b26', '#292e42', '#bb9af7', '#7aa2f7'],
     vars: make({
@@ -172,6 +172,18 @@ export const SKINS: Skin[] = [
       text: '#a3b1b1', muted: '#7f9399', onAccent: '#fdf6e3', warn: '#cb4b16', good: '#859900', bad: '#dc322f',
       line: 'rgba(147, 161, 161, 0.16)',
       win: ['#b58900', '#859900', '#dc322f', '#002b36']
+    })
+  },
+  {
+    // Nightfox's graphite variant, after IBM Carbon. It has no orange, so its pink marks warnings
+    id: 'carbonfox', name: 'Carbonfox', by: 'Nightfox by EdenEast',
+    swatch: ['#161616', '#252525', '#be95ff', '#78a9ff'],
+    vars: make({
+      bg: '#161616', bgDeep: '#0c0c0c', window: 'linear-gradient(135deg, #0c0c0c, #161616 50%, #1c1c1c)',
+      solid: '#121212', solid2: '#252525', accent: '#be95ff', accent2: '#c8a5ff', second: '#78a9ff', second2: '#33b1ff',
+      text: '#f2f4f8', muted: '#b6b8bb', onAccent: '#0c0c0c', warn: '#ff7eb6', good: '#25be6a', bad: '#ee5396',
+      line: 'rgba(120, 169, 255, 0.16)',
+      win: ['#08bdba', '#25be6a', '#ee5396', '#0c0c0c']
     })
   },
   {

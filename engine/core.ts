@@ -30,6 +30,10 @@ export const core = {
     invoke<Reply>('net_fetch', { method, url, headers, body }),
 
   login: (service: Service) => invoke<void>('auth_login', { service }),
+  /** StreamElements / Streamlabs: their website in a window, resolves once logged in and working. */
+  siteLogin: (service: 'streamelements' | 'streamlabs') => invoke<void>('site_login', { service }),
+  /** Streamlabs' last 30 days and live socket address, read with the saved website login. */
+  streamlabsFetch: () => invoke<any>('streamlabs_fetch'),
   /** Pasted token (BMC has no OAuth). Rust tests it before saving. */
   setToken: (service: Service, token: string) => invoke<void>('auth_set_token', { service, token }),
   cancelLogin: (service: Service) => invoke<void>('auth_cancel', { service }),
@@ -40,6 +44,8 @@ export const core = {
   obsAuth: (salt: string, challenge: string) => invoke<string>('obs_auth', { salt, challenge }),
   /** The full Streamlabs auth request with the saved token in it, or null if none is saved. */
   slobsAuth: (id: number) => invoke<string | null>('slobs_auth', { id }),
+  /** Version of the running Streamlabs Desktop or Meld Studio, read from its .exe. */
+  streamAppVersion: (app: 'streamlabs' | 'meld') => invoke<string | null>('stream_app_version', { app }),
   sbAuth: (salt: string, challenge: string) => invoke<string>('sb_auth', { salt, challenge }),
 
   secretState: () => invoke<SecretState>('secret_state'),

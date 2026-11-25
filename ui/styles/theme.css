@@ -96,11 +96,27 @@ h2, h3 { margin: 0; }
 
 /* Tabs */
 .tabs { position: relative; display: flex; align-items: center; gap: 2px; padding: 0 12px; flex: none; border-bottom: 1px solid var(--line); min-width: 0; }
-.tab { display: flex; align-items: center; gap: 6px; padding: 7px 10px 8px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tab { position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 5px 10px 6px; margin: 3px 0; border-radius: 9px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .tab:hover { color: var(--text); }
-.tab.active { color: var(--text); border-bottom-color: var(--blue); }
+.tab.active { color: var(--text); }
+/* the selected chat tab sits in a Hyprland-style frame (Tabs.tsx TabFrame): rounded border, its
+   gradient circling round, gliding to the next tab with a slight overshoot */
+@property --frame-angle { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+.tab-frame { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: 9px;
+  background: color-mix(in srgb, var(--frame-tint) 13%, transparent); animation: frame-spin 4s linear infinite; }
+.tab-frame.moves { transition: transform 0.5s cubic-bezier(0.05, 0.9, 0.1, 1.05), width 0.5s cubic-bezier(0.05, 0.9, 0.1, 1.05), background 0.4s; }
+.tab-frame::before, .tab-frame::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 2px;
+  background: conic-gradient(from var(--frame-angle), var(--frame-stops));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+/* soft glow: a blurred copy of the border */
+.tab-frame::after { filter: blur(6px); opacity: 0.55; }
+/* a new pick pops in a little, like a window opening */
+.tab-frame-pop { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 2px color-mix(in srgb, var(--frame-tint) 60%, transparent); opacity: 0; animation: frame-pop 0.45s ease-out; }
+@keyframes frame-spin { to { --frame-angle: 360deg; } }
+@keyframes frame-pop { 0% { opacity: 1; transform: scale(0.86); } 100% { opacity: 0; transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .tab-frame, .tab-frame-pop { animation: none; } .tab-frame.moves { transition: none; } }
 /* platform tabs: the logo in its platform's colour, and a slightly narrower name to save room */
-.tab.pf-tab { gap: 5px; padding: 7px 8px 8px; }
+.tab.pf-tab { gap: 5px; padding: 5px 8px 6px; }
 .tab.pf-tab > svg { flex: none; }
 .tab.pf-tab.twitch > svg { color: var(--twitch); }
 .tab.pf-tab.youtube > svg { color: var(--youtube); }
@@ -431,6 +447,9 @@ select option { background: var(--solid); }
 .seg button { padding: 4px 10px; font-size: 13px; font-weight: 600; border-radius: 6px; color: var(--muted); }
 .seg button:hover { color: var(--text); }
 .seg button.on { background: var(--blue); color: var(--on-accent); }
+/* the service's own logo in front of its name */
+.seg button.with-logo { display: inline-flex; align-items: center; gap: 6px; }
+.set-text b.with-logo { display: inline-flex; align-items: center; gap: 7px; }
 .seg button.soon { display: inline-flex; align-items: center; gap: 6px; opacity: 0.55; cursor: not-allowed; }
 .seg button.soon:hover { color: var(--muted); }
 .seg button.soon small { padding: 1px 6px; border-radius: 999px; font-size: 10.5px; font-weight: 700; color: var(--text); background: rgba(var(--purple-rgb), 0.35); }
@@ -800,7 +819,7 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 
 @media (max-width: 620px) {
   .tabs { padding: 0 8px; }
-  .tab { padding: 7px 7px 8px; }
+  .tab { padding: 5px 7px 6px; }
   .tab-label { display: none; }
   .row { font-size: calc(16px * var(--chat-scale)); padding: 4px 10px; }
   .composer-wrap { padding: 5px 8px 4px; }
@@ -825,15 +844,15 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .sort-arrow.up { transform: rotate(180deg); }
 
 /* connection progress: a comet line on the tab bar's bottom edge, coloured by the services in use */
-.connect-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; z-index: 2; pointer-events: none; animation: line-in 0.3s ease-out; }
+.connect-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; z-index: 2; pointer-events: none; animation: line-in 0.3s ease-out; overflow-x: clip; }
 .connect-line .cl-base { position: absolute; inset: 0; border-radius: 2px; transition: background 0.5s; }
 /* soft blurred copy underneath, so the lit parts glow */
 .connect-line .cl-glow { position: absolute; inset: -3px 0; border-radius: 4px; filter: blur(5px); opacity: 0.7; transition: background 0.5s; }
 /* the comet: bright head, fading tail, flips round at each end */
 .connect-line .cl-comet { position: absolute; top: -1px; height: 4px; width: 22%; left: 0; animation: cl-sweep 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
 .connect-line .cl-comet::before { content: ''; position: absolute; inset: 0; border-radius: 4px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0.75) 88%, #fff 97%, transparent);
-  filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px rgba(255, 255, 255, 0.6)); animation: cl-face 3.4s steps(1) infinite; }
+  background: var(--comet, linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0.75) 88%, #fff 97%, transparent));
+  filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px var(--comet-glow, rgba(255, 255, 255, 0.6))); animation: cl-face 3.4s steps(1) infinite; }
 /* a service just connected: a small flash of its colour spreads from its spot */
 .connect-line .cl-burst { position: absolute; top: 50%; width: 46px; height: 14px; margin: -7px 0 0 -23px; border-radius: 50%;
   background: radial-gradient(closest-side, #fff, var(--seg) 45%, transparent); animation: cl-burst 0.8s ease-out forwards; }
@@ -866,7 +885,10 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 
 /* Connections menu, next to the gear */
 .conn { position: relative; flex: none; margin-right: 4px; }
-.conn-pill { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text); background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line); white-space: nowrap; }
+/* same width as the list it opens, so the two line up exactly */
+.conn-pill { display: flex; align-items: center; gap: 6px; width: 210px; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--text); background: rgba(0, 0, 0, 0.22); border: 1px solid var(--line); white-space: nowrap; }
+.conn-word { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.conn-pill .conn-dot { margin-left: auto; }
 .conn-pill:hover, .conn-pill[aria-expanded="true"] { background: var(--surface-2); }
 .conn-count { color: var(--muted); font-weight: 500; }
 .conn-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #6d6f95; }
@@ -874,22 +896,38 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .conn-dot.wait { background: var(--blue); }
 .conn-dot.warn { background: var(--orange); }
 .conn-dot.bad { background: var(--bad); }
-.conn-menu { position: absolute; top: calc(100% + 6px); right: 0; width: 340px; max-width: calc(100vw - 24px); padding: 6px; }
+/* tiny list: logo on the left, name with its status underneath, arrow on the right */
+.conn-menu { position: absolute; top: calc(100% + 6px); right: 0; width: 210px; max-width: calc(100vw - 24px); padding: 4px; max-height: calc(100vh - 90px); overflow-y: auto; }
 .conn-menu ul { list-style: none; margin: 0; padding: 0; }
-.conn-head { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; text-align: left; }
+.conn-row { min-width: 0; }
+.conn-head { width: 100%; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center;
+  padding: 4px 6px; border-radius: 7px; text-align: left; }
 .conn-head:not(:disabled):hover, .conn-row.open .conn-head { background: var(--surface-2); }
+.conn-title { display: contents; }
+.conn-title .conn-icon { grid-row: 1 / 3; grid-column: 1; }
+.conn-title .conn-name { grid-row: 1; grid-column: 2; font-size: 12.5px; line-height: 1.25; }
+.conn-sub { grid-row: 2; grid-column: 2 / 4; display: flex; align-items: center; gap: 4px; min-width: 0; }
+.conn-sub .conn-dot { width: 6px; height: 6px; }
+.conn-sub .chev { margin-left: auto; }
+.conn-sub .chev svg { width: 11px; height: 11px; }
 .conn-head:disabled { cursor: default; opacity: 1; }
-.conn-icon { flex: none; display: grid; place-items: center; width: 22px; }
-.conn-icon svg { width: 16px; height: 16px; }
+.conn-icon { flex: none; display: grid; place-items: center; width: 18px; }
+.conn-icon svg, .conn-icon .logo-img { width: 15px; height: 15px; }
 .logo-img { flex: none; display: block; object-fit: contain; }
-.conn-name { flex: none; font-weight: 600; }
-.conn-state { flex: 1; min-width: 0; text-align: right; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.conn-body { padding: 4px 8px 8px 39px; }
+/* StreamElements' emblem sits on a black square: show it round, like its own avatar */
+.logo-img.se-logo { border-radius: 50%; }
+.conn-name { min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conn-state { min-width: 0; font-size: 11px; line-height: 1.2; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conn-body { padding: 2px 6px 6px 32px; }
+.conn-body .row-btns { gap: 4px; flex-wrap: wrap; }
+.conn-body .btn { padding: 3px 10px; font-size: 11.5px; white-space: nowrap; }
 .conn-hint { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); }
 .conn-err { margin: 6px 0 0; font-size: 12.5px; color: var(--bad); }
-@media (max-width: 760px) {
-  .conn-word { display: none; }
-}
+/* the tab bar squeezes as much as it has to (Tabs.tsx useFit): first the status button down to its
+   count, then the platform tabs down to their logos */
+.tabs.fit-1 .conn-word, .tabs.fit-2 .conn-word { display: none; }
+.tabs.fit-1 .conn-pill, .tabs.fit-2 .conn-pill { width: auto; }
+.tabs.fit-2 .pf-tab .tab-label { display: none; }
 
 /* test events + clearing */
 .test-tag { flex: none; font: 700 10px/1 'Segoe UI', sans-serif; letter-spacing: 0.05em; padding: 3px 5px; border-radius: 4px; color: #1b1440; background: #ffd166; }
@@ -949,6 +987,15 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .obs-strip { display: flex; align-items: center; gap: 12px; height: 28px; padding: 0 12px; max-width: 100%; overflow: hidden; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; animation: connect-in 0.3s ease-out; }
 button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgba(255, 255, 255, 0.06); }
 .obs-strip.muted { font-weight: 500; }
+/* waiting for a streaming app: OBS, Streamlabs and Meld logos flip in one after another */
+.app-cycle { display: inline-grid; place-items: center; width: 13px; height: 13px; perspective: 60px; }
+.app-cycle-logo { display: inline-grid; place-items: center; animation: app-cycle 1.8s ease-in-out both; }
+@keyframes app-cycle {
+  0% { opacity: 0; transform: rotateY(-90deg) scale(0.7); }
+  18%, 82% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: rotateY(90deg) scale(0.7); }
+}
+@media (prefers-reduced-motion: reduce) { .app-cycle-logo { animation: none; } }
 .obs-state { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
 .obs-state.live { color: #ff5c7a; }
 .obs-state.bad { color: var(--orange); }
@@ -956,6 +1003,10 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .obs-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
 .obs-state.live .obs-dot { animation: obs-pulse 1.6s ease-in-out infinite; }
 .obs-dot.ready { background: var(--good); }
+/* connected, not live: the app's name and a green check */
+.obs-ok { display: inline-grid; place-items: center; color: #2ecc71; }
+/* bold: the filled tick gets an outline of its own colour, plus a faint glow */
+.obs-ok svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6px; stroke-linejoin: round; filter: drop-shadow(0 0 3px rgba(46, 204, 113, 0.45)); }
 .obs-strip.muted .obs-dot { background: #6d6f95; }
 .obs-item.warn { color: var(--orange); }
 .obs-item.bad { color: var(--bad); }

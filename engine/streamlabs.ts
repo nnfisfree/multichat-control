@@ -22,6 +22,8 @@ export class StreamlabsLink {
   private seq = AUTH_ID
   private busy = false
   private state: ObsState = { status: 'off' }
+  // its API doesn't say, so this comes from the running .exe
+  private version: string | undefined
 
   constructor(private send: (s: ObsState) => void) {}
 
@@ -88,10 +90,12 @@ export class StreamlabsLink {
         if (msg.id === AUTH_ID) {
           if (msg.error || msg.result !== true) {
             refused = true
-            this.set({ status: 'error', detail: 'Streamlabs refused the token. In Streamlabs Desktop, open Settings → Remote Control, click the QR code, then Show details, and copy the API Token again.' })
+            this.set({ status: 'error', detail: 'Streamlabs refused the token. In Streamlabs Desktop, open Settings → Mobile, and under Third Party Connections copy the API Token again.' })
             return ws.close()
           }
           this.attempt = 0
+          this.version = undefined
+          void core.streamAppVersion('streamlabs').then((v) => { if (run === this.run && v) this.version = v }, () => {})
           this.set({ status: 'connected', stats: this.state.stats })
           void this.refresh(run)
           this.poll = setInterval(() => void this.refresh(run), POLL_MS)
@@ -110,7 +114,7 @@ export class StreamlabsLink {
       if (this.poll) clearInterval(this.poll)
       this.poll = null
       if (refused) return
-      this.set({ status: 'connecting', detail: `Waiting for Streamlabs Desktop on port ${port}. Is it open, with Remote Control turned on?` })
+      this.set({ status: 'connecting', detail: `Waiting for Streamlabs Desktop on port ${port}. Is it open, with Allow third party connections turned on (Settings → Mobile)?` })
       this.timer = setTimeout(() => this.open(run), Math.min(15000, backoff(this.attempt++)))
     })
   }
@@ -142,6 +146,7 @@ export class StreamlabsLink {
       const recording = st.recordingStatus === 'recording'
       const out: ObsStats = {
         app: 'streamlabs',
+        version: this.version,
         at: now,
         cpu: Number(perf.CPU) || 0,
         memoryMb: 0,

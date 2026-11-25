@@ -1,5 +1,6 @@
 import { Socket as WebSocket } from './socket'
 import type { ObsState, ObsStats } from '../shared/types'
+import { core } from './core'
 import { backoff } from './net'
 import { store } from './store'
 
@@ -22,6 +23,8 @@ export class MeldLink {
   private timer: ReturnType<typeof setTimeout> | null = null
   private tick: ReturnType<typeof setInterval> | null = null
   private state: ObsState = { status: 'off' }
+  // its API doesn't say, so this comes from the running .exe
+  private version: string | undefined
   // property indexes from the init reply; updates refer to properties by index
   private idx = { streaming: -1, recording: -1 }
   private live: { on: boolean; since: number; known: boolean } = { on: false, since: 0, known: false }
@@ -69,6 +72,7 @@ export class MeldLink {
     const now = Date.now()
     const out: ObsStats = {
       app: 'meld',
+      version: this.version,
       at: now,
       cpu: 0, memoryMb: 0, diskMb: 0, fps: 0, renderMs: 0,
       renderMissed: 0, renderTotal: 0, encodeSkipped: 0, encodeTotal: 0,
@@ -111,6 +115,8 @@ export class MeldLink {
         this.rec = { on: false, since: 0 }
         this.apply(!!sv, !!rv, true)
         this.attempt = 0
+        this.version = undefined
+        void core.streamAppVersion('meld').then((v) => { if (run === this.run && v) { this.version = v; this.emit() } }, () => {})
         ws.send(JSON.stringify({ type: IDLE }))
         this.emit()
         // re-send every second so the uptime keeps going

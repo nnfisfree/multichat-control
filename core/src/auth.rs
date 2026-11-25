@@ -1,5 +1,8 @@
 //! Logins and authenticated requests for Twitch, Kick, YouTube, StreamElements, Streamlabs and
-//! Buy Me a Coffee (no OAuth there, the user pastes a personal token, see `auth_set_token`).
+//! Buy Me a Coffee. Twitch, Kick and YouTube use OAuth. Buy Me a Coffee has none: the user pastes a
+//! personal token (`auth_set_token`). StreamElements and Streamlabs never gave us an app login, so
+//! the streamer logs in on their website inside the app and the key it hands back is kept here
+//! (see sitelogin.rs).
 //!
 //! Tokens only ever live here. The engine says "GET this Helix URL as Twitch" and this module
 //! attaches the token, refreshes it shortly before expiry, retries once on a 401, and only ever
@@ -88,16 +91,13 @@ impl Service {
             Self::Twitch => "https://id.twitch.tv/oauth2/token",
             Self::Kick => "https://id.kick.com/oauth/token",
             Self::Youtube => "https://oauth2.googleapis.com/token",
-            Self::StreamElements => "https://api.streamelements.com/oauth2/token",
-            Self::Streamlabs => "https://streamlabs.com/api/v2.0/token",
-            // unused, a pasted token has nothing to refresh with
-            Self::BuyMeACoffee => "",
+            // unused: website logins and pasted tokens have nothing to refresh with
+            Self::StreamElements | Self::Streamlabs | Self::BuyMeACoffee => "",
         }
     }
     fn header(self, host: &str, access: &str) -> String {
         match self {
             Self::Twitch if host == "id.twitch.tv" => format!("OAuth {access}"),
-            Self::StreamElements => format!("OAuth {access}"),
             _ => format!("Bearer {access}"),
         }
     }
@@ -159,9 +159,8 @@ fn built_in(s: Service) -> Option<Creds> {
     let (id, secret) = match s {
         Service::Youtube => (option_env!("NNF_YOUTUBE_CLIENT_ID"), option_env!("NNF_YOUTUBE_CLIENT_SECRET")),
         Service::Kick => (option_env!("NNF_KICK_CLIENT_ID"), option_env!("NNF_KICK_CLIENT_SECRET")),
-        Service::StreamElements => (option_env!("NNF_STREAMELEMENTS_CLIENT_ID"), option_env!("NNF_STREAMELEMENTS_CLIENT_SECRET")),
-        Service::Streamlabs => (option_env!("NNF_STREAMLABS_CLIENT_ID"), option_env!("NNF_STREAMLABS_CLIENT_SECRET")),
-        Service::Twitch | Service::BuyMeACoffee => return None,
+        // StreamElements and Streamlabs log in through their website (sitelogin.rs): no app keys
+        Service::Twitch | Service::BuyMeACoffee | Service::StreamElements | Service::Streamlabs => return None,
     };
     match (id, secret) {
         (Some(id), Some(secret)) if !id.is_empty() && !secret.is_empty() => Some(Creds { id: id.into(), secret: Some(secret.into()) }),
@@ -375,15 +374,14 @@ async fn twitch_login(app: &AppHandle) -> Result<Tokens, String> {
 
 struct Loopback { authorize: &'static str, port: u16, host: &'static str, path: &'static str, scope: &'static str, extra: &'static [(&'static str, &'static str)] }
 
+/// Kick and YouTube only: Twitch uses its device code, the others never go through here.
 fn loopback_of(s: Service) -> Loopback {
     match s {
         Service::Kick => Loopback { authorize: "https://id.kick.com/oauth/authorize", port: 53682, host: "localhost", path: "/callback", scope: KICK_SCOPES, extra: &[] },
-        Service::Youtube => Loopback {
+        _ => Loopback {
             authorize: "https://accounts.google.com/o/oauth2/v2/auth", port: 0, host: "127.0.0.1", path: "/callback",
             scope: "https://www.googleapis.com/auth/youtube.force-ssl", extra: &[("access_type", "offline"), ("prompt", "consent")],
         },
-        Service::StreamElements => Loopback { authorize: "https://api.streamelements.com/oauth2/authorize", port: 53683, host: "localhost", path: "/streamelements", scope: "channel:read activities:read tips:read", extra: &[] },
-        Service::Twitch | Service::BuyMeACoffee | Service::Streamlabs => Loopback { authorize: "https://streamlabs.com/api/v2.0/authorize", port: 53683, host: "localhost", path: "/streamlabs", scope: "donations.read socket.token", extra: &[] },
     }
 }
 
@@ -444,8 +442,7 @@ async fn loopback_login(app: &AppHandle, s: Service) -> Result<Tokens, String> {
             break q["code"].clone();
         }
         if let Some(why) = q.get("error_description").or_else(|| q.get("error")) {
-            // StreamElements just says error=true when the user declines
-            let declined = why == "true" || why == "access_denied";
+            let declined = why == "access_denied";
             // Until Google verifies the app its consent screen shows an "unverified app" warning,
             // and "Back to safety" there also comes back as a decline.
             return Err(if declined && s == Service::Youtube {
@@ -479,7 +476,8 @@ pub async fn auth_login(app: AppHandle, service: String) -> Result<(), String> {
     let t = match s {
         Service::Twitch => twitch_login(&app).await?,
         Service::BuyMeACoffee => return Err("Buy Me a Coffee connects with a token: paste it in Settings.".into()),
-        _ => loopback_login(&app, s).await?,
+        Service::StreamElements | Service::Streamlabs => return Err("This service logs in through its website: use Log in in Settings.".into()),
+        Service::Kick | Service::Youtube => loopback_login(&app, s).await?,
     };
     save_tokens(s, Some(&t));
     log(s.key(), "logged in");
@@ -534,9 +532,41 @@ pub async fn auth_logout(app: AppHandle, service: String) -> Result<(), String> 
         }
     }
     save_tokens(s, None);
+    // website logins: sign out on the site too, so the next login starts fresh
+    if matches!(s, Service::StreamElements | Service::Streamlabs) {
+        crate::sitelogin::site_logout(&app, s.key()).await;
+    }
     log(s.key(), "logged out");
     changed(&app, s, false);
     Ok(())
+}
+
+/// Saves the key a website login (sitelogin.rs) handed back. StreamElements' key is a JWT that
+/// carries its own expiry; Streamlabs' is the account token its dashboard uses.
+pub(crate) fn save_site_login(app: &AppHandle, service: &str, key: &str) -> Result<(), String> {
+    let s = Service::parse(service)?;
+    if !matches!(s, Service::StreamElements | Service::Streamlabs) || key.len() < 16 || key.len() > 4096 {
+        return Err("That login didn't work. Try again.".into());
+    }
+    let expires_at = if s == Service::StreamElements {
+        key.split('.')
+            .nth(1)
+            .and_then(|p| B64URL.decode(p.trim_end_matches('=')).ok())
+            .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+            .and_then(|v| v.get("exp").and_then(|e| e.as_f64()))
+            .map(|e| e * 1000.0)
+            .unwrap_or_else(never)
+    } else {
+        never()
+    };
+    save_tokens(s, Some(&Tokens { access: key.to_string(), refresh: None, expires_at }));
+    changed(app, s, true);
+    Ok(())
+}
+
+/// The saved website-login key, for the one place that needs it in Rust (Streamlabs' hidden page).
+pub(crate) fn site_key(service: &str) -> Option<String> {
+    load_tokens(Service::parse(service).ok()?).map(|t| t.access)
 }
 
 /// Is there a saved login, and can we log in at all (is there a developer app).
@@ -547,7 +577,9 @@ pub struct AuthState { logged_in: bool, configured: bool }
 #[tauri::command]
 pub fn auth_state(service: String) -> Result<AuthState, String> {
     let s = Service::parse(&service)?;
-    Ok(AuthState { logged_in: load_tokens(s).is_some(), configured: s == Service::BuyMeACoffee || creds(s).is_some() })
+    // StreamElements and Streamlabs log in through their website, no developer app needed
+    let configured = matches!(s, Service::BuyMeACoffee | Service::StreamElements | Service::Streamlabs) || creds(s).is_some();
+    Ok(AuthState { logged_in: load_tokens(s).is_some(), configured })
 }
 
 /// Platforms this build has a built-in login for (shown in Settings).

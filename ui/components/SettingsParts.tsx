@@ -2,10 +2,11 @@ import type { JSX, ReactNode } from 'react'
 import type { Platform } from '../../shared/types'
 import { PlatformIcon } from './Icons'
 
-export function Row({ title, desc, children }: { title: string; desc: string; children: ReactNode }): JSX.Element {
+/** A setting: title (with an optional logo in front), description, and its control on the right. */
+export function Row({ title, desc, icon, children }: { title: string; desc: string; icon?: ReactNode; children: ReactNode }): JSX.Element {
   return (
     <div className="set-row">
-      <div className="set-text"><b>{title}</b><span>{desc}</span></div>
+      <div className="set-text"><b className={icon ? 'with-logo' : undefined}>{icon}{title}</b><span>{desc}</span></div>
       <div className="set-control">{children}</div>
     </div>
   )

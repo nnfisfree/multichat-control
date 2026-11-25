@@ -25,9 +25,21 @@ export const EVENT_BADGE: Record<EventType, string> = {
   moderation: 'MOD', stream: 'LIVE', donation: 'TIP', announcement: 'ANN', other: 'INFO'
 }
 
-/** The amount as shown next to the badge. The BITS badge already says bits, so "500 bits" shows as "500". */
-export const shownAmount = (e: Pick<StreamEvent, 'type' | 'amount'>): string | undefined =>
-  e.type === 'cheer' || e.type === 'bits' ? e.amount?.replace(/\s*bits?$/i, '') : e.amount
+/**
+ * The amount as shown next to the badge. The BITS badge already says bits, so "500 bits" shows as
+ * "500". A gift bomb shows how many and which tier the same way everywhere: "5x Tier 1" (Twitch,
+ * StreamElements, Streamlabs), "5x Sub" (Kick), "5x <level>" or "5x Membership" (YouTube).
+ */
+export const shownAmount = (e: Pick<StreamEvent, 'type' | 'amount' | 'text'> & Partial<Pick<StreamEvent, 'platform' | 'details'>>): string | undefined => {
+  if (e.type === 'cheer' || e.type === 'bits') return e.amount?.replace(/\s*bits?$/i, '')
+  const n = e.type === 'gift' ? Number(/^gifted (\d+) (subs?|memberships?)\b/i.exec(e.text ?? '')?.[1] ?? 0) : 0
+  if (n < 2) return e.amount
+  // "Tier 1", "Tier 1 x5" or "Prime": keep just the tier
+  const tier = /^(tier \d|prime)/i.exec(e.amount ?? '')?.[0]
+  if (tier) return `${n}x ${tier.replace(/^tier/i, 'Tier').replace(/^prime/i, 'Prime')}`
+  if (e.platform === 'youtube' || /membership/i.test(e.text)) return `${n}x ${e.details?.Level || 'Membership'}`
+  return `${n}x Sub`
+}
 
 /** YouTube and BMC call them memberships, not subs. */
 export const isMembership = (e: Partial<Pick<StreamEvent, 'type' | 'source' | 'platform'>>): boolean =>

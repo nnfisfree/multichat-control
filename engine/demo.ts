@@ -459,20 +459,22 @@ export function startDemoObs(send: (s: ObsState) => void): void {
     if (live && Math.random() < 0.04) dropped += 1 + Math.floor(Math.random() * 12)
     if (live) bytes += (kbps * 1000) / 8
     const total = live ? Math.round((t - 9000) / 16.7) + 368000 : 0
+    // made-up versions, so the demo shows what a real connection does
+    const version = app === 'meld' ? '1.4.1' : app === 'streamlabs' ? '1.19.4' : '33.0.3'
     const stats: ObsStats = app === 'meld'
       ? {
-          app, at: Date.now(), cpu: 0, memoryMb: 0, diskMb: 0, fps: 0, renderMs: 0, renderMissed: 0, renderTotal: 0, encodeSkipped: 0, encodeTotal: 0,
+          app, version, at: Date.now(), cpu: 0, memoryMb: 0, diskMb: 0, fps: 0, renderMs: 0, renderMissed: 0, renderTotal: 0, encodeSkipped: 0, encodeTotal: 0,
           stream: { active: live, reconnecting: false, durationMs: live ? t - 9000 : 0, durationKnown: true, dropped: 0, total: 0, bytes: 0 },
           record: { active: false, paused: false, durationMs: 0, bytes: 0 }
         }
       : app === 'streamlabs'
         ? {
-            app, at: Date.now(), cpu: 3 + Math.random() * 4 + (live ? 3 : 0), memoryMb: 0, diskMb: 0, fps, renderMs: 0, renderMissed: 0, renderTotal: 0, encodeSkipped: 0, encodeTotal: 0,
+            app, version, at: Date.now(), cpu: 3 + Math.random() * 4 + (live ? 3 : 0), memoryMb: 0, diskMb: 0, fps, renderMs: 0, renderMissed: 0, renderTotal: 0, encodeSkipped: 0, encodeTotal: 0,
             stream: { active: live, reconnecting: false, durationMs: live ? t - 9000 + 6130000 : 0, dropped: live ? dropped : 0, total: 0, droppedPct: live ? Math.round((dropped / total) * 1000) / 10 : 0, bytes: 0, kbps: live ? Math.round(kbps) : undefined },
             record: { active: false, paused: false, durationMs: 0, bytes: 0 }
           }
         : {
-            app, at: Date.now(), cpu: 1 + Math.random() * 2 + (live ? 2 : 0), memoryMb: 2562.9, diskMb: 386.6 * 1024, fps, renderMs: 1.2,
+            app, version, at: Date.now(), cpu: 1 + Math.random() * 2 + (live ? 2 : 0), memoryMb: 2562.9, diskMb: 386.6 * 1024, fps, renderMs: 1.2,
             encoder: 'NVIDIA NVENC H.264', output: { width: 1920, height: 1080, fps: 60, canvas: { width: 2560, height: 1440 } },
             renderMissed: 0, renderTotal: Math.round(t / 16.7), encodeSkipped: 0, encodeTotal: live ? Math.round((t - 9000) / 16.7) : 0,
             stream: { active: live, reconnecting: false, durationMs: live ? t - 9000 + 6130000 : 0, dropped: live ? dropped : 0, total, bytes, kbps: live ? Math.round(kbps) : undefined },

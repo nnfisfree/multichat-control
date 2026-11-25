@@ -5,7 +5,6 @@ import { api, backoff, HttpError, message } from '../net'
 import { money, text, tier, toPlatform, type AlertContext, type AlertService } from './alerts'
 
 const API = 'https://api.streamelements.com/kappa/v2'
-const OAUTH = 'https://api.streamelements.com/oauth2'
 const ASTRO = 'wss://astro.streamelements.com'
 const HISTORY_DAYS = 30
 // Gifted subs trickle in one by one next to their gift bomb. Wait a moment so they can be folded in.
@@ -42,7 +41,8 @@ function toEvent(a: any, fallback: Platform): StreamEvent | null {
     case 'purchase':
       return { ...base, type: 'donation', actor: who, text: 'bought', subject: text(d.items?.[0]?.name) ?? text(d.itemName) ?? 'merch', amount: money(d.amount, d.currency) }
     case 'subscriber':
-      if (d.gifted) return { ...base, type: 'gift', actor: text(d.sender) ?? 'Someone', text: `gifted a sub to ${who}`, amount: tier(d.tier) }
+      // SE's note on a gift only repeats "X gifted a Tier 1 sub to Y!", so it's left out
+      if (d.gifted) return { ...base, message: undefined, type: 'gift', actor: text(d.sender) ?? 'Someone', text: `gifted a sub to ${who}`, amount: tier(d.tier) }
       return { ...base, type: 'sub', actor: who, text: amount > 1 ? `resubscribed (${amount} months)` : 'subscribed', amount: tier(d.tier), months: amount || undefined }
     case 'communityGiftPurchase':
       return { ...base, type: 'gift', big: amount >= 5, actor: text(d.sender) ?? who, text: `gifted ${amount || 'some'} subs to the community`, amount: tier(d.tier) }
@@ -102,7 +102,8 @@ export class StreamElements implements AlertService {
     this.stop()
     this.ctx.status({ status: 'authorizing' })
     try {
-      await core.login('streamelements')
+      // their website in a window: the streamer signs in to their own account there
+      await core.siteLogin('streamelements')
     } catch (err) {
       this.ctx.status({ status: 'needs-login', detail: message(err) })
       throw err
@@ -121,14 +122,12 @@ export class StreamElements implements AlertService {
     const run = ++this.run
     const state = await core.authState('streamelements')
     if (run !== this.run) return
-    if (!state.configured) return this.ctx.status({ status: 'needs-setup' })
     if (!state.loggedIn) return this.ctx.status({ status: 'needs-login' })
     this.ctx.status({ status: 'connecting' })
     try {
-      const v = await this.get(`${OAUTH}/validate`)
-      const me = await this.get(`${API}/channels/${v?.channel_id ?? 'me'}`)
+      const me = await this.get(`${API}/channels/me`)
       if (run !== this.run) return
-      this.channelId = String(me?._id ?? v?.channel_id ?? '')
+      this.channelId = String(me?._id ?? '')
       if (!this.channelId) throw new Error('StreamElements returned no channel for this login.')
       this.platform = toPlatform(me?.provider) ?? 'twitch'
       this.account = text(me?.displayName) ?? text(me?.username) ?? 'StreamElements'
@@ -157,24 +156,66 @@ export class StreamElements implements AlertService {
     this.ws = null
   }
 
-  /** Last 30 days of the activity feed. */
+  /** Last 30 days of the activity feed, 100 at a time, newest first. */
   private async loadHistory(run: number): Promise<void> {
-    const q = new URLSearchParams({
-      after: new Date(Date.now() - HISTORY_DAYS * 86400000).toISOString(), before: new Date().toISOString(),
-      limit: '100', mincheer: '0', minhost: '0', minsub: '0', mintip: '0', origin: 'feed'
-    })
-    for (const t of TYPES) q.append('types', t)
+    const after = new Date(Date.now() - HISTORY_DAYS * 86400000).toISOString()
+    let before = new Date().toISOString()
+    const all: any[] = []
     try {
-      const r = await this.get(`${API}/activities/${this.channelId}?${q}`)
-      if (run !== this.run) return
-      const list: any[] = Array.isArray(r) ? r : (r?.docs ?? r?.data ?? [])
-      this.handle(list, true)
+      for (let page = 0; page < 20; page++) {
+        const q = new URLSearchParams({ after, before, limit: '100', mincheer: '0', minhost: '0', minsub: '0', mintip: '0', origin: 'feed' })
+        // a month of channel-point redemptions would push the real support out of the list, and
+        // Twitch shows them live anyway: history is supporters only
+        for (const t of TYPES) if (!/redemption/i.test(t)) q.append('types', t)
+        const r = await this.get(`${API}/activities/${this.channelId}?${q}`)
+        if (run !== this.run) return
+        const list: any[] = Array.isArray(r) ? r : (r?.docs ?? r?.data ?? [])
+        all.push(...list)
+        // a full page means there may be more: carry on from just before the oldest one
+        const oldest = list.reduce((t, a) => Math.min(t, Date.parse(a?.createdAt) || Infinity), Infinity)
+        if (list.length < 100 || !Number.isFinite(oldest)) break
+        before = new Date(oldest - 1).toISOString()
+      }
+      this.handle(all, true)
     } catch (err) {
       if (run === this.run) this.ctx.status({ status: 'connected', account: this.account, detail: `Past events couldn't load: ${message(err)}` })
     }
   }
 
+  /**
+   * The last 30 days. Every gifted sub is also listed on its own, and some gift bombs have no bomb
+   * row at all, only their single gifts: singles covered by one of that person's bombs are dropped,
+   * and the rest from one person within a couple of minutes become one "gifted N subs" entry.
+   */
+  private history(list: any[]): void {
+    const at = (a: any): number => Date.parse(a?.createdAt) || 0
+    const isSingle = (a: any): boolean => a?.type === 'subscriber' && !!a.data?.gifted
+    const sender = (a: any): string => lower(a?.data?.sender ?? a?.data?.username)
+    const real = list.filter((a) => !isTest(a))
+    const bombs = new Map<string, number[]>()
+    for (const a of real) if (a?.type === 'communityGiftPurchase') bombs.set(sender(a), [...(bombs.get(sender(a)) ?? []), at(a)])
+    for (const a of real.filter((x) => !isSingle(x))) {
+      const e = toEvent(a, this.platform)
+      if (e) this.ctx.event({ ...e, history: true })
+    }
+    const runs: { first: any; last: number; count: number; key: string }[] = []
+    for (const a of real.filter(isSingle).sort((x, y) => at(x) - at(y))) {
+      if ((bombs.get(sender(a)) ?? []).some((t) => Math.abs(at(a) - t) < 120000)) continue
+      const e = toEvent(a, this.platform)
+      const key = `${e?.platform}|${sender(a)}`
+      const run = [...runs].reverse().find((r) => r.key === key)
+      if (run && at(a) - run.last < 120000) { run.count++; run.last = at(a) } else runs.push({ first: a, last: at(a), count: 1, key })
+    }
+    for (const r of runs) {
+      const e = toEvent(r.first, this.platform)
+      if (!e) continue
+      if (r.count === 1) { this.ctx.event({ ...e, history: true }); continue }
+      this.ctx.event({ ...e, id: `${e.id}-x${r.count}`, history: true, big: r.count >= 5, text: `gifted ${r.count} subs to the community` })
+    }
+  }
+
   private handle(list: any[], history: boolean): void {
+    if (history) return this.history(list)
     const now = Date.now()
     for (const a of list) {
       if (a?.type !== 'communityGiftPurchase') continue
@@ -182,7 +223,10 @@ export class StreamElements implements AlertService {
       this.bombs.set(who, Math.max(this.bombs.get(who) ?? 0, Date.parse(a.createdAt) || now))
     }
     for (const [k, t] of this.bombs) if (t < now - HISTORY_DAYS * 86400000) this.bombs.delete(k)
-    for (const a of list) {
+    // gift bombs (and everything else) first, single gifted subs last: the app folds a single gift
+    // into a bomb from the same person, but only once that bomb is in the list
+    const singleLast = (a: any): number => (a?.type === 'subscriber' && a.data?.gifted ? 1 : 0)
+    for (const a of [...list].sort((x, y) => singleLast(x) - singleLast(y))) {
       // every sub in a gift bomb is also listed on its own; the bomb row already covers them
       if (a?.type === 'subscriber' && a.data?.gifted) {
         const bomb = this.bombs.get(lower(a.data.sender))
@@ -190,9 +234,8 @@ export class StreamElements implements AlertService {
       }
       const e = toEvent(a, this.platform)
       if (!e) continue
-      if (history) this.ctx.event({ ...e, history: true })
       // emulated alert from the dashboard: shown until restart, never saved
-      else this.ctx.event(isTest(a) ? { ...e, id: `${e.id}-test-${Date.now()}`, ts: Date.now(), test: true } : e)
+      this.ctx.event(isTest(a) ? { ...e, id: `${e.id}-test-${Date.now()}`, ts: Date.now(), test: true } : e)
     }
   }
 
@@ -208,7 +251,7 @@ export class StreamElements implements AlertService {
         return
       }
       if (msg.type === 'welcome') {
-        ws.send(JSON.stringify({ type: 'subscribe', nonce: 'activities', data: { topic: 'channel.activities', room: this.channelId, token: this.socketToken, token_type: 'oauth2' } }))
+        ws.send(JSON.stringify({ type: 'subscribe', nonce: 'activities', data: { topic: 'channel.activities', room: this.channelId, token: this.socketToken, token_type: 'jwt' } }))
       } else if (msg.type === 'response' && msg.nonce === 'activities') {
         if (msg.error) {
           // usually an expired token, the reconnect after close refreshes it

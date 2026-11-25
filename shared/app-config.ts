@@ -1,11 +1,11 @@
 export const APP_NAME = 'Multichat Control'
 
 /**
- * SL and SE logins stay disabled until both services approve the app. Streamlabs only allows 10
- * test users before approval, and StreamElements hasn't issued keys yet. Flip this once both are
- * approved; the Settings option, the Connections menu and the engine all key off it.
+ * StreamElements and Streamlabs. They never approved an app login, so the streamer logs in to their
+ * own account on the service's website inside the app (core/src/sitelogin.rs) instead. Turning this
+ * off hides both again: the Settings option, the Connections menu and the engine all key off it.
  */
-export const ALERTS_READY = false
+export const ALERTS_READY = true
 
 /**
  * Kick wants an exact redirect URI match, so the port is fixed. Register this URL in the Kick app.

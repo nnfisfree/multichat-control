@@ -20,6 +20,15 @@ const TWIN_MS = 120000
 
 const sameKind = (t: string): string => (t === 'bits' ? 'cheer' : t)
 
+// gift bombs read "gifted 5 subs to the community" / "gifted 10 memberships"; single gifts read
+// "gifted a sub to X" (Kick: "gifted 1 sub")
+const SINGLE_GIFT = /^gifted (a|1) (sub|membership)\b/i
+const GIFT_BOMB = /^gifted (\d+|some) (subs?|memberships?)\b/i
+const BOMB_MS = 2 * 60_000
+// a live alert and the same thing in the 30-day history are seconds apart; two real gift bombs from
+// one person can be just minutes apart, so this stays tight
+const SAME_MS = 90_000
+
 /** Chat history persistence (ChatLog implements this). */
 interface Recorder {
   add(m: ChatMessage): void
@@ -224,9 +233,39 @@ export class Hub {
     return false
   }
 
+  /**
+   * Something that came in live and got saved shows up again in the service's 30-day history on the
+   * next start, sometimes under another id (Streamlabs). Same service, kind, person, text and amount
+   * within 90 seconds means it's the one we already have.
+   */
+  private seenBefore(e: StreamEvent): boolean {
+    if (!e.history || !e.source || e.source === 'buymeacoffee') return false
+    const key = `${e.type}|${e.actor?.toLowerCase() ?? ''}|${e.text}|${e.amount ?? ''}`
+    for (let i = this.events.length - 1, n = 0; i >= 0 && n < 800; i--, n++) {
+      const o = this.events[i]
+      if (o.source === e.source && !o.test && Math.abs(o.ts - e.ts) < SAME_MS && `${o.type}|${o.actor?.toLowerCase() ?? ''}|${o.text}|${o.amount ?? ''}` === key) return true
+    }
+    return false
+  }
+
+  /**
+   * A single gifted sub that's part of a gift bomb already listed: same person, same platform, a few
+   * minutes apart, whichever service reported either one. The bomb's one entry covers them all.
+   */
+  private inGiftBomb(e: StreamEvent): boolean {
+    const actor = e.actor?.toLowerCase()
+    if (e.type !== 'gift' || e.test || !actor || !SINGLE_GIFT.test(e.text)) return false
+    for (let i = this.events.length - 1, n = 0; i >= 0 && n < 800; i--, n++) {
+      const o = this.events[i]
+      if (o.type === 'gift' && !o.test && o.platform === e.platform && o.actor?.toLowerCase() === actor
+        && GIFT_BOMB.test(o.text) && !SINGLE_GIFT.test(o.text) && Math.abs(o.ts - e.ts) < BOMB_MS) return true
+    }
+    return false
+  }
+
   private addEvent(e: StreamEvent): void {
     // history can overlap with what's already loaded
-    if (this.eventIds.has(e.id) || this.removed.has(e.id) || this.twin(e)) return
+    if (this.eventIds.has(e.id) || this.removed.has(e.id) || this.twin(e) || this.seenBefore(e) || this.inGiftBomb(e)) return
     this.eventIds.add(e.id)
     // new stream, start the chatter list over
     if (e.type === 'stream' && !e.history && /went live/i.test(e.text)) this.seen.delete(e.platform)

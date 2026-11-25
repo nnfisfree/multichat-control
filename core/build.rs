@@ -1,5 +1,5 @@
 //! Official builds can bake in our own developer app credentials, so people can just log in to
-//! YouTube, Kick and the alert services. Values come from the private `.env.local` in the project
+//! YouTube and Kick. Values come from the private `.env.local` in the project
 //! root (never committed), same as the Electron build did.
 
 fn main() {

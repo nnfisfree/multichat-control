@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX } from 'react'
 import { STREAM_APPS, type ObsStats } from '../../shared/types'
 import { useStore } from '../lib/store'
-import { StreamAppLogo } from './Icons'
+import { Icon, StreamAppLogo } from './Icons'
 import { ObsGraph, recordObsSample } from './ObsGraph'
 
 /** Ticks every second while we're live or recording. */
@@ -45,6 +45,9 @@ const dropTone = (s: ObsStats): string => {
   return s.stream.reconnecting || r > 0.05 ? 'bad' : r > 0.01 ? 'warn' : ''
 }
 
+/** "OBS Studio 33.0.3", or just the name when the version couldn't be read. */
+const appName = (s: ObsStats): string => `${STREAM_APPS[s.app]}${s.version ? ` ${s.version}` : ''}`
+
 const size = (r: { width: number; height: number }): string => `${r.width}×${r.height}`
 
 /** Canvas, scaled output, and what actually goes to the stream if the encoder rescales again. */
@@ -72,7 +75,7 @@ function LimitedDetails({ s, now }: { s: ObsStats; now: number }): JSX.Element {
       {!meld && (
         <div className="obs-top">
           <dl>
-            <dt>Streaming app</dt><dd>{STREAM_APPS[s.app]}</dd>
+            <dt>Streaming app</dt><dd>{appName(s)}</dd>
             <dt>CPU usage</dt><dd>{s.cpu.toFixed(1)}%</dd>
             <dt>FPS</dt><dd>{s.fps.toFixed(2)}</dd>
             <dt>Dropped frames</dt><dd>{s.stream.dropped.toLocaleString()} ({dropText(s)})</dd>
@@ -98,6 +101,7 @@ function LimitedDetails({ s, now }: { s: ObsStats; now: number }): JSX.Element {
 function Details({ s, now }: { s: ObsStats; now: number }): JSX.Element {
   if (s.app && s.app !== 'obs') return <LimitedDetails s={s} now={now} />
   const rows: [string, string][] = [
+    ['Streaming app', appName(s)],
     ...(s.encoder ? [['Encoder', s.encoder] as [string, string]] : []),
     ...resolutionRows(s),
     ['CPU usage', `${s.cpu.toFixed(1)}%`],
@@ -135,6 +139,17 @@ function Details({ s, now }: { s: ObsStats; now: number }): JSX.Element {
       </table>
     </div>
   )
+}
+
+/** While no streaming app is connected yet, the supported apps' logos take turns, one flipping in after another. */
+const APP_ORDER = Object.keys(STREAM_APPS) as (keyof typeof STREAM_APPS)[]
+function WaitingLogos(): JSX.Element {
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setI((n) => (n + 1) % APP_ORDER.length), 1800)
+    return () => clearInterval(t)
+  }, [])
+  return <span className="app-cycle" aria-hidden="true"><span key={i} className="app-cycle-logo"><StreamAppLogo app={APP_ORDER[i]} size={13} /></span></span>
 }
 
 // how long the go-live animation of the app icon plays
@@ -186,8 +201,9 @@ export function ObsStrip({ onFix }: { onFix?(): void }): JSX.Element | null {
   if (obs.status !== 'connected' || !s) {
     // not connected yet; clicking opens the OBS settings
     return (
-      <button className={obs.status === 'error' ? 'obs-strip muted bad' : 'obs-strip muted'} title={`${obs.detail ?? 'Waiting for OBS'}. Click to open the OBS settings.`} onClick={onFix}>
-        <StreamAppLogo app={app} size={13} /><span className="obs-dot" /> {obs.status === 'error' ? (app === 'streamlabs' ? 'SLOBS: check token' : app === 'meld' ? 'Meld: needs attention' : 'OBS: check password') : `Waiting for ${app === 'obs' ? 'OBS' : app === 'streamlabs' ? 'SLOBS' : 'Meld'}…`}
+      <button className={obs.status === 'error' ? 'obs-strip muted bad' : 'obs-strip muted'} title={`${obs.detail ?? `Waiting for ${STREAM_APPS[app]}`}. Click to open the streaming app settings.`} onClick={onFix}>
+        {/* a problem belongs to the chosen app, so it keeps that app's logo; while waiting, the logos take turns */}
+        {obs.status === 'error' ? <StreamAppLogo app={app} size={13} /> : <WaitingLogos />}<span className="obs-dot" /> {obs.status === 'error' ? (app === 'streamlabs' ? 'SLOBS: check token' : app === 'meld' ? 'Meld: needs attention' : 'OBS: check password') : 'Waiting for your streaming app…'}
       </button>
     )
   }
@@ -213,7 +229,7 @@ export function ObsStrip({ onFix }: { onFix?(): void }): JSX.Element | null {
         <span className={`app-logo app-${s.app}${live ? ' on-air' : ''}${launch ? ' launch' : ''}`} aria-hidden="true"><StreamAppLogo app={s.app} size={16} /></span>
         {live
           ? <span className={s.stream.reconnecting ? 'obs-state bad' : 'obs-state live'}><span className="obs-dot" /> {s.stream.reconnecting ? 'RECONNECTING' : 'LIVE'}{s.stream.durationKnown === false ? '' : ` ${clock(running(s.stream.durationMs, s.at, now))}`}</span>
-          : <span className="obs-state"><span className="obs-dot ready" /> {short} ready</span>}
+          : <span className="obs-state" aria-label={`${appName(s)} connected`}>{appName(s)} <span className="obs-ok" aria-hidden="true"><Icon.check /></span></span>}
         {recording && <span className="obs-state rec"><span className="obs-dot" /> REC</span>}
         {full && live && <span className="obs-item obs-rate">⇡ {kbps(s.stream.kbps)}</span>}
         {full && live && <span className={`obs-item obs-drop ${dropTone(s)}`}>{dropText(s)} dropped</span>}

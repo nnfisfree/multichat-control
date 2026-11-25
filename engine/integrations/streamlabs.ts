@@ -1,11 +1,15 @@
 import { Socket as WebSocket } from '../socket'
 import type { Platform, StreamEvent } from '../../shared/types'
 import { core } from '../core'
-import { api, backoff, HttpError, message } from '../net'
+import { backoff, message } from '../net'
 import { money, text, tier, toPlatform, type AlertContext, type AlertService } from './alerts'
 
-const API = 'https://streamlabs.com/api/v2.0'
-const SOCKET = 'wss://sockets.streamlabs.com/socket.io/'
+// Recent Events categories -> the event type the socket uses for the same thing. Power-ups, watch
+// streaks and redemptions come from Twitch itself, and tips come from the full donations list.
+const RECENT: Record<string, string> = {
+  subscriptions: 'subscription', follows: 'follow', bits: 'bits', raids: 'raid', hosts: 'host', merch: 'merch',
+  superChats: 'superchat', sponsors: 'subscription', subscribers: 'follow'
+}
 
 /** One item of a Streamlabs socket event -> StreamEvent. Unknown types are skipped. */
 function toEvent(type: string, m: any, platform: Platform, eventId: string): StreamEvent | null {
@@ -48,8 +52,10 @@ function toEvent(type: string, m: any, platform: Platform, eventId: string): Str
 
 
 /**
- * Live alerts come over Streamlabs' socket (socket.io, but we speak the protocol directly instead of
- * pulling in the client), and the REST API has past donations.
+ * Logged in through the Streamlabs website (core/src/sitelogin.rs), with the streamer's own
+ * account. A hidden page on streamlabs.com reads the last 30 days the way its dashboard does, and
+ * hands out the live socket's address. Live alerts come over that socket (socket.io, but we speak
+ * the protocol directly instead of pulling in the client).
  */
 export class Streamlabs implements AlertService {
   readonly source = 'streamlabs' as const
@@ -59,22 +65,17 @@ export class Streamlabs implements AlertService {
   private retry: ReturnType<typeof setTimeout> | null = null
   private ping: ReturnType<typeof setTimeout> | null = null
   private watchdog: ReturnType<typeof setTimeout> | null = null
+  // the streamer's linked Twitch/YouTube name, as Streamlabs knows it
+  private account = 'Streamlabs'
 
   constructor(private ctx: AlertContext) {}
-
-  /** Authenticated call. Rust adds and refreshes the token. */
-  private async api(url: string): Promise<any> {
-    const data = await api('streamlabs', 'GET', url, undefined, { Accept: 'application/json' })
-    // a rejected token can come back as an HTML page instead of an error
-    if (!data || typeof data !== 'object') throw new HttpError(401, "Streamlabs didn't accept the login.", data)
-    return data
-  }
 
   async login(): Promise<void> {
     this.stop()
     this.ctx.status({ status: 'authorizing' })
     try {
-      await core.login('streamlabs')
+      // their website in a window: the streamer signs in to their own account there
+      await core.siteLogin('streamlabs')
     } catch (err) {
       this.ctx.status({ status: 'needs-login', detail: message(err) })
       throw err
@@ -93,21 +94,24 @@ export class Streamlabs implements AlertService {
     const run = ++this.run
     const state = await core.authState('streamlabs')
     if (run !== this.run) return
-    if (!state.configured) return this.ctx.status({ status: 'needs-setup' })
     if (!state.loggedIn) return this.ctx.status({ status: 'needs-login' })
     this.ctx.status({ status: 'connecting' })
     try {
-      const socket = text((await this.api(API + '/socket/token'))?.socket_token)
+      const data = await core.streamlabsFetch()
       if (run !== this.run) return
-      if (!socket) throw new Error('Streamlabs gave no live connection.')
-      void this.loadDonations(run)
-      this.open(run, socket)
-    } catch (err) {
-      if (run !== this.run) return
-      if (err instanceof HttpError && (err.status === 401 || err.status === 403)) {
+      if (data?.error === 'login') {
         void core.logout('streamlabs')
         return this.ctx.status({ status: 'needs-login', detail: 'Your Streamlabs login expired. Please log in again.' })
       }
+      if (data?.error) throw new Error(`Streamlabs: ${data.error}`)
+      let socket: URL | null = null
+      try { socket = new URL(String(data?.socket)) } catch { /* checked below */ }
+      if (!socket?.searchParams.get('token')) throw new Error('Streamlabs gave no live connection.')
+      this.account = text(data?.account) ?? 'Streamlabs'
+      this.history(data)
+      this.open(run, socket.host, socket.searchParams.get('token')!)
+    } catch (err) {
+      if (run !== this.run) return
       this.ctx.status({ status: 'reconnecting', detail: message(err) })
       this.retry = setTimeout(() => void this.start(), 60000)
     }
@@ -122,20 +126,54 @@ export class Streamlabs implements AlertService {
     this.ws = null
   }
 
-  private async loadDonations(run: number): Promise<void> {
-    try {
-      const r = await this.api(API + '/donations?limit=100')
-      if (run !== this.run) return
-      for (const d of Array.isArray(r?.data) ? r.data : []) {
-        const ts = Number(d.created_at) * 1000
-        if (!ts) continue
+  /** The last 30 days: every tip, plus subs, Bits, follows, raids... from Recent Events. */
+  private history(data: any): void {
+    const at = (v: unknown): number => Date.parse(String(v ?? '')) || 0
+    for (const d of Array.isArray(data?.donations) ? data.donations : []) {
+      const ts = at(d?.created_at)
+      if (!ts || d?.refunded || d?.deleted_at) continue
+      this.ctx.event({
+        id: `sl-don-${d.id}`, platform: this.ctx.home(), ts, source: 'streamlabs', history: true, type: 'donation',
+        actor: text(d.donor_name) ?? text(d.name) ?? 'Someone', text: 'donated',
+        amount: money(d.amount, d.currency) ?? text(d.amount_string), message: text(d.message), big: Number(d.amount) >= 50, details: {}
+      })
+    }
+    // Streamlabs lists a gift bomb as its single gifted subs: one person's gifts within a couple of
+    // minutes on one platform become one "gifted N subs" entry, like the platforms show it
+    const bombs = new Map<string, { first: any; ts: number; count: number; platform: StreamEvent['platform'] }[]>()
+    for (const [category, type] of Object.entries(RECENT)) {
+      const list = data?.recent?.[category]
+      if (!Array.isArray(list)) continue
+      for (const m of [...list].sort((a, b) => at(a?.created_at) - at(b?.created_at))) {
+        const ts = at(m?.created_at)
+        // YouTube members and subscribers are listed under their own names
+        const platform = category === 'sponsors' || category === 'subscribers' ? 'youtube' : toPlatform(m?.platform) ?? this.ctx.home()
+        const gifter = category === 'subscriptions' ? (text(m?.gifter_display_name) ?? text(m?.gifter)) : undefined
+        if (gifter && ts) {
+          const key = `${platform}|${gifter.toLowerCase()}`
+          const runs = bombs.get(key) ?? []
+          const last = runs[runs.length - 1]
+          if (last && ts - last.ts < 2 * 60_000) { last.count++; last.ts = ts } else runs.push({ first: m, ts, count: 1, platform })
+          bombs.set(key, runs)
+          continue
+        }
+        const e = toEvent(type, m, platform, '')
+        if (!e || !ts) continue
+        this.ctx.event({ ...e, id: `sl-${category}-${m?.id ?? m?._id ?? ts}`, ts, history: true })
+      }
+    }
+    for (const runs of bombs.values()) {
+      for (const r of runs) {
+        const e = toEvent('subscription', r.first, r.platform, '')
+        if (!e) continue
+        const id = `sl-subscriptions-${r.first?.id ?? r.first?._id ?? r.ts}`
+        const when = at(r.first?.created_at)
+        if (r.count === 1) { this.ctx.event({ ...e, id, ts: when, history: true }); continue }
         this.ctx.event({
-          id: `sl-don-${d.donation_id}`, platform: this.ctx.home(), ts, source: 'streamlabs', history: true, type: 'donation',
-          actor: text(d.name) ?? 'Someone', text: 'donated', amount: money(d.amount, d.currency), message: text(d.message), details: {}
+          ...e, id: `${id}-x${r.count}`, ts: when, history: true, big: r.count >= 5, message: undefined,
+          text: `gifted ${r.count} subs to the community`, amount: tier(r.first?.sub_plan)
         })
       }
-    } catch (err) {
-      if (run === this.run) this.ctx.status({ status: 'connected', account: 'Streamlabs', detail: `Past donations couldn't load: ${message(err)}` })
     }
   }
 
@@ -151,8 +189,10 @@ export class Streamlabs implements AlertService {
     }
   }
 
-  private open(run: number, token: string): void {
-    const ws = new WebSocket(`${SOCKET}?token=${encodeURIComponent(token)}&EIO=3&transport=websocket`)
+  private open(run: number, host: string, token: string): void {
+    // only Streamlabs' own socket hosts
+    if (!/(^|\.)streamlabs\.com$/.test(host)) host = 'aws-io.streamlabs.com'
+    const ws = new WebSocket(`wss://${host}/socket.io/?token=${encodeURIComponent(token)}&EIO=3&transport=websocket`)
     this.ws = ws
     const arm = (ms: number): void => {
       if (this.watchdog) clearTimeout(this.watchdog)
@@ -177,7 +217,7 @@ export class Streamlabs implements AlertService {
         arm(85000)
       } else if (s.startsWith('40')) {
         this.attempt = 0
-        this.ctx.status({ status: 'connected', account: 'Streamlabs' })
+        this.ctx.status({ status: 'connected', account: this.account })
       } else if (s.startsWith('44')) {
         // socket token refused; reconnecting fetches a fresh one
         ws.close()
@@ -192,7 +232,7 @@ export class Streamlabs implements AlertService {
     ws.on('close', () => {
       if (run !== this.run || ws !== this.ws) return
       if (this.ping) clearInterval(this.ping)
-      this.ctx.status({ status: 'reconnecting', account: 'Streamlabs' })
+      this.ctx.status({ status: 'reconnecting', account: this.account })
       this.retry = setTimeout(() => void this.start(), backoff(this.attempt++))
     })
   }

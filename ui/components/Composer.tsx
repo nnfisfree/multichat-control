@@ -15,7 +15,20 @@ const GROUP_HEAD: Record<CommandGroup, { label: string; icon: ReactNode }> = {
   streamerbot: { label: 'Streamer.bot', icon: <StreamerbotLogo size={16} /> }
 }
 
-export type Pop = 'emotes' | 'actions' | 'rewards' | 'menu' | 'commands' | null
+// What was typed, for Up / Down recall. Lives in memory only, so it's gone on the next launch,
+// and outside the component so it survives the composer remounting.
+const HISTORY_MAX = 100
+const history: string[] = []
+function remember(body: string): void {
+  if (!body) return
+  // a repeat moves to the newest spot instead of piling up
+  const i = history.lastIndexOf(body)
+  if (i !== -1) history.splice(i, 1)
+  history.push(body)
+  if (history.length > HISTORY_MAX) history.shift()
+}
+
+export type Pop ='emotes' | 'actions' | 'rewards' | 'menu' | 'commands' | null
 
 interface Props {
   tab: Tab
@@ -39,6 +52,8 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
   const [results, setResults] = useState<SendResult[]>([])
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
+  // while stepping through history: which entry is shown, and the unsent text to come back to
+  const browse = useRef<{ at: number; draft: string } | null>(null)
   const statuses = useStore((s) => s.statuses)
   const targets = useStore((s) => s.settings!.sendTargets)
   const sb = useStore((s) => s.streamerbot)
@@ -62,6 +77,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     const end = el?.selectionEnd ?? text.length
     const pre = text.slice(0, at)
     const piece = `${pre && !pre.endsWith(' ') ? ' ' : ''}${insert.text} `
+    browse.current = null
     setText(pre + piece + text.slice(end))
     requestAnimationFrame(() => {
       el?.focus()
@@ -98,6 +114,8 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     // app commands run locally and never reach a platform
     const command = findCommand(body)
     if (command) {
+      remember(body)
+      browse.current = null
       setText('')
       setPop(null)
       setNote(await command.run().then((t) => ({ ok: true, text: t }), (e) => ({ ok: false, text: String(e?.message ?? e) })))
@@ -112,6 +130,8 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
         setNote({ ok: false, text: sb.status !== 'connected' ? 'Streamer.bot is not connected. Turn it on in Settings → Connections.' : name ? `No Streamer.bot action called "${name}".` : 'Type the name of a Streamer.bot action after /sb.' })
         return
       }
+      remember(body)
+      browse.current = null
       setBusy(true)
       const r = await window.nnf.streamerbot.run(found.action.id, found.input).catch((e) => ({ ok: false, message: String(e?.message ?? e) }))
       setBusy(false)
@@ -123,6 +143,8 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     }
     // Twitch commands go through Helix no matter which tab is open
     if (isTwitchCommand(body)) {
+      remember(body)
+      browse.current = null
       setBusy(true)
       const r = await window.nnf.twitchCommand(body).catch((e) => ({ ok: false, message: String(e?.message ?? e) }))
       setBusy(false)
@@ -138,6 +160,8 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
       return
     }
     if (!body || busy || !destinations.length) return
+    remember(body)
+    browse.current = null
     setBusy(true)
     const r = await window.nnf.send(destinations, body, replyTo ? { platform: replyTo.platform, messageId: replyTo.id } : undefined)
     setBusy(false)
@@ -150,14 +174,45 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
     input.current?.focus()
   }
 
-  const onKey = (e: KeyboardEvent): void => {
+  // Up / Down walk through what was sent this session. Only from the first line going up and the
+  // last line going down, so moving around inside a multi-line message still works.
+  // Returns false when the key should keep its normal caret behaviour.
+  const recall = (dir: -1 | 1, el: HTMLTextAreaElement): boolean => {
+    const value = el.value
+    const caret = el.selectionStart
+    if (caret !== el.selectionEnd) return false
+    if (dir < 0 ? value.slice(0, caret).includes('\n') : value.slice(caret).includes('\n')) return false
+    const cur = browse.current
+    let next: string
+    if (dir < 0) {
+      const at = (cur ? cur.at : history.length) - 1
+      if (at < 0) return false
+      browse.current = { at, draft: cur ? cur.draft : value }
+      next = history[at]
+    } else {
+      if (!cur) return false
+      const at = cur.at + 1
+      // past the newest entry: back to what was being typed before
+      if (at >= history.length) { browse.current = null; next = cur.draft }
+      else { browse.current = { at, draft: cur.draft }; next = history[at] }
+    }
+    setText(next)
+    requestAnimationFrame(() => el.setSelectionRange(next.length, next.length))
+    return true
+  }
+
+  const onKey = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       void send()
     } else if (e.key === 'Escape' && replyTo) clearReply()
+    else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey && !readOnly) {
+      if (recall(e.key === 'ArrowUp' ? -1 : 1, e.currentTarget)) e.preventDefault()
+    }
   }
 
   const pick = (c: CommandInfo): void => {
+    browse.current = null
     setText(`${c.insert ?? c.name} `)
     setPop(null)
     requestAnimationFrame(() => input.current?.focus())
@@ -215,7 +270,7 @@ export function Composer({ tab, pop, setPop, replyTo, clearReply, insert, onSett
         <button className={pop === 'menu' ? 'icon-btn on' : 'icon-btn'} aria-label="Menu" data-pop-toggle onClick={() => setPop(pop === 'menu' ? null : 'menu')}><Icon.menu /></button>
         <button className={pop === 'commands' ? 'icon-btn on' : 'icon-btn'} aria-label="Commands" title="Commands" data-pop-toggle onClick={() => setPop(pop === 'commands' ? null : 'commands')}><Icon.slash /></button>
         <button className={pop === 'rewards' ? 'icon-btn on' : 'icon-btn'} aria-label="Twitch rewards and Power-ups" title="Twitch Rewards & Power-ups" data-pop-toggle onClick={() => setPop(pop === 'rewards' ? null : 'rewards')}><Icon.gem /></button>
-        <textarea ref={input} rows={1} aria-label="Message" placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} />
+        <textarea ref={input} rows={1} aria-label="Message" placeholder={placeholder} value={text} onChange={(e) => { browse.current = null; setText(e.target.value) }} onKeyDown={onKey} />
         {tab === 'all' && !replyTo && (
           <div className="targets">
             {PLATFORMS.filter((p) => !READ_ONLY.includes(p)).map((p) => (

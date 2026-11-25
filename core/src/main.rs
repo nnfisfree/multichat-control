@@ -1,6 +1,7 @@
 // no console window in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod appversion;
 mod auth;
 mod kick;
 mod legacy;
@@ -9,6 +10,7 @@ mod paths;
 mod placement;
 mod raid;
 mod secrets;
+mod sitelogin;
 mod sockets;
 mod storage;
 mod tiktok;
@@ -115,6 +117,9 @@ fn main() {
             auth::obs_auth,
             auth::sb_auth,
             auth::slobs_auth,
+            appversion::stream_app_version,
+            sitelogin::site_login,
+            sitelogin::streamlabs_fetch,
             kick::kick_via_page,
             kick::kick_json_via_page,
             youtube::youtube_stream_start,

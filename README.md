@@ -35,7 +35,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/chat.webp" width="800" alt="Multichat Control in the Sweet skin: Twitch, YouTube, Kick and TikTok chat merged in one window, a Kick gift pop-up at the top, a spam warning with Delete and Ban, the Reply, Copy and more-actions buttons on a message, a TikTok Galaxy gift, a Super Chat and a resub card" />
+<img src="docs/media/chat.webp" width="800" alt="Multichat Control in the Catppuccin Mocha skin: Twitch, YouTube, Kick and TikTok chat merged in one window, a Super Chat pop-up at the top, a suspicious user flagged with Delete and Ban, a Kick resub, a YouTube membership, a Buy Me a Coffee tip and a TikTok gift" />
 
 <sub>Every image here is the built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -44,8 +44,8 @@ One small file, nothing else to install. It updates itself.
 <br />
 
 > [!TIP]
-> ### 🎉 New in 0.4.1
-> **Point at any message** for Reply, Copy and a menu of quick actions: pin, user card, timeout, ban, delete, **ignore** or **highlight** the person. **Settings → Chat** now has a page per platform with **username colours** (per role too) and a switch for every kind of event: in chat, in the Events tab, or both. Plus two new skins, **Solarized Dark** and **Tokyo Night Day**, and steadier Kick and Buy Me a Coffee connections. TikTok LIVE (beta) is read-only next to them. [How to set it up](#-get-started)
+> ### 🎉 New in 0.5.0
+> **StreamElements and Streamlabs are here:** log in to your own account right inside the app with one click, and your last 30 days of tips, subs, gifts, cheers and raids land in Events, with new alerts live. **Gift bombs are one line** with how many and which tier (**5x Tier 1**), **Up** in the message box brings back what you sent, the open tab gets a glowing frame, the stats bar names your streaming app and its version, the Connections menu is smaller, and there's a new skin, **Carbonfox**. New installs start on **Catppuccin Mocha**. [How to set it up](#-get-started)
 
 ## 🚀 Features
 
@@ -62,6 +62,7 @@ One small file, nothing else to install. It updates itself.
 - **Users in Chat** for every platform, grouped Broadcaster · Moderators · VIPs · Users, with live viewer counts
 - **Previews for videos and clips**: YouTube links and Twitch, Kick or YouTube clips get a card with picture, length, title and channel
 - **Point at a message** for Reply, Copy and a ⋮ menu: pin, user card, Twitch's viewer card, timeout, ban, delete
+- **Press Up** in the message box to bring back what you sent this session, Down to go forward again
 - **Ignore** someone to hide their messages, or **highlight** them in gold, on this PC only
 - **Username colours per platform**: their own, the platform colour, random per person or one colour, plus colours per role
 - Right-click for more: time out for 1 second (clears their messages), 1 or 10 minutes, or shout out
@@ -80,7 +81,8 @@ One small file, nothing else to install. It updates itself.
 - **You choose where each event shows**, per platform: in chat, in the Events tab, or both. The Events badge only counts what you picked
 - **Test alerts** from Streamer.bot, StreamElements and Streamlabs tagged **TEST** and never saved
 - **Twitch Power-ups as on Twitch**: RGB Message Effects, giant emotes, On-Screen Celebrations
-- Gift bombs, Hype Train banner, and animated icons on every badge
+- **Gift bombs in one line** with how many and which tier: **5x Tier 1**, **3x Sub** on Kick, **2x Membership** on YouTube
+- Hype Train banner, and animated icons on every badge
 
 </td>
 </tr>
@@ -111,7 +113,8 @@ One small file, nothing else to install. It updates itself.
 
 ### 💸 Alerts
 - <img src="assets/buymeacoffee.png" width="14" height="14" alt=""> **Buy Me a Coffee** tips, memberships and shop sales live in chat, with **how many months** each member has supported you
-- *(coming soon)* one-click **Streamlabs** and **StreamElements**
+- **StreamElements** and **Streamlabs**: log in to your own account inside the app in one click (the window closes by itself), and your **last 30 days** of tips, subs, gifts, cheers and raids plus **live alerts** show up in Events
+- Twitch, YouTube and Kick stay the first source: nothing is listed twice, and what you missed while the app was closed fills in quietly
 
 </td>
 </tr>
@@ -119,8 +122,9 @@ One small file, nothing else to install. It updates itself.
 <td valign="top">
 
 ### 🎨 Look and feel
-- **14 skins**, dark and light, with a big live preview: Sweet, POS Club, Myst Bourne, Dracula, Catppuccin, Tokyo Night, Kanagawa, Rosé Pine, Solarized Dark, OLED Black, Butterfly, Catppuccin Latte, Everforest Light, Tokyo Night Day
-- **A comet line** under the tabs while platforms connect, that turns red if one drops
+- **15 skins**, dark and light, with a big live preview: Catppuccin Mocha (the default), Sweet, POS Club, Myst Bourne, Dracula, Tokyo Night, Kanagawa, Rosé Pine, Solarized Dark, Carbonfox, OLED Black, Butterfly, Catppuccin Latte, Everforest Light, Tokyo Night Day
+- **A glowing frame** around the open tab, its colours circling round, gliding over when you switch
+- **A comet line** under the tabs in your platforms' colours, that turns red if one drops
 - **Wobbly window**, inspired by KDE Plasma: it bends like jelly while you drag it
 - **Remembers its size and place**, monitor included
 - Twitch, BetterTTV, 7TV, FrankerFaceZ and Kick emotes, overlay emotes, cheermotes and GIFs
@@ -130,7 +134,7 @@ One small file, nothing else to install. It updates itself.
 <td valign="top">
 
 ### 📈 Stream health
-- **Live stats under the message box** from **OBS Studio, Streamlabs Desktop or Meld Studio**: uptime, bitrate, dropped frames, FPS and CPU
+- **Live stats under the message box** from **OBS Studio, Streamlabs Desktop or Meld Studio**: uptime, bitrate, dropped frames, FPS and CPU, with the app's name and version once it connects
 - **Point at them for a 60-second live graph**, like a system monitor
 - Click for everything: encoder, resolutions, render and encoding lag
 - **Followers and subscribers** of every platform in the title bar
@@ -144,18 +148,18 @@ One small file, nothing else to install. It updates itself.
 
 <table>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/popups.webp" alt="Event pop-ups sliding in at the top of chat, one at a time, each in the colour of its platform: a TikTok gift in cyan, Twitch cheers in purple, Kick gifted subs in green" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
+<td align="center" colspan="2"><img src="docs/media/popups.webp" alt="Event pop-ups sliding in at the top of chat, one at a time, each in the colour of its platform: a YouTube Super Chat in red, a Twitch channel point redemption, a Kick gift bomb shown as 3x Sub in green and TikTok gifts in cyan" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
 </tr>
 <tr>
-<td align="center" width="50%"><img src="docs/media/quickactions.webp" alt="Pointing at a Twitch message shows Reply, Copy and a more-actions button; its menu offers Pin message, View user card, Timeout user (60s), Ban user, Ignore user, Highlight user and Delete message" /><br /><b>Reply, copy and quick actions on every message</b></td>
-<td align="center" width="50%"><img src="docs/media/platforms.webp" alt="Settings, Chat, Platforms on Twitch: Show Pronouns and Show GIFs, username colour with a preview of sample names, Role Colours, and the events table with a Chat and an Events tab switch for each kind of event" /><br /><b>Username colours and event switches per platform</b></td>
+<td align="center" width="50%"><img src="docs/media/quickactions.webp" alt="Pointing at a Twitch message shows Reply, Copy and a more-actions button; its menu offers Pin message, View user card, Timeout user, Ban user, Ignore user, Highlight user and Delete message, while chat is paused with new messages waiting" /><br /><b>Reply, copy and quick actions on every message</b></td>
+<td align="center" width="50%"><img src="docs/media/events.webp" alt="The Events list: a Kick gift bomb shown as 3x Sub, a Streamlabs tip with its logo, a YouTube gift shown as 2x Membership, a Buy Me a Coffee tip, a Super Chat, TikTok gifts and channel point redemptions, each with its platform and time" /><br /><b>Every platform's events, StreamElements and Streamlabs included</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/moderation.webp" alt="A message held by Twitch's AutoMod with Allow and Deny buttons, a suspicious user marked as a likely ban evader, and spam bots offering followers, each with Delete and Ban buttons" /><br /><b>Held messages, suspicious users and spam bots</b></td>
-<td align="center"><img src="docs/media/stats.webp" alt="The full stream stats: encoder, resolutions, CPU, memory, FPS, render and encoding lag, stream and recording status, with a live bitrate graph" /><br /><b>Stream stats with a live graph</b></td>
+<td align="center"><img src="docs/media/moderation.webp" alt="A message held by Twitch's AutoMod with Allow and Deny, a suspicious user flagged as a likely ban evader, and a spam bot offering followers, each with Delete and Ban; a Twitch gift bomb shown as 50x Tier 1" /><br /><b>Held messages, suspicious users and spam bots</b></td>
+<td align="center"><img src="docs/media/stats.webp" alt="The full stream stats: streaming app and version (OBS Studio 33.0.3), encoder, resolutions, CPU, memory, FPS, render and encoding lag, stream and recording status, with a live bitrate graph" /><br /><b>Stream stats with a live graph</b></td>
 </tr>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/skins.webp" width="70%" alt="Settings, Appearance in the new Solarized Dark skin: the current skin's preview above fourteen skin chips split into Dark and Light, including Solarized Dark and Tokyo Night Day" /><br /><b>Fourteen skins, one click each</b></td>
+<td align="center" colspan="2"><img src="docs/media/skins.webp" width="70%" alt="Settings, Appearance in the default Catppuccin Mocha skin: the current skin preview above fifteen skin chips split into Dark and Light, including the new Carbonfox" /><br /><b>Fifteen skins, one click each</b></td>
 </tr>
 </table>
 
@@ -240,11 +244,11 @@ From then on the app checks every minute whether you're live and joins your LIVE
 
 - **Stream stats:** pick your app in **Settings → Connections → Streaming app**. The app only reads from it and never changes anything.
   - **OBS Studio:** **Tools → WebSocket Server Settings**, tick **Enable WebSocket server**, and copy the **Server Password** from **Show Connect Info** into the app.
-  - **Streamlabs Desktop:** **Settings → Remote Control**, click the QR code, then **Show details**, and copy the **API Token** into the app. Streamlabs shares CPU, FPS, bitrate and dropped frames, but not encoder or render times.
+  - **Streamlabs Desktop:** **Settings → Mobile**, turn on **Allow third party connections** under **Third Party Connections**, and copy the **API Token** into the app. Streamlabs shares CPU, FPS, bitrate and dropped frames, but not encoder or render times.
   - **Meld Studio:** nothing to set up, just keep Meld open. Meld only shares whether you're live or recording.
 - **Streamer.bot:** in Streamer.bot, **Servers/Clients → WebSocket Server**, tick **Auto Start**, click **Start Server** (`127.0.0.1`, port `8080`, endpoint `/`). Then turn on **Settings → Connections → Streamer.bot**, with its password if you set one.
 - **Buy Me a Coffee alerts:** click **Connect**, log in on Buy Me a Coffee's developer page, click **Create new token**, keep it read only, and paste it into the app.
-- **Streamlabs and StreamElements** are marked **Soon..** until both services approve the app.
+- **StreamElements or Streamlabs:** pick yours in **Settings → Connections → Alerts & Donations** and click **Log in**. Sign in to your own account in the window that opens. It closes by itself once your last 30 days and live alerts work.
 
 </details>
 
@@ -453,15 +457,11 @@ npm run build
 
 The app lands in `core/target/release/Multichat-Control.exe`. Running it needs none of the tools above. `npm run build` keeps your PC's folder paths out of the exe; plain `tauri build` works too, but Rust then embeds your user folder in the exe's error messages.
 
-Twitch works as it is. YouTube, Kick, Streamlabs and StreamElements need a developer app, because their credentials aren't in this repository. Put them in your build (below); YouTube's can also be entered in the app (click the YouTube row in Settings → Connections).
+Twitch, StreamElements and Streamlabs work as they are (StreamElements and Streamlabs log in through their own website, no app needed). YouTube and Kick need a developer app, because their credentials aren't in this repository. Put them in your build (below); YouTube's can also be entered in the app (click the YouTube row in Settings → Connections).
 
 **YouTube:** in the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create a project, enable **YouTube Data API v3**, configure and **publish** the OAuth consent screen (logins from an app left in Testing expire after 7 days), and create an OAuth client ID of type **Desktop app**.
 
 **Kick:** at [kick.com/settings/developer](https://kick.com/settings/developer), enable developer mode, create an app, set the redirect URL to exactly `http://localhost:53682/callback`, and enable all scopes.
-
-**Streamlabs:** [register an app](https://streamlabs.com/dashboard#/oauth-clients/register) with the redirect URL `http://localhost:53683/streamlabs` and the scopes `donations.read` and `socket.token`. Until Streamlabs approves it, only the accounts you whitelist (up to 10) can log in.
-
-**StreamElements** gives out credentials on request. Use the redirect URL `http://localhost:53683/streamelements` and the scopes `channel:read activities:read tips:read`.
 
 **Including them in your build:** copy `.env.example` to `.env.local`, fill it in, and run `npm run build`. Never commit `.env.local`. Anything built into an exe can be extracted from it, so only use apps made for this purpose.
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type JSX, type ReactNode } from 'react'
 import { ALERT_SOURCE_LABEL, PLATFORMS, type AlertSource, PLATFORM_LABEL, type ConnectionState, type IntegrationState, STREAM_APPS } from '../../shared/types'
-import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamerbotLogo } from './Icons'
+import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamElementsLogo, StreamerbotLogo, StreamlabsLogo } from './Icons'
 import { useStore } from '../lib/store'
 import { login as startLogin } from '../lib/login'
 import { ALERTS_READY } from '../../shared/app-config'
@@ -59,7 +59,8 @@ function platformService(p: (typeof PLATFORMS)[number], st?: ConnectionState): S
 }
 
 function alertService(source: AlertSource, st?: IntegrationState): Service {
-  const icon = source === 'buymeacoffee' ? <BmcLogo size={16} /> : <span className={`src-tag ${source}`}>{source === 'streamelements' ? 'SE' : 'SL'}</span>
+  // each service's official logo
+  const icon = source === 'buymeacoffee' ? <BmcLogo size={16} /> : source === 'streamelements' ? <StreamElementsLogo size={16} /> : <StreamlabsLogo size={16} />
   const base = { key: source, label: ALERT_SOURCE_LABEL[source], icon, account: st?.status === 'connected' && source !== 'buymeacoffee' ? st.account : undefined }
   // BMC connects with a pasted token, and that UI lives in Settings
   const login = source === 'buymeacoffee'
@@ -146,7 +147,7 @@ const LINE_COLOR: Record<string, string> = {
 
 /**
  * Comet line along the bottom of the tab bar: one gradient blending the colours of the services in
- * use, each lit once it's up.
+ * use, each lit once it's up. The comet itself wears the colours of the connected chat platforms.
  * - connecting: a comet sweeps back and forth, and a burst of light goes off where a service connects
  * - all up: one flash, then a calm glow with a slow comet every ~10 s (or it fades away, if the
  *   user turned the animated line off)
@@ -184,12 +185,19 @@ export function ConnectBar(): JSX.Element | null {
   const stops = list.map((s) => `${s.state === 'up' ? s.color : s.state === 'bad' ? 'var(--bad)' : `color-mix(in srgb, ${s.color} 22%, transparent)`} ${s.at}%`)
   const gradient = `linear-gradient(90deg, ${stops.length === 1 ? `${stops[0]}, ${stops[0]}` : stops.join(', ')})`
   const comet = phase === 'progress' ? 'cl-comet' : animated && phase === 'calm' ? 'cl-comet idle' : null
+  // the comet's tail carries the colours of the connected chat platforms, fading into a white head
+  const lit = list.filter((s) => s.state === 'up' && (PLATFORMS as string[]).includes(s.key)).map((s) => s.color)
+  const tail = lit.map((c, i) => `color-mix(in srgb, ${c} ${lit.length === 1 ? 90 : 75 + (i * 15) / (lit.length - 1)}%, transparent) ${20 + (i + 1) * (62 / lit.length)}%`)
+  const cometStyle = lit.length ? {
+    '--comet': `linear-gradient(90deg, transparent, ${tail.join(', ')}, #fff 97%, transparent)`,
+    '--comet-glow': `color-mix(in srgb, ${lit[lit.length - 1]} 70%, transparent)`
+  } as CSSProperties : undefined
   return (
     <div className={`connect-line ${phase}${allUp ? ' good' : ''}${animated ? '' : ' still'}`} role="status" aria-live="polite" aria-label={label} title={label}>
       <span className="cl-base" style={{ background: gradient }} />
       <span className="cl-glow" style={{ background: gradient }} />
       {failing.map((s) => <span key={`alarm-${s.key}`} className="cl-alarm" style={{ left: `${s.from}%`, width: `${s.width}%` }} />)}
-      {comet && <span className={comet} />}
+      {comet && <span className={comet} style={cometStyle} />}
       {list.filter((s) => s.state === 'up').map((s) => (
         <span key={s.key} className="cl-burst" style={{ left: `${s.at}%`, '--seg': s.color } as CSSProperties} />
       ))}
@@ -209,13 +217,19 @@ function Row({ s }: { s: Service }): JSX.Element {
   }
   const expandable = s.actions.length > 0 || !!s.hint
   return (
-    <li className={`conn-row${open ? ' open' : ''}`}>
+    // a tile: logo and name centred on top, status and the actions arrow underneath
+    <li className={`conn-row ${s.tone}${open ? ' open' : ''}`}>
       <button className="conn-head" disabled={!expandable} aria-expanded={expandable ? open : undefined} onClick={() => setOpen(!open)}>
-        <i className={`conn-dot ${s.tone}`} aria-hidden="true" />
-        <span className="conn-icon">{s.icon}</span>
-        <span className="conn-name">{s.label}</span>
-        <span className="conn-state" title={s.text}>{s.account && (s.tone === 'good' || s.tone === 'wait') ? `${s.account} · ` : ''}{s.text}</span>
-        {expandable && <span className={open ? 'chev open' : 'chev'}><Icon.chevron /></span>}
+        <span className="conn-title">
+          <span className="conn-icon">{s.icon}</span>
+          <span className="conn-name">{s.label}</span>
+        </span>
+        <span className="conn-sub">
+          <i className={`conn-dot ${s.tone}`} aria-hidden="true" />
+          {/* connected: the green dot says it, so the account name gets the room */}
+          <span className="conn-state" title={`${s.account ? `${s.account} · ` : ''}${s.text}`}>{s.account && s.tone === 'good' ? s.account : s.account && s.tone === 'wait' ? `${s.account} · ${s.text}` : s.text}</span>
+          {expandable && <span className={open ? 'chev open' : 'chev'}><Icon.chevron /></span>}
+        </span>
       </button>
       {open && (
         <div className="conn-body">
