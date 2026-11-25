@@ -20,20 +20,11 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
-    icon: <Icon.events />,
-    title: 'Official logos on your events',
-    text: 'Cheers, subs and raids that come through StreamElements or Streamlabs now show that service’s own logo instead of an SE or SL tag.'
-  },
-  {
-    icon: <Icon.plug />,
-    title: 'A tidier Connections menu',
-    text: 'The Connections menu only lists what’s connected, connecting or needs your attention. Services still waiting, like OBS before it opens, sit behind a small “+2 waiting…” bar at the bottom.',
-    show: { cat: 'connections' }
-  },
-  {
-    icon: <Icon.all />,
-    title: 'A finer tab frame',
-    text: 'The glowing frame around the open tab is thinner.'
+    icon: <Icon.palette />,
+    title: 'Drop-down menus open again',
+    text: 'After a recent Windows WebView2 update, drop-down menus like Interface Font, Chat Font and When Closing the Window stopped opening. They work again, so you can pick any font installed on your PC.',
+    fixed: true,
+    show: { cat: 'appearance' }
   }
 ]
 

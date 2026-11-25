@@ -26,9 +26,11 @@ use tauri::{Emitter, WebviewUrl, WebviewWindowBuilder};
 /// WebView2 flags. Tauri's defaults are repeated here because passing any flags replaces them.
 /// Chat has to keep running while the window is hidden or in the tray, so nothing gets throttled,
 /// and helper processes are merged where possible to save memory.
+/// No --in-process-gpu: since WebView2 158 it leaves every <select> list blank (the popup window
+/// opens but never paints), so no dropdown in the app could be used.
 pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
     --disable-background-timer-throttling --disable-renderer-backgrounding \
-    --disable-backgrounding-occluded-windows --in-process-gpu --renderer-process-limit=1";
+    --disable-backgrounding-occluded-windows --renderer-process-limit=1";
 
 /// Dev builds can expose a debugging port (NNF_DEBUG_PORT). Never in release.
 pub fn browser_args() -> String {
