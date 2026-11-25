@@ -205,7 +205,7 @@ export function ConnectBar(): JSX.Element | null {
   )
 }
 
-function Row({ s }: { s: Service }): JSX.Element {
+function Row({ s, waiting }: { s: Service; waiting?: boolean }): JSX.Element {
   const [open, setOpen] = useState(false)
   const [err, setErr] = useState('')
   const run = (fn: () => Promise<unknown>) => (): void => {
@@ -218,7 +218,7 @@ function Row({ s }: { s: Service }): JSX.Element {
   const expandable = s.actions.length > 0 || !!s.hint
   return (
     // a tile: logo and name centred on top, status and the actions arrow underneath
-    <li className={`conn-row ${s.tone}${open ? ' open' : ''}`}>
+    <li className={`conn-row ${s.tone}${waiting ? ' waiting' : ''}${open ? ' open' : ''}`}>
       <button className="conn-head" disabled={!expandable} aria-expanded={expandable ? open : undefined} onClick={() => setOpen(!open)}>
         <span className="conn-title">
           <span className="conn-icon">{s.icon}</span>
@@ -242,6 +242,24 @@ function Row({ s }: { s: Service }): JSX.Element {
   )
 }
 
+/** "+2 waiting…" under the list: opens the services that are turned on but not up yet. */
+function Waiting({ list }: { list: Service[] }): JSX.Element {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className={`conn-waiting${open ? ' open' : ''}`}>
+      <button className="conn-wait-bar" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <i className="conn-dot waiting" aria-hidden="true" />
+        <span className="conn-wait-word">+{list.length} waiting…</span>
+        <span className={open ? 'chev open' : 'chev'}><Icon.chevron /></span>
+      </button>
+      {open && <ul>{list.map((s) => <Row key={s.key} s={s} waiting />)}</ul>}
+    </div>
+  )
+}
+
+/** Connected, on its way, or broken: not "off" or idly waiting for an app to open. */
+const visible = (s: Service): boolean => s.tone === 'good' || s.tone === 'wait' || s.tone === 'bad' || s.pending
+
 /** Status pill that opens the connections list, each with its own actions. */
 export function ConnectionsMenu(): JSX.Element {
   const list = useServices()
@@ -257,6 +275,11 @@ export function ConnectionsMenu(): JSX.Element {
     return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', esc) }
   }, [open])
   const tone: Tone = tracked === 0 ? 'off' : pending ? 'warn' : up === tracked ? 'good' : up === 0 ? 'bad' : 'warn'
+  // the menu lists what's connected, connecting or needs fixing; the rest is set up in Settings.
+  // The count above still covers everything turned on.
+  const shown = list.filter(visible)
+  // turned on but not up (e.g. waiting for OBS to open): tucked behind the "+N waiting" bar
+  const waiting = list.filter((s) => s.tracked && !visible(s))
   const word = tracked === 0 ? 'Not connected' : pending ? 'Connecting' : up === tracked ? 'Connected' : up === 0 ? 'Disconnected' : 'Partially connected'
   return (
     <div className="conn" ref={box}>
@@ -268,7 +291,15 @@ export function ConnectionsMenu(): JSX.Element {
       </button>
       {open && (
         <div className="popover conn-menu" role="menu" aria-label="Connections">
-          <ul>{list.map((s) => <Row key={s.key} s={s} />)}</ul>
+          {shown.length > 0
+            ? <ul>{shown.map((s) => <Row key={s.key} s={s} />)}</ul>
+            : (
+              <div className="conn-empty">
+                <p className="conn-hint">Nothing connected yet.</p>
+                <button className="btn sm" onClick={() => { setOpen(false); window.dispatchEvent(new CustomEvent('nnf:open-settings', { detail: { cat: 'connections' } })) }}>Open Connections settings</button>
+              </div>
+            )}
+          {waiting.length > 0 && <Waiting list={waiting} />}
         </div>
       )}
     </div>

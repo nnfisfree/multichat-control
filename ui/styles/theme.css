@@ -105,13 +105,13 @@ h2, h3 { margin: 0; }
 .tab-frame { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: 9px;
   background: color-mix(in srgb, var(--frame-tint) 13%, transparent); animation: frame-spin 4s linear infinite; }
 .tab-frame.moves { transition: transform 0.5s cubic-bezier(0.05, 0.9, 0.1, 1.05), width 0.5s cubic-bezier(0.05, 0.9, 0.1, 1.05), background 0.4s; }
-.tab-frame::before, .tab-frame::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 2px;
+.tab-frame::before, .tab-frame::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
   background: conic-gradient(from var(--frame-angle), var(--frame-stops));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 /* soft glow: a blurred copy of the border */
 .tab-frame::after { filter: blur(6px); opacity: 0.55; }
 /* a new pick pops in a little, like a window opening */
-.tab-frame-pop { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 2px color-mix(in srgb, var(--frame-tint) 60%, transparent); opacity: 0; animation: frame-pop 0.45s ease-out; }
+.tab-frame-pop { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 1px color-mix(in srgb, var(--frame-tint) 60%, transparent); opacity: 0; animation: frame-pop 0.45s ease-out; }
 @keyframes frame-spin { to { --frame-angle: 360deg; } }
 @keyframes frame-pop { 0% { opacity: 1; transform: scale(0.86); } 100% { opacity: 0; transform: scale(1.12); } }
 @media (prefers-reduced-motion: reduce) { .tab-frame, .tab-frame-pop { animation: none; } .tab-frame.moves { transition: none; } }
@@ -376,11 +376,8 @@ select option { background: var(--solid); }
 .event-head:hover { background: var(--surface); }
 .event-text { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 400; color: var(--muted); }
 .event-text b { color: var(--text); font-weight: 700; }
-.src-tag { flex: none; font: 700 10px/1 'Segoe UI', sans-serif; letter-spacing: 0.04em; padding: 3px 5px; border-radius: 4px; color: #fff; }
-.src-tag.streamelements { background: #2b6cff; }
-.src-tag.streamlabs { background: #31c3a2; color: #062a22; }
-/* BMC shows its logo instead of letters */
-.src-tag.buymeacoffee { padding: 0; background: none; line-height: 0; }
+/* the alert service's official logo */
+.src-tag { flex: none; line-height: 0; }
 .bmc-logo { border-radius: 4px; }
 .account.bmc .pf { display: inline-flex; }
 .account.tiktok .pf { display: inline-flex; }
@@ -922,6 +919,18 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
 .conn-body .row-btns { gap: 4px; flex-wrap: wrap; }
 .conn-body .btn { padding: 3px 10px; font-size: 11.5px; white-space: nowrap; }
 .conn-hint { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); }
+.conn-empty { padding: 8px; }
+/* "+2 waiting…": a slim bar under the connected services, opening the ones still waiting */
+.conn-dot.waiting, .conn-row.waiting .conn-dot { background: #facc15; }
+.conn-waiting { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); }
+.conn-menu > .conn-empty + .conn-waiting { margin-top: 0; }
+.conn-wait-bar { width: 100%; display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 7px; text-align: left;
+  font-size: 11.5px; font-weight: 600; color: var(--muted); background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+.conn-wait-bar:hover, .conn-waiting.open .conn-wait-bar { color: var(--text); background: var(--surface-2); }
+.conn-wait-bar .conn-dot { width: 6px; height: 6px; }
+.conn-wait-word { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conn-wait-bar .chev svg { width: 11px; height: 11px; }
+.conn-waiting ul { list-style: none; margin: 4px 0 0; padding: 0; }
 .conn-err { margin: 6px 0 0; font-size: 12.5px; color: var(--bad); }
 /* the tab bar squeezes as much as it has to (Tabs.tsx useFit): first the status button down to its
    count, then the platform tabs down to their logos */

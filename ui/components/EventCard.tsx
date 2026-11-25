@@ -27,12 +27,12 @@ export function EventBadge({ e, months }: { e: Pick<StreamEvent, 'type' | 'text'
   return <span className={icon ? `${cls} has-icon` : cls}>{icon}{label}</span>
 }
 
-/** SE / SL tag, or the BMC logo, on events that came through an alert service. */
+/** The SE, SL or BMC logo, on events that came through an alert service. */
 export function SourceTag({ e }: { e: Pick<StreamEvent, 'source' | 'type'> }): JSX.Element | null {
   // tips already show the service logo in their TIP badge
   if (!e.source || e.type === 'donation') return null
-  if (e.source === 'buymeacoffee') return <span className="src-tag buymeacoffee" title={`From ${ALERT_SOURCE_LABEL[e.source]}`}><BmcLogo size={16} /></span>
-  return <span className={`src-tag ${e.source}`} title={`From ${ALERT_SOURCE_LABEL[e.source]}`}>{e.source === 'streamelements' ? 'SE' : 'SL'}</span>
+  const logo = e.source === 'buymeacoffee' ? <BmcLogo size={16} /> : e.source === 'streamelements' ? <StreamElementsLogo size={16} /> : <StreamlabsLogo size={16} />
+  return <span className={`src-tag ${e.source}`} title={`From ${ALERT_SOURCE_LABEL[e.source]}`}>{logo}</span>
 }
 
 /** Test alerts disappear on restart. */

@@ -20,41 +20,20 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
+    icon: <Icon.events />,
+    title: 'Official logos on your events',
+    text: 'Cheers, subs and raids that come through StreamElements or Streamlabs now show that service’s own logo instead of an SE or SL tag.'
+  },
+  {
     icon: <Icon.plug />,
-    title: 'StreamElements and Streamlabs are here',
-    text: 'Log in to your own StreamElements or Streamlabs account right inside the app: one click, and the window closes by itself. Your last 30 days of tips, subs, gifts, cheers and raids show up in Events, and new alerts arrive live.',
+    title: 'A tidier Connections menu',
+    text: 'The Connections menu only lists what’s connected, connecting or needs your attention. Services still waiting, like OBS before it opens, sit behind a small “+2 waiting…” bar at the bottom.',
     show: { cat: 'connections' }
   },
   {
-    icon: <Icon.gem />,
-    title: 'Gift bombs in one line',
-    text: 'A gift bomb is one entry with how many and which tier, like "5x Tier 1", on every platform. The single gifts inside it no longer fill the list.'
-  },
-  {
-    icon: <Icon.send />,
-    title: 'Send it again with the Up arrow',
-    text: 'In the message box, press Up to bring back what you sent earlier and Down to go forward again. It works on every platform you can type in, for messages and commands, and starts fresh each time the app opens.'
-  },
-  {
     icon: <Icon.all />,
-    title: 'A glowing frame and a colourful comet',
-    text: 'The open tab sits in a rounded frame whose colours keep circling round it and glides over when you switch tabs. The comet on the connection line now carries your connected platforms’ colours.'
-  },
-  {
-    icon: <Icon.timer />,
-    title: 'Your streaming app, by name',
-    text: 'Until OBS, Streamlabs Desktop or Meld Studio connects, the bar under the message box takes turns showing their logos. Once one connects, it shows the app and its version with a green check, like "OBS Studio 33.0.3 ✓".'
-  },
-  {
-    icon: <Icon.users />,
-    title: 'A smaller Connections menu',
-    text: 'The Connections list is compact, with each service’s official logo and its status under its name, and it squeezes itself to fit however many platforms you connect.'
-  },
-  {
-    icon: <Icon.palette />,
-    title: 'New skin: Carbonfox',
-    text: 'A graphite-black dark skin from the Nightfox family, with soft purple and blue accents.',
-    show: { cat: 'appearance' }
+    title: 'A finer tab frame',
+    text: 'The glowing frame around the open tab is thinner.'
   }
 ]
 
