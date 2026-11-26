@@ -41,7 +41,7 @@ function parse(text: string | null): Line[] {
  * Writes chat to one small file per stream under user-data/chat-history and keeps the last five
  * streams. Deletions and bans get logged too, so removed messages don't come back when history
  * loads. Everything is read once at startup and kept in memory; new lines are appended every few
- * seconds. The file format matches the old Electron build so upgrading keeps people's history.
+ * seconds.
  */
 export class ChatLog {
   private streams = new Map<string, Line[]>()

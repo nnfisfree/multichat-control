@@ -1,6 +1,6 @@
 //! Official builds can bake in our own developer app credentials, so people can just log in to
 //! YouTube and Kick. Values come from the private `.env.local` in the project
-//! root (never committed), same as the Electron build did.
+//! root (never committed). See .env.example for the names.
 
 fn main() {
     let env_file = std::path::Path::new("../.env.local");
@@ -12,8 +12,7 @@ fn main() {
                 continue;
             }
             let Some((key, value)) = line.split_once('=') else { continue };
-            // the Electron build's MAIN_VITE_... names still work
-            let name = key.trim().trim_start_matches("MAIN_VITE_");
+            let name = key.trim();
             let value = value.trim().trim_matches('"');
             if !value.is_empty() && name.chars().all(|c| c.is_ascii_uppercase() || c == '_') {
                 println!("cargo:rustc-env=NNF_{name}={value}");

@@ -4,8 +4,8 @@ import { chatEventGroup } from '../shared/events'
 import { core } from './core'
 
 /**
- * Settings, in user-data/settings.json. Same shape the Electron build used, so upgrading keeps
- * everything. Read once on start (loadStore), then kept in memory and written back on every change.
+ * Settings, in user-data/settings.json. Read once on start (loadStore), then kept in memory and
+ * written back on every change.
  * Logins aren't in here, Rust keeps those.
  */
 export const store = {

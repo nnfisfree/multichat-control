@@ -4,7 +4,6 @@
 mod appversion;
 mod auth;
 mod kick;
-mod legacy;
 mod panel;
 mod paths;
 mod placement;
@@ -71,8 +70,6 @@ fn main() {
         }))
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            legacy::remove_electron_leftovers();
-            secrets::migrate_electron();
             updater::remove_old_exe();
             let main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Multichat Control")

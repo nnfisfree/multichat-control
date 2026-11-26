@@ -1,13 +1,9 @@
 //! Saved logins and keys in `secrets.json`, encrypted with DPAPI so only this Windows user on this
 //! machine can read them. They never leave Rust: the engine only learns whether a secret exists,
 //! never its value.
-//!
-//! Logins saved by the old Electron build (0.1.x) get picked up too, so nobody has to log in again.
-//! Electron used AES-256-GCM with a key that's itself DPAPI-protected and stored in
-//! `session/Local State`. Each one is converted to our format the first time it's read.
 
 use crate::paths::data_dir;
-use crate::storage::{log, write_atomic};
+use crate::storage::write_atomic;
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use serde::Serialize;
@@ -67,28 +63,6 @@ mod dpapi {
     pub fn unprotect(_: &[u8]) -> Option<Vec<u8>> { None }
 }
 
-/// Electron's AES key from `session/Local State`, unlocked with DPAPI.
-fn electron_key() -> Option<Vec<u8>> {
-    let text = std::fs::read_to_string(data_dir().join("session").join("Local State")).ok()?;
-    let json: serde_json::Value = serde_json::from_str(&text).ok()?;
-    let wrapped = B64.decode(json.get("os_crypt")?.get("encrypted_key")?.as_str()?).ok()?;
-    let blob = wrapped.strip_prefix(b"DPAPI")?;
-    dpapi::unprotect(blob)
-}
-
-/// One Electron-encrypted value: "v10", a 12-byte nonce, then the AES-GCM ciphertext.
-fn electron_decrypt(raw: &[u8], key: &[u8]) -> Option<String> {
-    use aes_gcm::aead::{Aead, KeyInit};
-    use aes_gcm::{Aes256Gcm, Nonce};
-    let body = raw.strip_prefix(b"v10")?;
-    if body.len() < 12 + 16 {
-        return None;
-    }
-    let (nonce, data) = body.split_at(12);
-    let cipher = Aes256Gcm::new_from_slice(key).ok()?;
-    String::from_utf8(cipher.decrypt(Nonce::from_slice(nonce), data).ok()?).ok()
-}
-
 fn encrypt(value: &str) -> Option<String> {
     dpapi::protect(value.as_bytes()).map(|b| format!("{PREFIX}{}", B64.encode(b)))
 }
@@ -96,33 +70,6 @@ fn encrypt(value: &str) -> Option<String> {
 fn decrypt(stored: &str) -> Option<String> {
     let b = B64.decode(stored.strip_prefix(PREFIX)?).ok()?;
     String::from_utf8(dpapi::unprotect(&b)?).ok()
-}
-
-/// One-time conversion of everything the Electron build saved. Runs on startup.
-pub fn migrate_electron() {
-    let _guard = LOCK.lock().unwrap();
-    let mut map = load();
-    let old: Vec<String> = map.iter().filter(|(_, v)| !v.starts_with(PREFIX)).map(|(k, _)| k.clone()).collect();
-    if old.is_empty() {
-        return;
-    }
-    let key = electron_key();
-    let mut moved = 0;
-    for k in old {
-        let plain = key.as_ref().and_then(|key| B64.decode(&map[&k]).ok().and_then(|raw| electron_decrypt(&raw, key)));
-        match plain.and_then(|p| encrypt(&p)) {
-            Some(v) => {
-                map.insert(k, v);
-                moved += 1;
-            }
-            // can't decrypt (different machine or Windows user): drop it, that login just asks again
-            None => {
-                map.remove(&k);
-            }
-        }
-    }
-    save(&map);
-    log("secrets", &format!("kept {moved} saved logins from the previous version"));
 }
 
 pub fn get(key: &str) -> Option<String> {

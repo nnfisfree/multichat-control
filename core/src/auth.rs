@@ -109,7 +109,7 @@ struct Tokens {
     access: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     refresh: Option<String>,
-    /// Streamlabs tokens never expire, and the old Electron build saved them without an expiry.
+    /// Streamlabs tokens never expire, so they're saved without an expiry.
     #[serde(default = "never")]
     expires_at: f64,
 }

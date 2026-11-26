@@ -4,8 +4,6 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 const DATA_FOLDER: &str = "user-data";
-/// Folder name used by the Electron app up to 0.1.2.
-const OLD_FOLDER: &str = "nnf-data";
 
 static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
@@ -37,11 +35,6 @@ pub fn data_dir() -> &'static PathBuf {
         let hidden = if cfg!(debug_assertions) { "." } else { "" };
         let base = exe_dir();
         let dir = base.join(format!("{hidden}{DATA_FOLDER}"));
-        let old = base.join(format!("{hidden}{OLD_FOLDER}"));
-        // people upgrading from Electron 0.1.2 or older keep everything, just renamed
-        if !dir.exists() && old.exists() {
-            let _ = std::fs::rename(&old, &dir);
-        }
         if writable(&dir) {
             return dir;
         }

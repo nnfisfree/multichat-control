@@ -1,9 +1,8 @@
 //! YouTube's live chat stream (gRPC), which a web page can't open on its own.
 //!
 //! The message types below are hand-written from proto/stream_list.proto (same field numbers), so
-//! no codegen step. Items go to the engine as JSON in the same shape grpc-js produced in the
-//! Electron build (camelCase names, enums as strings), so the existing normalizer reads them
-//! unchanged. The token is added here and never reaches the webview.
+//! no codegen step. Items go to the engine as JSON (camelCase names, enums as strings), the shape
+//! the engine's normalizer reads. The token is added here and never reaches the webview.
 
 use crate::auth;
 use serde_json::{json, Map, Value};

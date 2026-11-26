@@ -4,16 +4,12 @@
 //   npm run release -- --dry                     build and check only, publish nothing
 // Version comes from package.json. Everything gets checked before anything is uploaded.
 //
-// Two assets get published, and both are needed:
-//   Multichat-Control-<v>-portable.exe   the app, one file. New users and v0.2+ updates use this.
-//   Multichat-Control-<v>-x64.zip        for 0.1.x (Electron) installs from the zip: their updater
-//                                        only accepts a zip containing resources/app.asar, so a tiny
-//                                        placeholder goes in. The new app deletes it on start.
+// One asset gets published: Multichat-Control-<v>-portable.exe, the whole app in one file. New users
+// download it and the in-app updater installs it.
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { homedir, tmpdir, userInfo } from 'node:os'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { homedir, userInfo } from 'node:os'
 import { join, relative, resolve } from 'node:path'
-import { placeholderAsar } from './placeholder-asar.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const args = process.argv.slice(2)
@@ -26,7 +22,7 @@ const version = pkg.version
 const tag = `v${version}`
 const out = join(root, 'release')
 const EXE = 'Multichat-Control.exe'
-const files = { exe: `Multichat-Control-${version}-portable.exe`, zip: `Multichat-Control-${version}-x64.zip` }
+const files = { exe: `Multichat-Control-${version}-portable.exe` }
 
 const step = (text) => console.log(`\n▸ ${text}`)
 const stop = (text) => {
@@ -84,31 +80,12 @@ if (build.status !== 0 || !existsSync(built)) stop('Build failed.')
 
 mkdirSync(out, { recursive: true })
 copyFileSync(built, join(out, files.exe))
-const stage = mkdtempSync(join(tmpdir(), 'release-zip-'))
-try {
-  copyFileSync(built, join(stage, EXE))
-  mkdirSync(join(stage, 'resources'))
-  writeFileSync(join(stage, 'resources', 'app.asar'), placeholderAsar())
-  const zip = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', `Compress-Archive -Path '${stage}\\*' -DestinationPath '${join(out, files.zip)}' -Force`], { stdio: 'inherit' })
-  if (zip.status !== 0 || !existsSync(join(out, files.zip))) stop('Could not create the zip.')
-} finally {
-  rmSync(stage, { recursive: true, force: true })
-}
 
 // 3. Privacy audit of exactly what gets uploaded, plus the UI bundled into the exe.
 step('Checking the release for personal data')
-const work = mkdtempSync(join(tmpdir(), 'release-audit-'))
-try {
-  // Run from a PowerShell 7 window, Windows PowerShell inherits PS7's PSModulePath and loads its
-  // Archive module, which fails there without changing the exit code. Drop it, and fail on errors.
-  const { PSModulePath: _ps7, ...env } = process.env
-  const zipped = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', `$ErrorActionPreference = 'Stop'; Expand-Archive -LiteralPath '${join(out, files.zip)}' -DestinationPath '${work}' -Force`], { stdio: 'inherit', env })
-  if (zipped.status !== 0) stop('Could not open the zip to check it.')
+{
   const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]))
-  const shipped = walk(work).map((f) => relative(work, f).replace(/\\/g, '/')).sort()
-  const expected = [EXE, 'resources/app.asar']
-  if (JSON.stringify(shipped) !== JSON.stringify(expected)) stop(`The zip must hold exactly ${expected.join(' and ')}, but holds:\n  ${shipped.join('\n  ')}`)
-  const all = [join(out, files.exe), ...walk(work), ...walk(join(root, 'dist'))]
+  const all = [join(out, files.exe), ...walk(join(root, 'dist'))]
   const name = userInfo().username
   const needles = [homedir(), homedir().replace(/\\/g, '/'), root, root.replace(/\\/g, '/'), `\\Users\\${name}\\`, `/Users/${name}/`].map((s) => s.toLowerCase())
   for (const f of all) {
@@ -119,8 +96,6 @@ try {
   }
   const sizes = Object.values(files).map((f) => `${f} (${(statSync(join(out, f)).size / 1048576).toFixed(1)} MB)`)
   console.log(`  ${all.length} files checked: no local paths, logins or test files.\n  ${sizes.join('\n  ')}`)
-} finally {
-  rmSync(work, { recursive: true, force: true })
 }
 
 if (dry) {
@@ -135,7 +110,7 @@ const made = await api('POST', '/releases', {
   body: readFileSync(notesFile, 'utf8'), prerelease: pre, draft: false
 })
 if (made.status !== 201) stop(`GitHub refused the release: ${made.json?.message}`)
-for (const f of [files.exe, files.zip]) {
+for (const f of Object.values(files)) {
   const data = readFileSync(join(out, f))
   const r = await send(`https://uploads.github.com/repos/${repo}/releases/${made.json.id}/assets?name=${encodeURIComponent(f)}`, {
     method: 'POST', headers: { ...headers, 'Content-Type': 'application/octet-stream', 'Content-Length': String(data.length) }, body: data
