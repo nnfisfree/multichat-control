@@ -8,8 +8,8 @@ import { MarkedUsers, Row, Toggle } from './SettingsParts'
 
 type FoldId = 'messages' | 'platforms' | 'popups' | 'animations' | 'other' | 'people' | 'emotes'
 
-// which sections are open, kept while the app runs
-let openFolds: Set<FoldId> = new Set(['platforms'])
+// which sections are open, kept while the app runs (Chat opens on Platforms, Events on Pop-ups)
+let openFolds: Set<FoldId> = new Set(['platforms', 'popups'])
 // the platform last picked in Platforms
 let lastPlatform: PrefPlatform = 'twitch'
 
@@ -21,7 +21,29 @@ const TARGET_FOLD: Record<string, FoldId> = {
   'popup-settings': 'popups',
   'animation-settings': 'animations',
   'people-settings': 'people',
-  'emote-settings': 'emotes'
+  'emote-settings': 'emotes',
+  'other-events-settings': 'other'
+}
+
+/** Section ids that live on the Events & Alerts page, so older jumps to Chat still land there. */
+export const EVENT_TARGETS = ['popup-settings', 'animation-settings', 'other-events-settings']
+
+/** Open/closed state for the folds, opening the one a Settings jump points at. */
+function useFolds(target?: string): (id: FoldId) => { open: boolean; onToggle(): void } {
+  const [open, setOpen] = useState<Set<FoldId>>(() => {
+    const t = target && TARGET_FOLD[target]
+    if (t) openFolds = new Set([...openFolds, t])
+    return openFolds
+  })
+  return (id) => ({
+    open: open.has(id),
+    onToggle: () => {
+      const next = new Set(open)
+      if (!next.delete(id)) next.add(id)
+      openFolds = next
+      setOpen(next)
+    }
+  })
 }
 
 /** A section that folds away, so the Chat page stays short. */
@@ -166,6 +188,9 @@ function PlatformPanel({ s }: { s: Settings }): JSX.Element {
         ))}
       </div>
 
+      {/* side by side when the section is wide enough, stacked otherwise */}
+      <div className="pf-cols">
+      <div className="pf-col">
       {p === 'twitch' && <>
         <h4 className="pf-sub">Messages</h4>
         <Row title="Show Pronouns" desc="For chatters who set them at pronouns.alejo.io. Sends chatter names to that service.">
@@ -206,10 +231,14 @@ function PlatformPanel({ s }: { s: Settings }): JSX.Element {
           })}
         </div>
       )}
+      </div>
 
+      <div className="pf-col">
       <h4 className="pf-sub">Events</h4>
       <p className="hint pf-hint">Chat puts a card in chat. Events tab lists it there and lets it pop up.</p>
       <EventsTable platform={p} s={s} setEvent={setEvent} resetEvents={resetEvents} />
+      </div>
+      </div>
     </div>
   )
 }
@@ -224,20 +253,7 @@ const OTHER_ROWS: [ChatEventGroup, string, string][] = [
 /** Settings > Chat. Each part folds away; Platforms holds the per-platform options. */
 export function ChatSettings({ target }: { target?: string }): JSX.Element {
   const s = useStore((x) => x.settings!)
-  const [open, setOpen] = useState<Set<FoldId>>(() => {
-    const t = target && TARGET_FOLD[target]
-    if (t) openFolds = new Set([...openFolds, t])
-    return openFolds
-  })
-  const fold = (id: FoldId) => ({
-    open: open.has(id),
-    onToggle: () => {
-      const next = new Set(open)
-      if (!next.delete(id)) next.add(id)
-      openFolds = next
-      setOpen(next)
-    }
-  })
+  const fold = useFolds(target)
   const providers = s.emoteProviders
   const setProvider = (key: keyof typeof providers, on: boolean): void => void updateSettings({ emoteProviders: { ...providers, [key]: on } })
   const ignored = Object.keys(s.ignoredUsers ?? {}).length
@@ -264,33 +280,6 @@ export function ChatSettings({ target }: { target?: string }): JSX.Element {
         <PlatformPanel s={s} />
       </Fold>
 
-      <Fold id="popup-settings" title="Event Pop-ups" desc="New events rise above the message box, then slide away" {...fold('popups')}>
-        <Row title="Show Pop-ups" desc="Hover a pop-up to keep it open, click it to close it now. Events switched off for the Events tab never pop up.">
-          <Toggle label="Event pop-ups" on={s.eventPopups ?? true} onChange={(v) => void updateSettings({ eventPopups: v })} />
-        </Row>
-        {(s.eventPopups ?? true) && (
-          <Row title="Pop-up Duration" desc="How long each pop-up stays before it slides away">
-            <div className="slider">
-              <output>{s.eventPopupSeconds ?? 6} s</output>
-              <input type="range" aria-label="Pop-up duration in seconds" min="2" max="30" step="1" value={s.eventPopupSeconds ?? 6} onChange={(e) => void updateSettings({ eventPopupSeconds: Number(e.target.value) })} />
-            </div>
-          </Row>
-        )}
-      </Fold>
-
-      <Fold id="animation-settings" title="Animations" desc="Confetti for Twitch follows. Bits, gift boxes and banknotes raining over chat" {...fold('animations')}>
-        <p className="anim-note">They play one at a time, in the order the events came in. Drops fall behind the raid, Hype Train and pinned message bars, and nothing shows while Settings is open. Only for events the Events tab shows.</p>
-        {ANIMATION_KINDS.map((kind) => <AnimationRows key={kind} kind={kind} s={s} />)}
-      </Fold>
-
-      <Fold id="other-events-settings" title="Tips and TikTok" desc="Cards in chat for tips from alert services and for TikTok LIVE" {...fold('other')}>
-        {OTHER_ROWS.map(([key, title, desc]) => (
-          <Row key={key} title={title} desc={desc}>
-            <Toggle label={`${title} in chat`} on={s.chatEvents[key] ?? true} onChange={(v) => void updateSettings({ chatEvents: { ...s.chatEvents, [key]: v } })} />
-          </Row>
-        ))}
-      </Fold>
-
       <Fold id="people-settings" title="Ignored and Highlighted" desc={ignored || highlighted ? `${ignored} ignored · ${highlighted} highlighted. Set from the ⋮ on a message or by right-clicking a name.` : 'Set from the ⋮ on a message or by right-clicking a name. Only on this PC.'} {...fold('people')}>
         <h4 className="marked-head">Ignored, their messages are hidden from chat</h4>
         <MarkedUsers list={s.ignoredUsers ?? {}} empty="Nobody is ignored." remove={(k) => { const next = { ...s.ignoredUsers }; delete next[k]; void updateSettings({ ignoredUsers: next }) }} />
@@ -308,6 +297,42 @@ export function ChatSettings({ target }: { target?: string }): JSX.Element {
         <Row title="FrankerFaceZ" desc="Twitch channel and global emotes">
           <Toggle label="FrankerFaceZ" on={providers.ffz} onChange={(v) => setProvider('ffz', v)} />
         </Row>
+      </Fold>
+    </>
+  )
+}
+
+/** Settings > Events & Alerts: pop-ups, the animations over chat, and cards for tips and TikTok. */
+export function EventsSettings({ target }: { target?: string }): JSX.Element {
+  const s = useStore((x) => x.settings!)
+  const fold = useFolds(target)
+  return (
+    <>
+      <Fold id="popup-settings" title="Event Pop-ups" desc="New events rise above the message box, then slide away" {...fold('popups')}>
+        <Row title="Show Pop-ups" desc="Hover a pop-up to keep it open, click it to close it now. Events switched off for the Events tab never pop up.">
+          <Toggle label="Event pop-ups" on={s.eventPopups ?? true} onChange={(v) => void updateSettings({ eventPopups: v })} />
+        </Row>
+        {(s.eventPopups ?? true) && (
+          <Row title="Pop-up Duration" desc="How long each pop-up stays before it slides away">
+            <div className="slider">
+              <output>{s.eventPopupSeconds ?? 6} s</output>
+              <input type="range" aria-label="Pop-up duration in seconds" min="2" max="30" step="1" value={s.eventPopupSeconds ?? 6} onChange={(e) => void updateSettings({ eventPopupSeconds: Number(e.target.value) })} />
+            </div>
+          </Row>
+        )}
+      </Fold>
+
+      <Fold id="animation-settings" title="Animations" desc="Confetti for Twitch follows. Bits, gift boxes and banknotes raining over chat" {...fold('animations')}>
+        <p className="anim-note">They play one at a time, in the order the events came in. Drops fall behind the raid, Hype Train and pinned message bars, and nothing shows while Settings is open. Only for events the Events tab shows.</p>
+        <div className="anim-kinds">{ANIMATION_KINDS.map((kind) => <div key={kind} className="anim-kind"><AnimationRows kind={kind} s={s} /></div>)}</div>
+      </Fold>
+
+      <Fold id="other-events-settings" title="Tips and TikTok" desc="Cards in chat for tips from alert services and for TikTok LIVE" {...fold('other')}>
+        {OTHER_ROWS.map(([key, title, desc]) => (
+          <Row key={key} title={title} desc={desc}>
+            <Toggle label={`${title} in chat`} on={s.chatEvents[key] ?? true} onChange={(v) => void updateSettings({ chatEvents: { ...s.chatEvents, [key]: v } })} />
+          </Row>
+        ))}
       </Fold>
     </>
   )

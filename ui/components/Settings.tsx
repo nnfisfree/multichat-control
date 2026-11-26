@@ -4,7 +4,8 @@ import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamElementsLogo, Streame
 import { setSecrets, updateSettings, useStore } from '../lib/store'
 import { login as startLogin } from '../lib/login'
 import { About } from './About'
-import { ChatSettings } from './ChatSettings'
+import { ChatSettings, EVENT_TARGETS, EventsSettings } from './ChatSettings'
+import { changedCount, searchSettings, type Category } from './settingsSearch'
 import { Row, Toggle } from './SettingsParts'
 import { statusText } from './Tabs'
 import { SKINS, skinById } from '../styles/skins'
@@ -191,7 +192,7 @@ function TikTokAccount({ startOpen }: { startOpen?: boolean }): JSX.Element {
 }
 
 const ALERT_STATUS: Record<IntegrationState['status'], string> = {
-  off: 'Off', 'needs-setup': 'Coming soon', 'needs-login': 'Not logged in', authorizing: 'Finish logging in in your browser…',
+  off: 'Off', 'needs-setup': 'Not set up', 'needs-login': 'Not logged in', authorizing: 'Finish logging in in your browser…',
   connecting: 'Connecting…', connected: 'Connected', reconnecting: 'Reconnecting…', error: 'Needs attention'
 }
 
@@ -226,7 +227,7 @@ function AlertsPicker(): JSX.Element {
               {live && <button className="btn ghost sm" onClick={act(() => window.nnf.alerts.reconnect(choice))}>Reconnect</button>}
               {live
                 ? <button className="btn ghost sm" onClick={act(() => window.nnf.alerts.logout(choice))}>Log out</button>
-                : st?.status !== 'needs-setup' && <button className="btn sm" disabled={st?.status === 'authorizing'} onClick={act(() => window.nnf.alerts.login(choice))}>Log in</button>}
+                : <button className="btn sm" disabled={st?.status === 'authorizing'} onClick={act(() => window.nnf.alerts.login(choice))}>Log in</button>}
             </div>
           </>
         )}
@@ -234,7 +235,7 @@ function AlertsPicker(): JSX.Element {
       {choice !== 'none' && st?.status === 'authorizing' && (
         <div className="notice" role="status">Log in to your own {ALERT_SOURCE_LABEL[choice]} account in the window that just opened. It closes by itself once your last 30 days and live alerts work.</div>
       )}
-      {st?.detail && st.status !== 'needs-setup' && <div className={st.status === 'error' || st.status === 'needs-login' ? 'notice bad' : 'notice'} role="status">{st.detail}</div>}
+      {st?.detail && <div className={st.status === 'error' || st.status === 'needs-login' ? 'notice bad' : 'notice'} role="status">{st.detail}</div>}
       {err && err !== st?.detail && <div className="notice bad" role="alert">{err}</div>}
     </article>
   )
@@ -632,20 +633,25 @@ function SkinPicker(): JSX.Element {
   )
 }
 
-export type Category = 'connections' | 'appearance' | 'chat' | 'app' | 'about'
-/** Which page to open Settings on, and optionally a section id to scroll to. */
+export type { Category }
+/** Which page to open Settings on, and optionally a section id (or About chapter) to go to. */
 export interface SettingsFocus { cat: Category; target?: string }
 const CATEGORIES: { id: Category; label: string; desc: string; icon: () => JSX.Element }[] = [
   { id: 'connections', label: 'Connections', desc: 'Your platforms, alerts, OBS and Streamer.bot', icon: Icon.plug },
   { id: 'appearance', label: 'Appearance', desc: 'Skins, fonts and how the window looks', icon: Icon.palette },
-  { id: 'chat', label: 'Chat', desc: 'What chat shows: details, events and emotes', icon: Icon.all },
+  { id: 'chat', label: 'Chat', desc: 'What chat shows: messages, platforms, people and emotes', icon: Icon.all },
+  { id: 'events', label: 'Events & Alerts', desc: 'Pop-ups, celebrations over chat, and cards for tips and TikTok', icon: Icon.events },
   { id: 'app', label: 'App', desc: 'Closing, safety, clock and updates', icon: Icon.gear },
   { id: 'about', label: 'About', desc: 'The story behind the app', icon: Icon.info }
 ]
 
+/** Jumps from before Events & Alerts had its own page still say Chat; send them to the right page. */
+const fixFocus = (f: SettingsFocus): SettingsFocus =>
+  f.cat === 'chat' && f.target && EVENT_TARGETS.includes(f.target) ? { ...f, cat: 'events' } : f
+
 interface CardSize { w: number; h: number }
 const CARD_SIZE_KEY = 'nnf.settingsSize'
-// the sidebar layout needs about this much; a smaller window just gets the whole window
+// the tabs layout needs about this much; a smaller window just gets the whole window
 const CARD_MIN = { w: 640, h: 360 }
 
 /** The size the Settings card was last resized to on this PC, if any. */
@@ -673,7 +679,7 @@ const GRIPS: { cls: string; x: -1 | 0 | 1; y: -1 | 0 | 1 }[] = [
 
 /**
  * Edges and corners to resize the Settings card. It stays centred, so it grows on both sides at once
- * and the grabbed edge follows the mouse. Never smaller than the sidebar layout needs (or the whole
+ * and the grabbed edge follows the mouse. Never smaller than the layout needs (or the whole
  * window, if that's smaller), never bigger than the window. Double-click an edge to fill the window
  * again. The size is remembered on this PC.
  */
@@ -722,31 +728,84 @@ function CardGrips({ card, onSize }: { card: React.RefObject<HTMLDivElement | nu
   )
 }
 
+/** Search box in the Settings header. Esc clears it, Enter opens the first result. */
+function SearchBox({ query, setQuery, onEnter }: { query: string; setQuery(q: string): void; onEnter(): void }): JSX.Element {
+  return (
+    <label className="set-search">
+      <Icon.search />
+      <input type="search" placeholder="Search settings" aria-label="Search settings" spellCheck={false} value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && query) { e.stopPropagation(); setQuery('') }
+          if (e.key === 'Enter') onEnter()
+        }} />
+      {query && <button className="set-search-clear" aria-label="Clear search" title="Clear search" onClick={() => setQuery('')}><Icon.close /></button>}
+    </label>
+  )
+}
+
 export function Settings({ onClose, focus }: { onClose(): void; focus?: SettingsFocus }): JSX.Element {
   const boot = useStore((s) => s.boot!)
   const s = useStore((x) => x.settings!)
   const fonts = useFonts()
   const percent = Math.round(s.windowOpacity * 100)
   const [cat, setCat] = useState<Category>('connections')
+  // where the last jump (from outside, or a search result) pointed; n remounts the page so a fold it names opens
+  const [jump, setJump] = useState<SettingsFocus & { n: number }>({ cat: 'connections', n: 0 })
+  const [query, setQuery] = useState('')
+  const searching = !!query.trim()
+  const results = searchSettings(query)
   const scroll = useRef<HTMLDivElement>(null)
   const modal = useRef<HTMLDivElement>(null)
+  const tabs = useRef<HTMLElement>(null)
+  // on a narrow card the tab row scrolls sideways: keep the open page's tab in sight
+  // (set by hand: scrollIntoView here got cancelled by the page's own scroll reset)
+  useEffect(() => {
+    const nav = tabs.current
+    const tab = nav?.querySelector<HTMLElement>('[aria-selected="true"]')
+    if (!nav || !tab) return
+    const left = tab.offsetLeft
+    const right = left + tab.offsetWidth
+    if (left < nav.scrollLeft) nav.scrollLeft = left - 8
+    else if (right > nav.scrollLeft + nav.clientWidth - 24) nav.scrollLeft = right - nav.clientWidth + 32
+  }, [cat, searching])
   const followLight = (e: MouseEvent): void => {
     const box = modal.current!
     const r = box.getBoundingClientRect()
     box.style.setProperty('--light-x', `${e.clientX - r.left}px`)
     box.style.setProperty('--light-y', `${e.clientY - r.top}px`)
   }
+  const go = (f: SettingsFocus): void => {
+    const to = fixFocus(f)
+    setQuery('')
+    setCat(to.cat)
+    setJump((j) => ({ ...to, n: j.n + 1 }))
+    if (!to.target || to.cat === 'about') {
+      requestAnimationFrame(() => scroll.current?.scrollTo({ top: 0 }))
+      return
+    }
+    // twice: once for the page to render, once more for a fold it opens
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const el = document.getElementById(to.target!)
+      if (!el) return
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      // restart the glow if the same section is found twice in a row
+      el.classList.remove('set-flash')
+      void el.offsetWidth
+      el.classList.add('set-flash')
+    }))
+  }
   // opened for something specific (the OBS pill, What's New): jump straight to that page/section
   useEffect(() => {
-    if (!focus) return
-    setCat(focus.cat)
-    if (focus.target) requestAnimationFrame(() => document.getElementById(focus.target!)?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+    if (focus) go(focus)
   }, [focus?.cat, focus?.target])
   const pick = (c: Category): void => {
+    setQuery('')
     setCat(c)
     scroll.current?.scrollTo({ top: 0 })
   }
   const info = CATEGORIES.find((c) => c.id === cat)!
+  const target = jump.cat === cat ? jump.target : undefined
   // A click on the dimmed chat around the card closes Settings. Only when the press started there
   // too, so selecting text in Settings and letting go outside the card doesn't close it.
   const downOnBack = useRef(false)
@@ -762,135 +821,165 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
     >
       <div className="modal settings" role="dialog" aria-label="Settings" ref={modal} onMouseMove={followLight} style={sized}>
         <CardGrips card={modal} onSize={setSize} />
-        <aside className="set-side">
-          <button className="back-to-chat" onClick={onClose}><Icon.chevron /> Back to chat</button>
-          <div className="set-side-title">Settings</div>
-          <nav role="tablist" aria-label="Settings categories" aria-orientation="vertical">
-            {CATEGORIES.map((c) => (
-              <button key={c.id} role="tab" aria-selected={cat === c.id} className={cat === c.id ? 'on' : ''} onClick={() => pick(c.id)}>
-                <span className="set-nav-icon"><c.icon /></span>{c.label}
-              </button>
-            ))}
+        <header className="set-top">
+          <div className="set-top-row">
+            <h2 className="set-title">Settings</h2>
+            <SearchBox query={query} setQuery={setQuery} onEnter={() => { if (results[0]) go(results[0]) }} />
+            <button className="back-to-chat" onClick={onClose} title="Back to chat"><Icon.chevron /><span>Back to chat</span></button>
+          </div>
+          <nav className="set-tabs" ref={tabs} role="tablist" aria-label="Settings categories">
+            {CATEGORIES.map((c) => {
+              const n = changedCount(s, c.id)
+              const on = !searching && cat === c.id
+              return (
+                <button key={c.id} role="tab" aria-selected={on} className={on ? 'on' : ''} onClick={() => pick(c.id)}>
+                  <c.icon />{c.label}
+                  {n > 0 && <span className="set-tab-count" title={`${n} setting${n === 1 ? '' : 's'} changed from the defaults`}>{n}</span>}
+                </button>
+              )
+            })}
           </nav>
-          <div className="set-side-foot">Version {boot.version}</div>
-        </aside>
+        </header>
 
         <div className="set-main">
-          <button className="icon-btn set-close" aria-label="Close settings" title="Back to chat" onClick={onClose}><Icon.close /></button>
-          {cat === 'about' ? <About chapter={focus?.cat === 'about' ? focus.target : undefined} /> : (
+          {searching ? (
             <div className="modal-scroll" ref={scroll}>
-              <header className="cat-head">
-                <h2>{info.label}</h2>
-                <p>{info.desc}</p>
-              </header>
+              <div className="set-page results">
+                <p className="set-page-desc" role="status">{results.length ? `${results.length} result${results.length === 1 ? '' : 's'} for “${query.trim()}”` : `Nothing matches “${query.trim()}”. Try another word, like “font”, “tray” or “emotes”.`}</p>
+                {!!results.length && (
+                  <ul className="set-results">
+                    {results.map((r) => (
+                      <li key={`${r.cat}-${r.title}`}>
+                        <button onClick={() => go(r)}>
+                          <span className="set-result-text"><b>{r.title}</b><span>{r.desc}</span></span>
+                          <span className="set-result-where">{CATEGORIES.find((c) => c.id === r.cat)!.label}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ) : cat === 'about' ? <About key={jump.n} chapter={target} /> : (
+            <div className="modal-scroll" ref={scroll}>
+              <div className="set-page" key={jump.n}>
+                <p className="set-page-desc">{info.desc}</p>
 
-              {cat === 'connections' && <>
-                {!s.setupDismissed && <p className="lead">Welcome! Log in to each platform you stream on, here or on the welcome card in chat. Your chat is right behind this window: close it with Back to chat.</p>}
-                <Section title="Accounts" desc="Connect the platforms you stream on">
-                  {(['twitch', 'youtube', 'kick'] as LoginPlatform[]).map((p) => <Account key={p} platform={p} />)}
-                  <TikTokAccount startOpen={focus?.target === 'tiktok-settings'} />
-                </Section>
-                <Section title="Alerts & Donations" desc="Pick only the one you use. It adds donations, plus past subs, gifts and Bits the platforms don't share.">
-                  <AlertsPicker />
-                </Section>
-                <Section title="Buy Me a Coffee" desc="Tips, memberships (with every month they've supported you) and shop sales, live in chat and in Recent events. Works next to the service above.">
-                  <BmcRow />
-                </Section>
-                <Section title="Streaming app" desc="See your stream's health at a glance, from OBS Studio, Streamlabs Desktop or Meld Studio">
-                  <ObsSettings />
-                </Section>
-                <Section title="Streamer.bot" desc="Run your Streamer.bot actions from the message box">
-                  <StreamerbotSettings />
-                </Section>
-              </>}
+                {cat === 'connections' && <>
+                  {!s.setupDismissed && <p className="lead">Welcome! Log in to each platform you stream on, here or on the welcome card in chat. Your chat is right behind this window: close it with Back to chat.</p>}
+                  <Section id="accounts-settings" title="Accounts" desc="Connect the platforms you stream on">
+                    {(['twitch', 'youtube', 'kick'] as LoginPlatform[]).map((p) => <Account key={p} platform={p} />)}
+                    <TikTokAccount startOpen={target === 'tiktok-settings'} />
+                  </Section>
+                  <Section id="alerts-settings" title="Alerts & Donations" desc="Pick only the one you use. It adds donations, plus past subs, gifts and Bits the platforms don't share.">
+                    <AlertsPicker />
+                  </Section>
+                  <Section title="Buy Me a Coffee" desc="Tips, memberships (with every month they've supported you) and shop sales, live in chat and in Recent events. Works next to the service above.">
+                    <BmcRow />
+                  </Section>
+                  <Section title="Streaming app" desc="See your stream's health at a glance, from OBS Studio, Streamlabs Desktop or Meld Studio">
+                    <ObsSettings />
+                  </Section>
+                  <Section title="Streamer.bot" desc="Run your Streamer.bot actions from the message box">
+                    <StreamerbotSettings />
+                  </Section>
+                </>}
 
-              {cat === 'appearance' && <>
-                <Section id="skins-settings" title="Skins" desc="Change the colours of the whole app. The glowing window edge stays the same in every skin.">
-                  <SkinPicker />
-                </Section>
-                <Section id="window-settings" title="Window" desc="How the window looks on your screen">
-                  <Row title="Window Opacity" desc="See through the whole window. Ctrl+Shift+O returns to 100%.">
-                    <div className="slider">
-                      <output>{percent}%</output>
-                      <input type="range" aria-label="Window opacity" min="0" max="100" step="1" value={percent} onChange={(e) => void updateSettings({ windowOpacity: Number(e.target.value) / 100 })} />
-                    </div>
-                  </Row>
-                  <Row title="Wobbly Window" desc="The window bends like jelly while you drag it by the title bar, and settles when you let go. Inspired by the Wobbly Windows effect built into KDE Plasma, the Linux desktop.">
-                    <Toggle label="Wobbly window" on={s.windowWobble} onChange={(v) => void updateSettings({ windowWobble: v })} />
-                  </Row>
-                  <Row title="Animated Connection Line" desc="Once everything is connected, the line under the tabs keeps a soft glow in your platforms' colours, with a slow comet now and then. Off: it fades away after connecting. A platform that drops always turns its part of the line red.">
-                    <Toggle label="Animated connection line" on={s.connectionLine} onChange={(v) => void updateSettings({ connectionLine: v })} />
-                  </Row>
-                  {s.windowWobble && (
-                    <Row title="Wobble Intensity" desc="Low is a light sway, high is soft jelly">
+                {cat === 'appearance' && <>
+                  <Section id="skins-settings" title="Skins" desc="Change the colours of the whole app. The glowing window edge stays the same in every skin.">
+                    <SkinPicker />
+                    {skinById(s.theme).effects && (
+                      <Row title="Animate Skin" desc="Snow falls and the lights twinkle. They pause while the app is minimized or not in focus. Off keeps the decorations still.">
+                        <Toggle label="Animate skin" on={s.skinEffects ?? true} onChange={(v) => void updateSettings({ skinEffects: v })} />
+                      </Row>
+                    )}
+                  </Section>
+                  <Section id="window-settings" title="Window" desc="How the window looks on your screen">
+                    <Row title="Window Opacity" desc="See through the whole window. Ctrl+Shift+O returns to 100%.">
                       <div className="slider">
-                        <output>{s.wobbleIntensity}%</output>
-                        <input type="range" aria-label="Wobble intensity" min="0" max="100" step="1" value={s.wobbleIntensity} onChange={(e) => void updateSettings({ wobbleIntensity: Number(e.target.value) })} />
+                        <output>{percent}%</output>
+                        <input type="range" aria-label="Window opacity" min="0" max="100" step="1" value={percent} onChange={(e) => void updateSettings({ windowOpacity: Number(e.target.value) / 100 })} />
                       </div>
                     </Row>
-                  )}
-                </Section>
-                <Section title="Text" desc="Fonts and sizes">
-                  <Row title="Interface Font" desc="Used for menus, tabs and settings">
-                    <select aria-label="Interface font" value={s.uiFont} onChange={(e) => void updateSettings({ uiFont: e.target.value })}>
-                      {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                  </Row>
-                  <Row title="Chat Font" desc="Used for chat messages and events">
-                    <select aria-label="Chat font" value={s.chatFont} onChange={(e) => void updateSettings({ chatFont: e.target.value })}>
-                      {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                  </Row>
-                  <Row title="Chat Text Size" desc="Scale chat messages up or down">
-                    <div className="slider">
-                      <output>{Math.round(s.fontScale * 100)}%</output>
-                      <input type="range" aria-label="Chat text size" min="0.8" max="1.6" step="0.05" value={s.fontScale} onChange={(e) => void updateSettings({ fontScale: Number(e.target.value) })} />
-                    </div>
-                  </Row>
-                </Section>
-              </>}
+                    <Row title="Wobbly Window" desc="The window bends like jelly while you drag it by the title bar, and settles when you let go. Inspired by the Wobbly Windows effect built into KDE Plasma, the Linux desktop.">
+                      <Toggle label="Wobbly window" on={s.windowWobble} onChange={(v) => void updateSettings({ windowWobble: v })} />
+                    </Row>
+                    <Row title="Animated Connection Line" desc="Once everything is connected, the line under the tabs keeps a soft glow in your platforms' colours, with a slow comet now and then. Off: it fades away after connecting. A platform that drops always turns its part of the line red.">
+                      <Toggle label="Animated connection line" on={s.connectionLine} onChange={(v) => void updateSettings({ connectionLine: v })} />
+                    </Row>
+                    {s.windowWobble && (
+                      <Row title="Wobble Intensity" desc="Low is a light sway, high is soft jelly">
+                        <div className="slider">
+                          <output>{s.wobbleIntensity}%</output>
+                          <input type="range" aria-label="Wobble intensity" min="0" max="100" step="1" value={s.wobbleIntensity} onChange={(e) => void updateSettings({ wobbleIntensity: Number(e.target.value) })} />
+                        </div>
+                      </Row>
+                    )}
+                  </Section>
+                  <Section id="text-settings" title="Text" desc="Fonts and sizes">
+                    <Row title="Interface Font" desc="Used for menus, tabs and settings">
+                      <select aria-label="Interface font" value={s.uiFont} onChange={(e) => void updateSettings({ uiFont: e.target.value })}>
+                        {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    </Row>
+                    <Row title="Chat Font" desc="Used for chat messages and events">
+                      <select aria-label="Chat font" value={s.chatFont} onChange={(e) => void updateSettings({ chatFont: e.target.value })}>
+                        {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    </Row>
+                    <Row title="Chat Text Size" desc="Scale chat messages up or down">
+                      <div className="slider">
+                        <output>{Math.round(s.fontScale * 100)}%</output>
+                        <input type="range" aria-label="Chat text size" min="0.8" max="1.6" step="0.05" value={s.fontScale} onChange={(e) => void updateSettings({ fontScale: Number(e.target.value) })} />
+                      </div>
+                    </Row>
+                  </Section>
+                </>}
 
-              {cat === 'chat' && <ChatSettings target={focus?.cat === 'chat' ? focus.target : undefined} />}
+                {cat === 'chat' && <ChatSettings target={target} />}
 
-              {cat === 'app' && <>
-                <Section title="Closing" desc="Choose what happens when you close the app">
-                  <Row title="When Closing the Window" desc="In the tray, chat stays connected in the background. Open it from the tray icon.">
-                    <select aria-label="When closing the window" value={s.closeAction} onChange={(e) => void updateSettings({ closeAction: e.target.value as CloseAction })}>
-                      <option value="exit">Exit completely</option>
-                      <option value="ask">Ask every time</option>
-                      <option value="tray">Minimize to tray</option>
-                    </select>
-                  </Row>
-                </Section>
-                <Section title="Welcome" desc="The card in chat that helps you log in to your platforms">
-                  <Row title="Show the Welcome Card" desc="Brings back the welcome card at the top of chat, with a Log in button for each platform">
-                    <button className="btn sm" disabled={!s.setupDismissed} onClick={() => { void updateSettings({ setupDismissed: false }); onClose() }}>{s.setupDismissed ? 'Show again' : 'Showing'}</button>
-                  </Row>
-                </Section>
-                <Section title="Safety" desc="Protect against accidental clicks">
-                  <Row title="Confirm Big Actions" desc="Ask before running an ad, raid or chat clear">
-                    <Toggle label="Confirm big actions" on={s.confirmActions} onChange={(v) => void updateSettings({ confirmActions: v })} />
-                  </Row>
-                </Section>
-                <Section id="stats-settings" title="Clock & Stats" desc="The clock under the message box, the stats in the title bar">
-                  <Row title="Show the Clock" desc="hh:mm:ss AM/PM, in the skin's colours. Point at it to see the date.">
-                    <Toggle label="Show the clock" on={s.showClock} onChange={(v) => void updateSettings({ showClock: v })} />
-                  </Row>
-                  <Row title="Show Channel Stats" desc="Followers and subscribers of each connected platform, in the middle of the title bar. On YouTube, its subscribers; YouTube doesn't share member counts.">
-                    <Toggle label="Show channel stats" on={s.showStats ?? true} onChange={(v) => void updateSettings({ showStats: v })} />
-                  </Row>
-                </Section>
-                <Section title="Updates" desc="New versions come from the project's GitHub page">
-                  <UpdatesRow />
-                  <Row title="Check Automatically" desc="Look for a new version at start and every few hours. Only GitHub is contacted.">
-                    <Toggle label="Check for updates automatically" on={s.autoUpdate} onChange={(v) => void updateSettings({ autoUpdate: v })} />
-                  </Row>
-                  <Row title="Include Test Versions" desc="Also offer pre-releases, which may be less stable">
-                    <Toggle label="Include test versions" on={s.updatePrereleases} onChange={(v) => void updateSettings({ updatePrereleases: v })} />
-                  </Row>
-                </Section>
-                <p className="fine">Data is stored in {boot.dataDir}. Keep that folder private: it holds your logins.</p>
-              </>}
+                {cat === 'events' && <EventsSettings target={target} />}
+
+                {cat === 'app' && <>
+                  <Section id="closing-settings" title="Closing" desc="Choose what happens when you close the app">
+                    <Row title="When Closing the Window" desc="In the tray, chat stays connected in the background. Open it from the tray icon.">
+                      <select aria-label="When closing the window" value={s.closeAction} onChange={(e) => void updateSettings({ closeAction: e.target.value as CloseAction })}>
+                        <option value="exit">Exit completely</option>
+                        <option value="ask">Ask every time</option>
+                        <option value="tray">Minimize to tray</option>
+                      </select>
+                    </Row>
+                  </Section>
+                  <Section id="welcome-settings" title="Welcome" desc="The card in chat that helps you log in to your platforms">
+                    <Row title="Show the Welcome Card" desc="Brings back the welcome card at the top of chat, with a Log in button for each platform">
+                      <button className="btn sm" disabled={!s.setupDismissed} onClick={() => { void updateSettings({ setupDismissed: false }); onClose() }}>{s.setupDismissed ? 'Show again' : 'Showing'}</button>
+                    </Row>
+                  </Section>
+                  <Section id="safety-settings" title="Safety" desc="Protect against accidental clicks">
+                    <Row title="Confirm Big Actions" desc="Ask before running an ad, raid or chat clear">
+                      <Toggle label="Confirm big actions" on={s.confirmActions} onChange={(v) => void updateSettings({ confirmActions: v })} />
+                    </Row>
+                  </Section>
+                  <Section id="stats-settings" title="Clock & Stats" desc="The clock under the message box, the stats in the title bar">
+                    <Row title="Show the Clock" desc="hh:mm:ss AM/PM, in the skin's colours. Point at it to see the date.">
+                      <Toggle label="Show the clock" on={s.showClock} onChange={(v) => void updateSettings({ showClock: v })} />
+                    </Row>
+                    <Row title="Show Channel Stats" desc="Followers and subscribers of each connected platform, in the middle of the title bar. On YouTube, its subscribers; YouTube doesn't share member counts.">
+                      <Toggle label="Show channel stats" on={s.showStats ?? true} onChange={(v) => void updateSettings({ showStats: v })} />
+                    </Row>
+                  </Section>
+                  <Section id="updates-settings" title="Updates" desc="New versions come from the project's GitHub page">
+                    <UpdatesRow />
+                    <Row title="Check Automatically" desc="Look for a new version at start and every few hours. Only GitHub is contacted.">
+                      <Toggle label="Check for updates automatically" on={s.autoUpdate} onChange={(v) => void updateSettings({ autoUpdate: v })} />
+                    </Row>
+                    <Row title="Include Test Versions" desc="Also offer pre-releases, which may be less stable">
+                      <Toggle label="Include test versions" on={s.updatePrereleases} onChange={(v) => void updateSettings({ updatePrereleases: v })} />
+                    </Row>
+                  </Section>
+                  <p className="fine">Data is stored in {boot.dataDir}. Keep that folder private: it holds your logins.</p>
+                </>}
+              </div>
             </div>
           )}
         </div>

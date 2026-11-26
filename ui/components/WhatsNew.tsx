@@ -21,19 +21,20 @@ interface NewThing {
 const NEW_THINGS: NewThing[] = [
   {
     icon: <Icon.star />,
-    title: 'Celebrations over chat',
-    text: 'A Twitch follow fires confetti from both bottom corners of the window. Cheers rain Bits, gift bombs rain gift boxes and StreamElements or Streamlabs tips rain banknotes down over chat, one after the other in the order they came in. Turn each one on or off, pick how long it lasts and the smallest cheer, gift bomb or tip that sets it off.',
-    show: { cat: 'chat', target: 'animation-settings' }
+    title: 'Frosty Christmas skin',
+    text: 'A new light skin for the season: snowflakes falling behind your chat, a string of twinkling Christmas lights along the top, a Santa hat on the app icon, frost in the corners and snow piling up above the message box. Now and then Santa\'s sleigh flies across the top. Turn the animation off any time with Animate Skin.',
+    show: { cat: 'appearance', target: 'skins-settings' }
   },
   {
     icon: <Icon.gear />,
-    title: 'Settings over your chat',
-    text: 'Settings opens as a card on top of your chat, which stays visible around it. Go back with Back to chat or by clicking the chat. Drag its edges or corners to resize it; it remembers the size. New installs start on the chat with a welcome card to log in to your platforms.'
+    title: 'A new Settings',
+    text: 'The pages are tabs along the top, with a search box that finds any setting and takes you straight to it. Sections sit side by side when the window is wide, so there is far less scrolling. Pop-ups and celebrations now have their own Events & Alerts page, and each tab shows how many of its settings you changed.',
+    show: { cat: 'events' }
   },
   {
-    icon: <Icon.all />,
-    title: 'Easier window resizing',
-    text: 'The window edges and corners are much easier to grab, so you no longer have to aim for one exact pixel to resize the app.',
+    icon: <Icon.timer />,
+    title: 'Live time with Enhanced Broadcasting',
+    text: 'With Twitch Enhanced Broadcasting (several qualities sent at once) the LIVE time under the message box ran several times too fast. It now counts the real time you have been live.',
     fixed: true
   }
 ]

@@ -374,6 +374,8 @@ export interface Settings {
   windowWobble: boolean
   /** The connection line under the tabs keeps a calm glow and a slow comet once everything is up. */
   connectionLine: boolean
+  /** Skins with effects (Frosty Christmas): snow and twinkling lights move. Off keeps them still. */
+  skinEffects: boolean
   /** 0-100 */
   wobbleIntensity: number
   uiFont: string
@@ -465,6 +467,7 @@ export const DEFAULT_SETTINGS: Settings = {
   windowOpacity: 1,
   windowWobble: false,
   connectionLine: true,
+  skinEffects: true,
   wobbleIntensity: 50,
   uiFont: 'Segoe UI',
   chatFont: 'Segoe UI',

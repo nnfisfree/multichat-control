@@ -26,6 +26,7 @@ import { Tabs, type Tab } from './components/Tabs'
 import { TitleBar } from './components/TitleBar'
 import { UpdateBanner } from './components/UpdateBanner'
 import { applySkin } from './styles/skins'
+import { SkinEffects } from './components/SkinEffects'
 import { setEventsOpen, updateSettings, useFiltered, useInit, useStore } from './lib/store'
 
 export function App(): JSX.Element {
@@ -143,6 +144,8 @@ function Main(): JSX.Element {
 
   return (
     <div className="app" style={{ '--chat-scale': settings.fontScale, '--ui-font': `"${settings.uiFont}"`, '--chat-font': `"${settings.chatFont}"` } as React.CSSProperties}>
+      {/* snow behind everything, lights and the hat over the title bar (only for skins with effects) */}
+      <SkinEffects />
       <TitleBar demo={boot.demo} />
       <UpdateBanner />
       <div className="shell">

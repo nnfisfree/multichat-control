@@ -66,7 +66,37 @@ export class ObsLink {
   }
 
   // last byte counts, for working out the bitrate
-  private last: { bytes: number; at: number; recBytes: number } | null = null
+  private last: { bytes: number; at: number; recBytes: number; streaming: boolean } | null = null
+
+  // OBS's outputDuration is (video frames sent × frame time). With Enhanced Broadcasting every rendition
+  // sends its own frames, so it runs 2-5× too fast (a user saw 7:09 while live for 1:47). We keep our own
+  // wall clock instead: exact when we see the stream start, otherwise calibrated from how fast OBS's
+  // number grows over a few seconds. null start = still calibrating.
+  private liveClock: { start: number | null; firstAt: number; firstMs: number } | null = null
+
+  private streamUptime(active: boolean, durationMs: number, now: number): { ms: number; known: boolean } {
+    if (!active) {
+      this.liveClock = null
+      return { ms: 0, known: true }
+    }
+    if (!this.liveClock) {
+      // went live while we were watching: it started between the previous poll and this one
+      const sawStart = this.last && !this.last.streaming
+      this.liveClock = sawStart
+        ? { start: now - Math.min(durationMs, now - this.last!.at), firstAt: now, firstMs: durationMs }
+        : { start: null, firstAt: now, firstMs: durationMs }
+    }
+    const c = this.liveClock
+    if (c.start === null) {
+      const wall = now - c.firstAt
+      if (wall < 3000) return { ms: 0, known: false }
+      // how many frame-counts per real second: 1 normally, the rendition count with multitrack
+      const ratio = (durationMs - c.firstMs) / wall
+      const tracks = ratio >= 1.5 ? Math.round(ratio) : 1
+      c.start = now - durationMs / tracks
+    }
+    return { ms: now - c.start, known: true }
+  }
 
   constructor(private send: (s: ObsState) => void) {}
 
@@ -96,6 +126,7 @@ export class ObsLink {
     this.timer = this.poll = null
     this.pending.clear()
     this.last = null
+    this.liveClock = null
     this.setup = null
     this.ws?.close()
     this.ws = null
@@ -148,6 +179,7 @@ export class ObsLink {
       if (this.poll) clearInterval(this.poll)
       this.poll = null
       this.last = null
+      this.liveClock = null
       // 4009 = wrong password, retrying won't help
       if (code === 4009) return this.set({ status: 'error', detail: 'OBS refused the password. In OBS, open Tools → WebSocket Server Settings → Show Connect Info and copy the Server Password again.' })
       if (refused) return
@@ -185,6 +217,7 @@ export class ObsLink {
     const recBytes = Number(record?.outputBytes) || 0
     const since = this.last ? (now - this.last.at) / 1000 : 0
     // bits per second since the last poll; restarting the output resets the counter
+    const uptime = this.streamUptime(!!stream?.outputActive, Number(stream?.outputDuration) || 0, now)
     const kbps = (b: number, prev: number | undefined): number | undefined =>
       since > 0 && prev !== undefined && b >= prev ? Math.round(((b - prev) * 8) / since / 1000) : undefined
     const out: ObsStats = {
@@ -205,7 +238,8 @@ export class ObsLink {
       stream: {
         active: !!stream?.outputActive,
         reconnecting: !!stream?.outputReconnecting,
-        durationMs: Number(stream?.outputDuration) || 0,
+        durationMs: uptime.ms,
+        durationKnown: uptime.known,
         dropped: Number(stream?.outputSkippedFrames) || 0,
         total: Number(stream?.outputTotalFrames) || 0,
         bytes,
@@ -219,7 +253,7 @@ export class ObsLink {
         kbps: record?.outputActive ? kbps(recBytes, this.last?.recBytes) : undefined
       }
     }
-    this.last = { bytes, at: now, recBytes }
+    this.last = { bytes, at: now, recBytes, streaming: !!stream?.outputActive }
     this.set({ status: 'connected', stats: out })
   }
 }

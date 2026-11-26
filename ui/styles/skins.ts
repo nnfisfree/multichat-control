@@ -12,6 +12,8 @@ export interface Skin {
   vars: Record<string, string>
   /** Light skin (dark text on a pale window). theme.css swaps the dark translucent fills for light ones. */
   light?: boolean
+  /** Extra decorations drawn by SkinEffects.tsx (snow, lights...), styled in theme.css under [data-fx]. */
+  effects?: 'xmas'
 }
 
 // "#rrggbb" -> "r, g, b" for use inside rgba()
@@ -232,6 +234,25 @@ export const SKINS: Skin[] = [
       }),
       '--surface': 'rgba(255, 255, 255, 0.45)',
       '--surface-2': 'rgba(255, 255, 255, 0.7)'
+    }
+  },
+  {
+    id: 'frosty-christmas', name: 'Frosty Christmas', by: 'Snow, lights and a Santa hat', light: true, effects: 'xmas',
+    swatch: ['#d5e5f1', '#ffffff', '#c8102e', '#1b7f4b'],
+    vars: {
+      ...make({
+        // winter sky at the top, a pine-green glow at the bottom and a warm red one in the corner,
+        // light enough for dark text but deep enough for white snow to show
+        bg: '#dbe8f3', bgDeep: '#cddff0',
+        window: 'radial-gradient(ellipse at 100% 0%, rgba(200, 16, 46, 0.12), transparent 45%), radial-gradient(ellipse at 0% 100%, rgba(27, 127, 75, 0.2), transparent 55%), linear-gradient(180deg, #c9dcee, #d9e6f2 45%, #d3e6da)',
+        solid: '#ffffff', solid2: '#e8f1f8', accent: '#c8102e', accent2: '#e03a50', second: '#1b7f4b', second2: '#23995c',
+        text: '#1a2a33', muted: '#56697a', onAccent: '#ffffff', warn: '#c05f00', good: '#1b7f4b', bad: '#c8102e',
+        line: 'rgba(26, 42, 51, 0.14)',
+        hype: 'linear-gradient(90deg, rgba(230, 57, 70, 0.75), rgba(43, 182, 115, 0.6))',
+        win: ['#e0a91b', '#1b7f4b', '#c8102e', '#ffffff']
+      }),
+      '--surface': 'rgba(255, 255, 255, 0.6)',
+      '--surface-2': 'rgba(255, 255, 255, 0.8)'
     }
   },
   {

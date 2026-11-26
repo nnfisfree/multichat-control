@@ -4,6 +4,7 @@ import type { EventFilter, StreamEvent } from '../../shared/types'
 import { getState, useStore } from '../lib/store'
 import { inEventsTab } from '../../shared/event-prefs'
 import { EventCard } from './EventCard'
+import { Sparkle } from './SkinEffects'
 
 // One at a time. The next waits until the current one has fully left.
 const MAX_SHOWN = 1
@@ -201,6 +202,8 @@ function Popup({ g, ms, paused, leaving, onLeave, onGone }: { g: Group; ms: numb
         {/* outside the capsule so it can sit on the edge like a notification badge */}
         {/* not on follows, every follow is a different person so a count is just confusing */}
         {count > 1 && e.type !== 'follow' && <span key={count} className="ev-pop-count" aria-hidden="true">×{count}</span>}
+        {/* only shows with a skin that has effects (Frosty Christmas), see theme.css */}
+        {(e.type === 'sub' || e.type === 'gift') && <Sparkle key={`s${count}`} />}
       </div>
     </div>
   )

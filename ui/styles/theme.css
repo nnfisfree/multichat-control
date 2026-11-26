@@ -65,7 +65,7 @@ h2, h3 { margin: 0; }
 /* Title bar */
 /* Dragging is data-tauri-drag-region only, no CSS app-region. WebView2 updates app-region areas late,
    and a stale one ended up eating clicks on the window buttons. */
-.titlebar { height: 38px; flex: none; display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, auto) minmax(80px, 1fr); align-items: center; gap: 16px; padding: 0 10px 0 10px; }
+.titlebar { height: var(--titlebar-h, 38px); flex: none; display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, auto) minmax(80px, 1fr); align-items: center; gap: 16px; padding: 0 10px 0 10px; }
 /* Both sides are always the same width (at least enough for the window buttons) so the middle stays
    centred on the window. When space runs out the app name gets shortened instead. */
 .title-left, .title-right { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
@@ -659,7 +659,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .toast.bad { color: var(--bad); }
 
 /* Settings: section title, then rows with text on the left and a control on the right */
-.modal-back { position: absolute; inset: 38px 0 0; display: flex; z-index: 50; background: var(--window); }
+.modal-back { position: absolute; inset: var(--titlebar-h, 38px) 0 0; display: flex; z-index: 50; background: var(--window); }
 /* Settings is a card over the chat: the chat stays visible, dimmed, around it, so it's clear
    where chat went. Clicking that dimmed chat closes Settings. */
 .modal-back.settings-back { padding: clamp(6px, 2.2vw, 22px); background: rgba(4, 4, 14, 0.55); animation: settings-back-in 0.18s ease-out; }
@@ -682,7 +682,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
 /* a small corner mark so it's clear the card can be resized */
 .set-grip.se::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); border-radius: 0 0 3px 0; opacity: 0.6; }
 .set-grip.se:hover::after { opacity: 1; border-color: var(--purple-2); }
-.back-to-chat { display: flex; align-items: center; gap: 6px; margin: -6px 0 14px; padding: 6px 12px 6px 8px; width: fit-content; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--text); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); transition: background 0.2s, box-shadow 0.2s; }
+.back-to-chat { flex: none; display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 12px 6px 8px; width: fit-content; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--text); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); transition: background 0.2s, box-shadow 0.2s; }
 .back-to-chat:hover { background: linear-gradient(90deg, rgba(var(--purple-rgb), 0.34), rgba(var(--blue-rgb), 0.1)); box-shadow: inset 0 0 0 1px rgba(var(--purple-rgb), 0.55); }
 .back-to-chat svg { width: 16px; height: 16px; transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .modal-back.settings-back, .settings-back > .modal.settings { animation: none; } }
@@ -725,10 +725,10 @@ dd { margin: 0; overflow-wrap: anywhere; }
 
 /* About this App */
 .about-page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.about-chapters { display: flex; gap: 2px; padding: 0 18px; border-bottom: 1px solid var(--line); flex: none; }
-.about-chapters button { padding: 9px 12px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.about-chapters { display: flex; flex-wrap: wrap; gap: 4px; width: fit-content; max-width: calc(100% - 32px); margin: 14px auto 0; padding: 4px; flex: none; border-radius: 12px; background: rgba(0, 0, 0, 0.2); box-shadow: inset 0 0 0 1px var(--line); }
+.about-chapters button { padding: 7px 14px; border-radius: 9px; font-size: 13.5px; font-weight: 600; color: var(--muted); white-space: nowrap; transition: background 0.15s, color 0.15s; }
 .about-chapters button:hover { color: var(--text); }
-.about-chapters button.on { color: var(--text); border-bottom-color: var(--blue); }
+.about-chapters button.on { color: var(--text); background: var(--surface); box-shadow: inset 0 0 0 1px rgba(var(--purple-rgb), 0.45); }
 .about-body { flex: 1; overflow-y: auto; padding: 18px 26px 28px; line-height: 1.6; }
 .about-inner { max-width: 760px; margin: 0 auto; }
 .about-body.memory { padding: 0; display: flex; }
@@ -884,7 +884,6 @@ input[type='range']::-webkit-slider-thumb { appearance: none; width: 14px; heigh
   .about-hero { flex-direction: column; align-items: center; text-align: center; }
   .about-cards { grid-template-columns: 1fr; }
   .about-body { padding: 14px 16px 22px; }
-  .about-chapters { padding: 0 8px; overflow-x: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .drawer, .chev, .toggle, .toggle i, .hype-bar i { transition: none; }
@@ -1298,24 +1297,45 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .cmd-group-note { margin: 2px 10px 6px; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
 .chip.bad { white-space: normal; }
 
-/* Settings: categories on the left, a big title per category, labelled sections in panels */
-.modal.settings { flex-direction: row; }
-.set-side { width: 214px; flex: none; display: flex; flex-direction: column; padding: 18px 12px 12px; border-right: 1px solid var(--line); background: rgba(0, 0, 0, 0.18); position: relative; z-index: 4; }
-.set-side-title { padding: 0 12px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-.set-side nav { display: flex; flex-direction: column; gap: 4px; }
-.set-side nav button { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 11px; font-size: 15px; font-weight: 600; color: var(--muted); text-align: left; transition: background 0.2s, color 0.2s, box-shadow 0.2s; }
-.set-side nav button:hover { color: var(--text); background: var(--surface); }
-.set-side nav button.on { color: var(--text); background: linear-gradient(90deg, rgba(var(--purple-rgb), 0.34), rgba(var(--blue-rgb), 0.1)); box-shadow: inset 0 0 0 1px rgba(var(--purple-rgb), 0.45), 0 0 16px rgba(var(--purple-rgb), 0.18); }
-.set-side nav button.on::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: linear-gradient(var(--purple-2), var(--blue-2)); }
-.set-nav-icon { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--surface); transition: background 0.2s; }
-.set-nav-icon svg { width: 17px; height: 17px; }
-.set-side nav button.on .set-nav-icon { color: var(--on-accent); background: linear-gradient(135deg, var(--purple), var(--blue)); box-shadow: 0 0 10px rgba(var(--purple-rgb), 0.5); }
-.set-side-foot { margin-top: auto; padding: 10px 12px 0; font-size: 12px; color: var(--muted); }
-.set-main { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.set-close { position: absolute; top: 12px; right: 16px; z-index: 5; }
-.cat-head { padding: 20px 44px 4px 0; }
-.cat-head h2 { width: fit-content; font-size: 32px; font-weight: 800; line-height: 1.15; letter-spacing: 0.01em; color: transparent; background: linear-gradient(90deg, var(--purple-2), var(--blue-2)); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 14px rgba(var(--purple-rgb), 0.35)); }
-.cat-head p { margin: 4px 0 0; font-size: 15px; color: var(--muted); }
+/* Settings: a header with search and the page tabs on top, then one centred column of labelled
+   sections. Everything comes from the skin's variables, so every skin restyles it. */
+.modal.settings { flex-direction: column; }
+.set-top { position: relative; z-index: 4; flex: none; padding: 14px 22px 0; border-bottom: 1px solid var(--line); background: rgba(0, 0, 0, 0.18); }
+.set-top-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.set-title { flex: 1; min-width: 0; margin: 0; font-size: 22px; font-weight: 800; line-height: 1.2; color: transparent; background: linear-gradient(90deg, var(--purple-2), var(--blue-2)); -webkit-background-clip: text; background-clip: text; width: fit-content; }
+.set-search { display: flex; align-items: center; gap: 8px; width: 240px; max-width: 100%; height: 36px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); transition: box-shadow 0.15s; }
+.set-search:focus-within { box-shadow: inset 0 0 0 1px rgba(var(--purple-rgb), 0.7), 0 0 12px rgba(var(--purple-rgb), 0.2); }
+.set-search > svg { flex: none; width: 15px; height: 15px; }
+.set-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; box-shadow: none; color: var(--text); font: inherit; font-size: 14px; outline: none; }
+.set-search input::-webkit-search-cancel-button { display: none; }
+.set-search-clear { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 6px; color: var(--muted); }
+.set-search-clear:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.set-search-clear svg { width: 12px; height: 12px; }
+/* centred; "safe" falls back to starting at the left when the row is too wide and scrolls */
+.set-tabs { position: relative; display: flex; justify-content: safe center; gap: 2px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+.set-tabs::-webkit-scrollbar { display: none; }
+.set-tabs button { flex: none; display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 13px; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: 14px; font-weight: 600; white-space: nowrap; color: var(--muted); transition: color 0.15s, border-color 0.15s; }
+.set-tabs button svg { width: 16px; height: 16px; flex: none; }
+.set-tabs button:hover { color: var(--text); }
+.set-tabs button.on { color: var(--text); border-image: linear-gradient(90deg, var(--purple-2), var(--blue-2)) 1; border-bottom-width: 2px; border-bottom-style: solid; }
+.set-tabs button.on svg { color: var(--purple-2); }
+.set-tab-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; font-size: 11px; font-weight: 700; color: var(--text); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.set-main { position: relative; flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+/* Sections flow into as many columns as the card is wide enough for (one on a narrow card, two or
+   three on a wide one), so a bigger window shows more at once and scrolls less. A section never
+   splits across columns. */
+.set-page { max-width: 1560px; margin: 0 auto; column-width: 460px; column-gap: 28px; }
+.set-page > .set-page-desc, .set-page > .lead, .set-page > .fine { column-span: all; }
+.set-page > .set-section { break-inside: avoid; }
+.set-page.results { column-width: auto; max-width: 760px; }
+/* a lone switch or button needs no half of the row: the text gets the room, and fewer lines */
+.set-control:has(> .toggle:only-child), .set-control:has(> .btn:only-child) { width: auto; }
+/* the two big sections take the full width when open, and lay their own parts side by side */
+.set-page > #platform-settings.open, .set-page > #animation-settings.open { column-span: all; }
+.pf-cols, .anim-kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 0 28px; align-items: start; }
+.pf-col, .anim-kind { min-width: 0; }
+@media (max-width: 620px) { .pf-cols, .anim-kinds { grid-template-columns: minmax(0, 1fr); } }
+.set-page-desc { margin: 16px 0 0; font-size: 14px; color: var(--muted); }
 .modal.settings .set-section { padding: 18px 0 4px; border-bottom: 0; }
 .sec-head { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid var(--purple-2); }
 .set-section .sec-head h3 { font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue-2); }
@@ -1324,6 +1344,18 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .sec-body > .set-row + .set-row { border-top: 1px solid rgba(255, 255, 255, 0.06); border-radius: 0; }
 .sec-body > .account:first-child { margin-top: 6px; }
 .modal.settings .fine { margin-top: 18px; }
+/* the section a search result or a link jumped to glows for a moment */
+.set-flash { animation: set-flash 1.6s ease-out; border-radius: 12px; }
+@keyframes set-flash { 0%, 30% { box-shadow: 0 0 0 2px rgba(var(--purple-rgb), 0.75), 0 0 22px rgba(var(--purple-rgb), 0.35); } 100% { box-shadow: 0 0 0 2px transparent; } }
+/* search results */
+.set-results { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.set-results button { display: flex; align-items: center; gap: 14px; width: 100%; padding: 11px 14px; border-radius: 12px; text-align: left; background: rgba(255, 255, 255, 0.035); border: 1px solid var(--line); transition: border-color 0.15s, background 0.15s; }
+.set-results button:hover, .set-results button:focus-visible { border-color: rgba(var(--purple-rgb), 0.6); background: rgba(var(--purple-rgb), 0.08); }
+.set-result-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.set-result-text b { font-weight: 700; color: var(--text); }
+.set-result-text span { font-size: 13.5px; color: var(--muted); }
+.set-result-where { flex: none; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--blue-2); background: var(--surface); }
+@media (prefers-reduced-motion: reduce) { .set-flash { animation: none; } }
 
 /* Skin picker: one big preview (a mini version of the app, framed by the edge every skin shares)
    and a compact chip per skin, split into dark and light. */
@@ -1359,15 +1391,13 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 .skin-by { font-size: 12px; color: var(--muted); }
 
 @media (max-width: 620px) {
-  .modal.settings { flex-direction: column; }
-  .set-side { width: auto; padding: 6px 8px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .set-side-title, .set-side-foot { display: none; }
-  .set-side nav { flex-direction: row; overflow-x: auto; padding-right: 40px; }
-  .set-side nav button { flex: none; padding: 6px 10px; }
-  .set-side nav button.on::before { display: none; }
-  .set-close { top: 8px; right: 8px; }
-  .back-to-chat { margin: 0 0 6px; }
-  .cat-head h2 { font-size: 26px; }
+  .set-top { padding: 10px 12px 0; }
+  .set-title { font-size: 19px; }
+  .set-search { order: 3; width: 100%; }
+  .back-to-chat span { display: none; }
+  .set-tabs button { padding: 0 10px; }
+  /* a soft fade on the right says the tabs go on */
+  .set-tabs { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); padding-right: 24px; }
 }
 @media (prefers-reduced-motion: reduce) { .skin-chip, .skin-hero .skin-shot { transition: none; } }
 
@@ -1512,7 +1542,7 @@ button.obs-strip:hover, button.obs-strip[aria-expanded="true"] { background: rgb
 [data-tone='light'] select, [data-tone='light'] input[type='text'], [data-tone='light'] input[type='number'], [data-tone='light'] input[type='password'],
 [data-tone='light'] input:not([type]), [data-tone='light'] textarea, [data-tone='light'] .composer, [data-tone='light'] .seg, [data-tone='light'] .types-btn,
 [data-tone='light'] .conn-pill, [data-tone='light'] .users-filter, [data-tone='light'] .skin-chip, [data-tone='light'] .skin-hero, [data-tone='light'] .update-notes { background: rgba(255, 255, 255, 0.55); }
-[data-tone='light'] .set-side { background: rgba(255, 255, 255, 0.3); }
+[data-tone='light'] .set-top { background: rgba(255, 255, 255, 0.3); }
 [data-tone='light'] .sec-body { background: rgba(255, 255, 255, 0.4); }
 [data-tone='light'] .sec-body > .set-row + .set-row, [data-tone='light'] .event, [data-tone='light'] .uc-history li { border-color: var(--line); }
 [data-tone='light'] .set-row:hover, [data-tone='light'] .account:hover, [data-tone='light'] .about:hover, [data-tone='light'] button.obs-strip:hover,
@@ -1611,3 +1641,90 @@ input[type='color'] { width: 34px; height: 28px; padding: 2px; border: 1px solid
 .ev-reset { width: 28px; height: 28px; }
 .ev-reset svg { width: 16px; height: 16px; }
 .ev-none { margin: 0; padding: 12px; text-align: center; color: var(--muted); }
+
+/* Frosty Christmas: decorations drawn by SkinEffects.tsx. data-fx-anim is 'on' (moving), 'paused'
+   (window minimized or not in focus: frozen in place) or 'off' (Animate skin off, or reduced motion). */
+[data-fx='xmas'] .app { --titlebar-h: 56px; isolation: isolate; }
+[data-fx='xmas'] .titlebar { padding-top: 18px; }
+/* snow: behind all the content (isolation keeps it above the window background), never takes a click */
+.fx-snow { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+/* every flake is a six-armed crystal: a white star cut out with a mask, outlined by a blue glow */
+.fx-snow i { position: absolute; top: -20px; background: linear-gradient(135deg, #ffffff 25%, #d6ecff 60%, #8cc4fb); animation: fx-fall var(--dur) linear var(--delay) infinite, fx-glint 2.8s ease-in-out var(--delay) infinite; will-change: transform; filter: drop-shadow(0 0 0.7px rgba(15, 55, 115, 1)) drop-shadow(0 0 0.7px rgba(15, 55, 115, 1)) drop-shadow(0 0 5px rgba(110, 175, 240, 0.9)); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Cg stroke='black' stroke-width='3' stroke-linecap='round' fill='none'%3E%3Cpath d='M0-11V11M-9.5-5.5L9.5 5.5M-9.5 5.5L9.5-5.5'/%3E%3Cpath stroke-width='2.2' d='M-3-8L0-5L3-8M-3 8L0 5L3 8M-8.4-1.5L-5.4-2.9L-5.7-6.1M8.4 1.5L5.4 2.9L5.7 6.1M-8.4 1.5L-5.4 2.9L-5.7 6.1M8.4-1.5L5.4-2.9L5.7-6.1'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Cg stroke='black' stroke-width='3' stroke-linecap='round' fill='none'%3E%3Cpath d='M0-11V11M-9.5-5.5L9.5 5.5M-9.5 5.5L9.5-5.5'/%3E%3Cpath stroke-width='2.2' d='M-3-8L0-5L3-8M-3 8L0 5L3 8M-8.4-1.5L-5.4-2.9L-5.7-6.1M8.4 1.5L5.4 2.9L5.7 6.1M-8.4 1.5L-5.4 2.9L-5.7 6.1M8.4-1.5L5.4-2.9L5.7-6.1'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat; }
+@keyframes fx-fall { to { transform: translate3d(var(--dx), calc(100vh + 32px), 0) rotate(220deg); } }
+/* a cold glint: each flake catches the light now and then */
+@keyframes fx-glint { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; filter: drop-shadow(0 0 0.7px rgba(15, 55, 115, 1)) drop-shadow(0 0 0.7px rgba(15, 55, 115, 1)) drop-shadow(0 0 9px rgba(150, 205, 255, 1)); } }
+/* a string of C9 bulbs along the top of the window, the hat on the app icon */
+.fx-top { position: absolute; left: 0; right: 0; top: 0; height: 26px; z-index: 6; pointer-events: none; }
+/* the string starts right of the hat, so it never hangs a bulb in front of it */
+.fx-wire { position: absolute; left: 44px; top: 0; width: calc(100% - 44px); height: 12px; overflow: visible; }
+.fx-wire path { fill: none; stroke: #2f4a3a; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.fx-bulbs { position: absolute; inset: 0 0 0 44px; display: flex; justify-content: space-around; }
+/* each bulb hangs from its socket at the bottom of a dip and sways a little from there */
+.fx-bulb { display: flex; flex-direction: column; align-items: center; margin-top: 6px; transform-origin: 50% 0; animation: fx-sway var(--sway) ease-in-out var(--sway-delay) infinite alternate; }
+.fx-bulb b { width: 5px; height: 4px; border-radius: 1px 1px 2px 2px; background: linear-gradient(90deg, #1f3a2c, #4d6e5a, #1f3a2c); }
+/* the glass: its colour, a white shine on the left, and a halo that comes and goes in a wave along the string */
+.fx-bulb i { width: 9px; height: 13px; margin-top: -1px; border-radius: 50% 50% 46% 46% / 62% 62% 38% 38%;
+  background: radial-gradient(ellipse at 34% 30%, rgba(255, 255, 255, 0.95) 0 14%, rgba(255, 255, 255, 0) 30%), radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--bc) 70%, #ffffff) 0, var(--bc) 55%, color-mix(in srgb, var(--bc) 70%, #000000) 100%);
+  box-shadow: 0 0 6px 1px var(--bc), 0 0 14px 2px color-mix(in srgb, var(--bc) 55%, transparent);
+  animation: fx-chase 2.4s ease-in-out var(--chase) infinite; }
+@keyframes fx-sway { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+@keyframes fx-chase { 0%, 100% { filter: brightness(1.15) saturate(1.2); box-shadow: 0 0 7px 2px var(--bc), 0 0 16px 4px color-mix(in srgb, var(--bc) 60%, transparent); }
+  50% { filter: brightness(0.7) saturate(0.85); box-shadow: 0 0 2px 0 color-mix(in srgb, var(--bc) 40%, transparent); } }
+/* the app icon wears it: the brim covers the icon's top edge. The hat rocks gently, the tip flops
+   and the pom-pom bobs, each on its own beat. Lined up with .brand-icon (10px in, 27px down with the
+   taller title bar of this skin). */
+.fx-hat { position: absolute; left: 7px; top: 10px; width: 32px; height: 28px; overflow: visible; transform-origin: 42% 75%; filter: drop-shadow(0 1px 1px rgba(60, 20, 30, 0.3)); animation: fx-hat-rock 3.4s ease-in-out infinite; }
+.fx-hat-tip { transform-box: fill-box; transform-origin: 20% 90%; animation: fx-hat-flop 2.2s ease-in-out infinite; }
+.fx-pom { transform-box: fill-box; transform-origin: 50% 50%; animation: fx-pom-bob 1.1s ease-in-out infinite; }
+@keyframes fx-hat-rock { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(4deg) translateY(-0.5px); } }
+@keyframes fx-hat-flop { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-9deg); } }
+@keyframes fx-pom-bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(1.6px) scale(0.92, 1.08); } }
+[data-fx-anim='off'] .fx-bulb, [data-fx-anim='off'] .fx-bulb i, [data-fx-anim='off'] .fx-hat, [data-fx-anim='off'] .fx-hat-tip, [data-fx-anim='off'] .fx-pom { animation: none; }
+[data-fx-anim='paused'] .fx-snow i, [data-fx-anim='paused'] .fx-bulb, [data-fx-anim='paused'] .fx-bulb i,
+[data-fx-anim='paused'] .fx-hat, [data-fx-anim='paused'] .fx-hat-tip, [data-fx-anim='paused'] .fx-pom { animation-play-state: paused; }
+/* frost growing into the corners of the window, like a cold glass pane; behind all the content */
+.fx-frosts { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+/* drawn for the top-left corner and mirrored for the others; a soft white haze under the branches,
+   thickest right in the corner */
+.fx-frost { position: absolute; width: 230px; height: 230px; overflow: visible; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
+  background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.95), rgba(235, 246, 255, 0.55) 30%, rgba(220, 238, 255, 0.2) 55%, transparent 75%); }
+.fx-frost path { fill: none; stroke: #ffffff; stroke-width: 2.1; stroke-linecap: round; }
+/* a thin icy-blue edge on the branches, like the snowflakes, so they show on the frosty window */
+.fx-frost { filter: drop-shadow(0 0 0.8px rgba(40, 95, 160, 0.9)) drop-shadow(0 0 5px rgba(150, 205, 255, 0.9)); }
+.fx-frost.tl { left: 0; top: 0; }
+.fx-frost.tr { right: 0; top: 0; transform: scaleX(-1); }
+.fx-frost.bl { left: 0; bottom: 0; transform: scaleY(-1); }
+.fx-frost.br { right: 0; bottom: 0; transform: scale(-1, -1); }
+/* snow piled up along the bottom of the chat: the flakes land in it */
+[data-fx='xmas'] .stage::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 26px; z-index: -1; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 26' preserveAspectRatio='none'%3E%3Cpath d='M0 26 L0 16 C30 8 60 6 95 11 C130 16 150 18 190 12 C230 6 260 4 300 10 C340 16 365 20 405 14 C445 8 470 5 510 9 C545 13 575 12 600 8 L600 26 Z' fill='white'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 -1px 0 rgba(120, 160, 200, 0.55)) drop-shadow(0 -2px 4px rgba(70, 110, 150, 0.25));
+}
+/* Santa's sleigh: across the top of the window every few minutes, behind the lights */
+.fx-sky { position: absolute; left: 0; right: 0; top: 0; height: 60px; z-index: -1; overflow: hidden; pointer-events: none; }
+.fx-sleigh { position: absolute; left: 0; top: 8px; width: 132px; height: 40px; animation: fx-sleigh-fly 6.5s linear both; }
+.fx-sleigh-art { position: absolute; inset: 0; width: 132px; height: 40px; overflow: visible; animation: fx-sleigh-bob 0.9s ease-in-out infinite alternate; }
+@keyframes fx-sleigh-fly { from { transform: translateX(-160px); } to { transform: translateX(calc(100vw + 40px)); } }
+@keyframes fx-sleigh-bob { from { transform: translateY(-2px) rotate(-2deg); } to { transform: translateY(3px) rotate(1.5deg); } }
+/* sparkles trailing behind the sleigh, each one fading out where it was dropped */
+.fx-trail { position: absolute; right: 100%; top: 18px; width: 120px; height: 10px; }
+.fx-trail i { position: absolute; right: calc(var(--i) * 13px); top: calc(sin(var(--i) * 1rad) * 4px); width: 6px; height: 6px; background: #f4c95d;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  opacity: calc(1 - var(--i) * 0.1); animation: fx-trail 0.7s ease-in-out calc(var(--i) * -0.08s) infinite alternate; }
+.fx-trail i:nth-child(even) { background: #ffffff; filter: drop-shadow(0 0 1px rgba(80, 130, 185, 0.9)); }
+@keyframes fx-trail { from { transform: scale(0.5) rotate(0deg); } to { transform: scale(1.1) rotate(45deg); } }
+/* snow resting on the message box */
+[data-fx='xmas'] .composer-wrap::before {
+  content: ''; position: absolute; z-index: 2; height: 9px; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 10' preserveAspectRatio='none'%3E%3Cpath d='M0 10 C12 3 26 1 40 4 C54 7 66 0 86 2 C104 4 116 8 132 5 C150 2 166 0 182 4 C198 8 214 3 232 2 C250 1 262 6 280 5 C298 4 312 0 330 3 C348 6 364 2 380 4 C390 5 396 7 400 10 Z' fill='white'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  /* a blue shadow under the white, or it vanishes on the frosty window */
+  filter: drop-shadow(0 1px 0 rgba(120, 160, 200, 0.7)) drop-shadow(0 2px 3px rgba(70, 110, 150, 0.35));
+}
+[data-fx='xmas'] .composer-wrap::before { left: 16px; right: 16px; top: 0; }
+/* red and gold stars bursting from a new sub or gift pop-up */
+.fx-sparkle { display: none; }
+[data-fx='xmas'][data-fx-anim='on'] .fx-sparkle { display: block; position: absolute; left: 34px; top: 26px; width: 0; height: 0; z-index: 3; pointer-events: none; }
+.fx-sparkle i { position: absolute; width: 10px; height: 10px; margin: -5px; background: var(--sc); clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); animation: fx-spark 1.1s ease-out var(--sd) both; }
+@keyframes fx-spark { 0% { transform: translate(0, 0) scale(0); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(var(--sx), var(--sy)) scale(1) rotate(90deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .fx-snow, .fx-sparkle { display: none !important; } .fx-bulb, .fx-bulb i, .fx-hat, .fx-hat-tip, .fx-pom { animation: none; } }

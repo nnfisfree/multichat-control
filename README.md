@@ -44,8 +44,8 @@ One small file, nothing else to install. It updates itself.
 <br />
 
 > [!TIP]
-> ### 🎉 New in 0.5.3
-> **Celebrations over chat:** a Twitch follow fires confetti from both bottom corners of the window, cheers rain **Bits**, gift bombs rain **gift boxes** and StreamElements or Streamlabs tips rain **banknotes**, one after the other, behind your raid, Hype Train and pinned message bars. Turn each one on or off, choose how long it lasts and the smallest cheer, gift bomb or tip that sets it off. **Settings now opens over your chat** as a card you can resize, new installs start on the chat with a **welcome card** to log in, and the window edges are **much easier to grab** to resize the app. [See it in action](#-screenshots)
+> ### 🎉 New in 0.5.5
+> **A new Settings:** the pages are tabs along the top, a **search box** finds any setting and takes you straight to it, and sections sit **side by side** on a wide window, so there's far less scrolling. Pop-ups and celebrations have their own **Events & Alerts** page. **Frosty Christmas**, a new skin for the season: snowflakes falling behind your chat, **twinkling Christmas lights**, a Santa hat on the app icon, frost in the corners and now and then **Santa's sleigh** flying across the top. **Fixed:** the LIVE time no longer runs too fast with Twitch Enhanced Broadcasting. [See the new Settings](#-screenshots)
 
 ## 🚀 Features
 
@@ -123,12 +123,13 @@ One small file, nothing else to install. It updates itself.
 <td valign="top">
 
 ### 🎨 Look and feel
-- **15 skins**, dark and light, with a big live preview: Catppuccin Mocha (the default), Sweet, POS Club, Myst Bourne, Dracula, Tokyo Night, Kanagawa, Rosé Pine, Solarized Dark, Carbonfox, OLED Black, Butterfly, Catppuccin Latte, Everforest Light, Tokyo Night Day
+- **16 skins**, dark and light, with a big live preview: Catppuccin Mocha (the default), Sweet, POS Club, Myst Bourne, Dracula, Tokyo Night, Kanagawa, Rosé Pine, Solarized Dark, Carbonfox, OLED Black, Butterfly, Catppuccin Latte, Everforest Light, Tokyo Night Day
+- **Frosty Christmas**, an animated skin: falling snowflakes, twinkling lights, a Santa hat on the icon, frosted corners and Santa's sleigh now and then. One switch keeps it still
 - **A glowing frame** around the open tab, its colours circling round, gliding over when you switch
 - **A comet line** under the tabs in your platforms' colours, that turns red if one drops
 - **Wobbly window**, inspired by KDE Plasma: it bends like jelly while you drag it
 - **Remembers its size and place**, monitor included, and its edges are easy to grab to resize it
-- **Settings opens over your chat**, which stays visible around it, as a card you can resize
+- **Settings opens over your chat** as a card you can resize, with **tabs along the top**, a **search box** for every setting, and sections side by side on a wide window
 - Twitch, BetterTTV, 7TV, FrankerFaceZ and Kick emotes, overlay emotes, cheermotes and GIFs
 - Pronouns beside Twitch chatters
 
@@ -164,7 +165,7 @@ One small file, nothing else to install. It updates itself.
 <td align="center"><img src="docs/media/stats.webp" alt="The full stream stats: streaming app and version (OBS Studio 33.0.3), encoder, resolutions, CPU, memory, FPS, render and encoding lag, stream and recording status, with a live bitrate graph" /><br /><b>Stream stats with a live graph</b></td>
 </tr>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/skins.webp" width="70%" alt="Settings open as a card over the dimmed chat, with a Back to chat button and a resize corner, on the Appearance page in the default Catppuccin Mocha skin: the current skin preview above fifteen skin chips split into Dark and Light" /><br /><b>Settings over your chat, fifteen skins one click each</b></td>
+<td align="center" colspan="2"><img src="docs/media/skins.webp" width="70%" alt="Settings open as a card over the dimmed chat, in the default Catppuccin Mocha skin: a search box and Back to chat at the top, tabs for Connections, Appearance, Chat, Events and Alerts, App and About, and the Appearance page with the skin preview, sixteen skin chips split into Dark and Light, and the Window settings below" /><br /><b>Settings with tabs and search, sixteen skins one click each</b></td>
 </tr>
 </table>
 
@@ -258,12 +259,11 @@ From then on the app checks every minute whether you're live and joins your LIVE
 </details>
 
 <details>
-<summary><b>🧩 Upgrading from 0.1, or missing WebView2?</b></summary>
+<summary><b>🧩 Missing WebView2?</b></summary>
 
 <br />
 
-- **From 0.1:** click **Update** in the app as usual. Settings, logins, saved events and chat history carry over, and the old files are removed. The rewards panel asks you to sign in to Twitch once more.
-- **WebView2** is part of Windows 10 and 11, so this is rare. If it's missing, the app says so and offers [Microsoft's free installer](https://go.microsoft.com/fwlink/p/?LinkId=2124703).
+WebView2 is part of Windows 10 and 11, so this is rare. If it's missing, the app says so and offers [Microsoft's free installer](https://go.microsoft.com/fwlink/p/?LinkId=2124703).
 
 </details>
 
@@ -480,7 +480,7 @@ Twitch, StreamElements and Streamlabs work as they are (StreamElements and Strea
 | `npm run dev` | Run with real connections |
 | `npm run typecheck` | Type checking |
 | `npm run build` | Build `core/target/release/Multichat-Control.exe` |
-| `npm run release -- --dry` | Build both downloads into `release/` and check them for personal data, without publishing |
+| `npm run release -- --dry` | Build the download into `release/` and check it for personal data, without publishing |
 | `npm run release -- --notes notes.md` | Build, check, and publish a GitHub release (`--pre` for a test version) |
 
 ```text

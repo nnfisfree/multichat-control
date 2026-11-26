@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.5
+
+**New**
+
+- **A new Settings.** The pages are tabs along the top: Connections, Appearance, Chat, Events & Alerts, App and About. Each tab shows how many of its settings differ from a fresh install.
+- **Search in Settings.** Type in the search box to find any setting on any page. Click a result (or press Enter for the first one) to go straight to it; the section glows for a moment. Esc clears the search.
+- **Less scrolling.** Sections sit side by side when the window is wide, and the two big ones (Chat → Platforms and Events & Alerts → Animations) lay out their own parts in columns. On a narrow window everything stacks and the tab row scrolls, always keeping the open tab in view.
+- **Events & Alerts page.** Event pop-ups, the celebrations over chat, and the cards for tips and TikTok moved here from the Chat page.
+- **About in chapters.** My Story, Free & Open, Support and In Memory as small tabs under the main ones.
+- **Frosty Christmas skin.** A light skin with a winter-sky window, snowflakes falling behind the chat, a string of twinkling Christmas lights along the top, an animated Santa hat on the app icon, frost in the corners and snow piling up above the message box. Every few minutes Santa's sleigh flies across the top, and new subs and gifts get a burst of red and gold sparkles.
+- **Animate Skin switch** in Settings → Appearance for skins with animation. Off keeps the decorations still. The animation also pauses while the app is minimized, and stays still if Windows is set to reduce motion.
+
+**Fixed**
+
+- With Twitch Enhanced Broadcasting (several qualities sent at once), the LIVE time under the message box ran several times too fast, because OBS counts the frames of every quality. It now counts the real time you have been live. When the app connects to a stream that's already running, the time appears after about 3 seconds.
+
+**Changed**
+
+- Versions 0.1.x can no longer update themselves. Releases now contain only the portable exe.
+
 ## 0.5.3
 
 **New**
