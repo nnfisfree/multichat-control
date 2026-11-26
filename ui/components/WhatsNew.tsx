@@ -20,11 +20,21 @@ interface NewThing {
 
 const NEW_THINGS: NewThing[] = [
   {
-    icon: <Icon.palette />,
-    title: 'Drop-down menus open again',
-    text: 'After a recent Windows WebView2 update, drop-down menus like Interface Font, Chat Font and When Closing the Window stopped opening. They work again, so you can pick any font installed on your PC.',
-    fixed: true,
-    show: { cat: 'appearance' }
+    icon: <Icon.star />,
+    title: 'Celebrations over chat',
+    text: 'A Twitch follow fires confetti from both bottom corners of the window. Cheers rain Bits, gift bombs rain gift boxes and StreamElements or Streamlabs tips rain banknotes down over chat, one after the other in the order they came in. Turn each one on or off, pick how long it lasts and the smallest cheer, gift bomb or tip that sets it off.',
+    show: { cat: 'chat', target: 'animation-settings' }
+  },
+  {
+    icon: <Icon.gear />,
+    title: 'Settings over your chat',
+    text: 'Settings opens as a card on top of your chat, which stays visible around it. Go back with Back to chat or by clicking the chat. Drag its edges or corners to resize it; it remembers the size. New installs start on the chat with a welcome card to log in to your platforms.'
+  },
+  {
+    icon: <Icon.all />,
+    title: 'Easier window resizing',
+    text: 'The window edges and corners are much easier to grab, so you no longer have to aim for one exact pixel to resize the app.',
+    fixed: true
   }
 ]
 

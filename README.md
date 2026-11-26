@@ -35,7 +35,7 @@ One small file, nothing else to install. It updates itself.
 
 <br />
 
-<img src="docs/media/chat.webp" width="800" alt="Multichat Control in the Catppuccin Mocha skin: Twitch, YouTube, Kick and TikTok chat merged in one window, a Super Chat pop-up at the top, a suspicious user flagged with Delete and Ban, a Kick resub, a YouTube membership, a Buy Me a Coffee tip and a TikTok gift" />
+<img src="docs/media/chat.webp" width="800" alt="Multichat Control in the Catppuccin Mocha skin: Twitch, YouTube, Kick and TikTok chat merged in one window, a Super Chat pop-up at the top, a Kick spam bot flagged with Delete and Ban, a Kick channel point redemption and a Twitch On-Screen Celebration Power-up" />
 
 <sub>Every image here is the built-in demo mode, with invented chatters and placeholder emotes.</sub>
 
@@ -44,8 +44,8 @@ One small file, nothing else to install. It updates itself.
 <br />
 
 > [!TIP]
-> ### 🎉 New in 0.5.0
-> **StreamElements and Streamlabs are here:** log in to your own account right inside the app with one click, and your last 30 days of tips, subs, gifts, cheers and raids land in Events, with new alerts live. **Gift bombs are one line** with how many and which tier (**5x Tier 1**), **Up** in the message box brings back what you sent, the open tab gets a glowing frame, the stats bar names your streaming app and its version, the Connections menu is smaller, and there's a new skin, **Carbonfox**. New installs start on **Catppuccin Mocha**. [How to set it up](#-get-started)
+> ### 🎉 New in 0.5.3
+> **Celebrations over chat:** a Twitch follow fires confetti from both bottom corners of the window, cheers rain **Bits**, gift bombs rain **gift boxes** and StreamElements or Streamlabs tips rain **banknotes**, one after the other, behind your raid, Hype Train and pinned message bars. Turn each one on or off, choose how long it lasts and the smallest cheer, gift bomb or tip that sets it off. **Settings now opens over your chat** as a card you can resize, new installs start on the chat with a **welcome card** to log in, and the window edges are **much easier to grab** to resize the app. [See it in action](#-screenshots)
 
 ## 🚀 Features
 
@@ -82,6 +82,7 @@ One small file, nothing else to install. It updates itself.
 - **Test alerts** from Streamer.bot, StreamElements and Streamlabs tagged **TEST** and never saved
 - **Twitch Power-ups as on Twitch**: RGB Message Effects, giant emotes, On-Screen Celebrations
 - **Gift bombs in one line** with how many and which tier: **5x Tier 1**, **3x Sub** on Kick, **2x Membership** on YouTube
+- **Celebrations over chat**: confetti for a Twitch follow, **Bits** raining for a cheer, **gift boxes** for a gift bomb and **banknotes** for a StreamElements or Streamlabs tip, one after the other. Each one on or off, how long it lasts, and the smallest amount that sets it off
 - Hype Train banner, and animated icons on every badge
 
 </td>
@@ -126,7 +127,8 @@ One small file, nothing else to install. It updates itself.
 - **A glowing frame** around the open tab, its colours circling round, gliding over when you switch
 - **A comet line** under the tabs in your platforms' colours, that turns red if one drops
 - **Wobbly window**, inspired by KDE Plasma: it bends like jelly while you drag it
-- **Remembers its size and place**, monitor included
+- **Remembers its size and place**, monitor included, and its edges are easy to grab to resize it
+- **Settings opens over your chat**, which stays visible around it, as a card you can resize
 - Twitch, BetterTTV, 7TV, FrankerFaceZ and Kick emotes, overlay emotes, cheermotes and GIFs
 - Pronouns beside Twitch chatters
 
@@ -148,18 +150,21 @@ One small file, nothing else to install. It updates itself.
 
 <table>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/popups.webp" alt="Event pop-ups sliding in at the top of chat, one at a time, each in the colour of its platform: a YouTube Super Chat in red, a Twitch channel point redemption, a Kick gift bomb shown as 3x Sub in green and TikTok gifts in cyan" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
+<td align="center" colspan="2"><img src="docs/media/celebrations.webp" width="800" alt="Celebrations over chat, one after the other: confetti shooting up from both bottom corners of the window for a Twitch follow, purple Bits raining down for a 1,000 Bits cheer, Twitch gift boxes raining for a 100-sub gift bomb, and green banknotes raining for a 50 dollar StreamElements tip" /><br /><b>Confetti, Bits, gift boxes and banknotes rain over chat</b></td>
 </tr>
 <tr>
-<td align="center" width="50%"><img src="docs/media/quickactions.webp" alt="Pointing at a Twitch message shows Reply, Copy and a more-actions button; its menu offers Pin message, View user card, Timeout user, Ban user, Ignore user, Highlight user and Delete message, while chat is paused with new messages waiting" /><br /><b>Reply, copy and quick actions on every message</b></td>
-<td align="center" width="50%"><img src="docs/media/events.webp" alt="The Events list: a Kick gift bomb shown as 3x Sub, a Streamlabs tip with its logo, a YouTube gift shown as 2x Membership, a Buy Me a Coffee tip, a Super Chat, TikTok gifts and channel point redemptions, each with its platform and time" /><br /><b>Every platform's events, StreamElements and Streamlabs included</b></td>
+<td align="center" colspan="2"><img src="docs/media/popups.webp" alt="Event pop-ups sliding in at the top of chat, one at a time, each in the colour of its platform: TikTok gifts in cyan, a Streamlabs tip, a wave of Kick follows grouped into one pop-up and a Twitch raid" /><br /><b>Events pop up at the top of chat, one at a time</b></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/moderation.webp" alt="A message held by Twitch's AutoMod with Allow and Deny, a suspicious user flagged as a likely ban evader, and a spam bot offering followers, each with Delete and Ban; a Twitch gift bomb shown as 50x Tier 1" /><br /><b>Held messages, suspicious users and spam bots</b></td>
+<td align="center" width="50%"><img src="docs/media/quickactions.webp" alt="Pointing at a Twitch message shows Reply, Copy and a more-actions button; its menu offers Pin message, View user card, Timeout user, Ban user, Ignore user, Highlight user and Delete message, while chat is paused with 54 new messages waiting" /><br /><b>Reply, copy and quick actions on every message</b></td>
+<td align="center" width="50%"><img src="docs/media/events.webp" alt="The Events list: a Twitch cheer with its message, a Twitch gift bomb shown as 50x Tier 1, YouTube memberships, TikTok gifts and a TikTok sub, Kick follows and a Streamlabs tip with its logo, each with its platform and time" /><br /><b>Every platform's events, StreamElements and Streamlabs included</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/media/moderation.webp" alt="A message held by Twitch's AutoMod with Allow and Deny, a suspicious user flagged as a likely ban evader with Delete and Ban, and a spam bot offering followers with Delete and Ban, between a YouTube gift of 2 memberships and a Kick redemption" /><br /><b>Held messages, suspicious users and spam bots</b></td>
 <td align="center"><img src="docs/media/stats.webp" alt="The full stream stats: streaming app and version (OBS Studio 33.0.3), encoder, resolutions, CPU, memory, FPS, render and encoding lag, stream and recording status, with a live bitrate graph" /><br /><b>Stream stats with a live graph</b></td>
 </tr>
 <tr>
-<td align="center" colspan="2"><img src="docs/media/skins.webp" width="70%" alt="Settings, Appearance in the default Catppuccin Mocha skin: the current skin preview above fifteen skin chips split into Dark and Light, including the new Carbonfox" /><br /><b>Fifteen skins, one click each</b></td>
+<td align="center" colspan="2"><img src="docs/media/skins.webp" width="70%" alt="Settings open as a card over the dimmed chat, with a Back to chat button and a resize corner, on the Appearance page in the default Catppuccin Mocha skin: the current skin preview above fifteen skin chips split into Dark and Light" /><br /><b>Settings over your chat, fifteen skins one click each</b></td>
 </tr>
 </table>
 
@@ -182,7 +187,7 @@ Windows SmartScreen may warn on the first run because the exe isn't code-signed:
 <td width="33%" valign="top">
 
 ### 3️⃣ Connect
-Open the ⚙️ gear and click **Log in** next to each platform you stream on. You sign in on the platform's own page, so the app never sees your password.
+The app opens on your chat with a **welcome card**: click **Log in** next to each platform you stream on (later, use the ⚙️ gear). You sign in on the platform's own page, so the app never sees your password.
 
 </td>
 </tr>

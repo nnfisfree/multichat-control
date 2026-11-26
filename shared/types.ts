@@ -389,6 +389,8 @@ export interface Settings {
   eventPopups: boolean
   /** Seconds each pop-up stays up. */
   eventPopupSeconds: number
+  /** Celebrations: confetti for Twitch follows, Bits / gift boxes / banknotes raining over chat. */
+  animations: Record<AnimationKind, AnimationPref>
   closeAction: CloseAction
   eventFilter: EventFilter
   autoUpdate: boolean
@@ -424,6 +426,29 @@ export interface Settings {
   highlightedUsers: Record<string, string>
 }
 
+/**
+ * The celebration animations: confetti for a Twitch follow, Bits for a cheer, gift boxes for a gift
+ * bomb, banknotes for a StreamElements / Streamlabs tip.
+ */
+export type AnimationKind = 'follow' | 'bits' | 'gifts' | 'tips'
+export interface AnimationPref {
+  on: boolean
+  /** How long it runs: the confetti cannons keep firing, the drops keep raining. */
+  seconds: number
+  /** Fewest Bits / gifted subs / tip amount (in the tip's own currency) that set it off. Unused for follows. */
+  min: number
+}
+export const ANIMATION_KINDS: AnimationKind[] = ['follow', 'bits', 'gifts', 'tips']
+export const DEFAULT_ANIMATIONS: Record<AnimationKind, AnimationPref> = {
+  follow: { on: true, seconds: 1, min: 1 },
+  bits: { on: true, seconds: 9, min: 1 },
+  gifts: { on: true, seconds: 9, min: 5 },
+  tips: { on: true, seconds: 9, min: 1 }
+}
+/** Settings files from before a kind (or the whole block) existed get the defaults for what's missing. */
+export const animationPref = (s: Partial<Pick<Settings, 'animations'>>, kind: AnimationKind): AnimationPref =>
+  ({ ...DEFAULT_ANIMATIONS[kind], ...s.animations?.[kind] })
+
 export const DEFAULT_SETTINGS: Settings = {
   twitchClientId: '',
   youtubeClientId: '',
@@ -450,6 +475,7 @@ export const DEFAULT_SETTINGS: Settings = {
   closeAction: 'ask',
   eventPopups: true,
   eventPopupSeconds: 6,
+  animations: DEFAULT_ANIMATIONS,
   eventFilter: { platforms: { twitch: true, youtube: true, kick: true, tiktok: true }, hiddenTypes: [] },
   autoUpdate: true,
   updatePrereleases: false,

@@ -1,12 +1,12 @@
-import { useMemo, useState, type JSX, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type JSX, type ReactNode } from 'react'
 import { PLATFORM_EVENTS, PREF_PLATFORMS, defaultShow, eventShow, type PrefPlatform } from '../../shared/event-prefs'
-import { PLATFORM_LABEL, type ChatEventGroup, type EventShow, type EventType, type NameColorMode, type NameRole, type PlatformPrefs, type Settings } from '../../shared/types'
+import { ANIMATION_KINDS, PLATFORM_LABEL, animationPref, type AnimationKind, type ChatEventGroup, type EventShow, type EventType, type NameColorMode, type NameRole, type PlatformPrefs, type Settings } from '../../shared/types'
 import { updateSettings, useStore } from '../lib/store'
 import { NAME_ROLES, nameColor } from '../lib/nameColor'
 import { Icon, PlatformIcon } from './Icons'
 import { MarkedUsers, Row, Toggle } from './SettingsParts'
 
-type FoldId = 'messages' | 'platforms' | 'popups' | 'other' | 'people' | 'emotes'
+type FoldId = 'messages' | 'platforms' | 'popups' | 'animations' | 'other' | 'people' | 'emotes'
 
 // which sections are open, kept while the app runs
 let openFolds: Set<FoldId> = new Set(['platforms'])
@@ -19,6 +19,7 @@ const TARGET_FOLD: Record<string, FoldId> = {
   'platform-settings': 'platforms',
   'chat-events-settings': 'platforms',
   'popup-settings': 'popups',
+  'animation-settings': 'animations',
   'people-settings': 'people',
   'emote-settings': 'emotes'
 }
@@ -277,6 +278,11 @@ export function ChatSettings({ target }: { target?: string }): JSX.Element {
         )}
       </Fold>
 
+      <Fold id="animation-settings" title="Animations" desc="Confetti for Twitch follows. Bits, gift boxes and banknotes raining over chat" {...fold('animations')}>
+        <p className="anim-note">They play one at a time, in the order the events came in. Drops fall behind the raid, Hype Train and pinned message bars, and nothing shows while Settings is open. Only for events the Events tab shows.</p>
+        {ANIMATION_KINDS.map((kind) => <AnimationRows key={kind} kind={kind} s={s} />)}
+      </Fold>
+
       <Fold id="other-events-settings" title="Tips and TikTok" desc="Cards in chat for tips from alert services and for TikTok LIVE" {...fold('other')}>
         {OTHER_ROWS.map(([key, title, desc]) => (
           <Row key={key} title={title} desc={desc}>
@@ -303,6 +309,79 @@ export function ChatSettings({ target }: { target?: string }): JSX.Element {
           <Toggle label="FrankerFaceZ" on={providers.ffz} onChange={(v) => setProvider('ffz', v)} />
         </Row>
       </Fold>
+    </>
+  )
+}
+
+/**
+ * A whole number from 1 to `max`, saved when the field loses focus or on Enter. Anything out of range
+ * snaps back into it, an empty or invalid entry goes back to the saved value.
+ */
+function MinInput({ value, max, unit, label, onChange }: { value: number; max: number; unit: string; label: string; onChange(v: number): void }): JSX.Element {
+  const [text, setText] = useState(String(value))
+  useEffect(() => setText(String(value)), [value])
+  const commit = (): void => {
+    const n = Math.round(Number(text))
+    if (!text.trim() || !Number.isFinite(n)) return setText(String(value))
+    const v = Math.min(max, Math.max(1, n))
+    setText(String(v))
+    if (v !== value) onChange(v)
+  }
+  return (
+    <label className="min-input">
+      <input type="number" aria-label={label} min={1} max={max} step={1} value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} />
+      <span>{unit}</span>
+    </label>
+  )
+}
+
+const ANIMATION_INFO: Record<AnimationKind, { title: string; desc: string; length: string; min?: { title: string; desc: string; unit: string; max: number } }> = {
+  follow: {
+    title: 'Follows (Twitch)', desc: 'Confetti shoots up from both bottom corners of the window and meets at the top. Only on the All and Twitch tabs.',
+    length: 'How long the confetti cannons keep firing. 1 s is a single burst.'
+  },
+  bits: {
+    title: 'Cheers (Twitch Bits)', desc: 'Bits rain down over chat. More Bits, a heavier shower. Only on the All and Twitch tabs.',
+    length: 'How long the Bits keep raining.',
+    min: { title: 'Smallest Cheer', desc: 'Bits rain for a cheer of at least this many Bits. 1 = every cheer.', unit: 'bits', max: 1000000 }
+  },
+  gifts: {
+    title: 'Gifted Subs (Twitch)', desc: 'Gift boxes rain down over chat for a gift bomb. Bigger bomb, heavier shower. Only on the All and Twitch tabs.',
+    length: 'How long the gift boxes keep raining.',
+    min: { title: 'Smallest Gift Bomb', desc: 'Gift boxes rain for a gift bomb of at least this many subs.', unit: 'subs', max: 1000 }
+  },
+  tips: {
+    title: 'Tips (StreamElements and Streamlabs)', desc: "Banknotes with the tip's currency sign rain down over chat. Bigger tip, heavier shower. On every tab.",
+    length: 'How long the banknotes keep raining.',
+    min: { title: 'Smallest Tip', desc: "Banknotes rain for a tip of at least this much, in the tip's own currency (1 = 1 dollar, 1 euro…).", unit: 'or more', max: 100000 }
+  }
+}
+
+/** On/off, length and smallest amount for one animation. Always all shown, even while it's off. */
+function AnimationRows({ kind, s }: { kind: AnimationKind; s: Settings }): JSX.Element {
+  const info = ANIMATION_INFO[kind]
+  const p = animationPref(s, kind)
+  const set = (patch: Partial<typeof p>): void => {
+    const all = Object.fromEntries(ANIMATION_KINDS.map((k) => [k, animationPref(s, k)])) as Settings['animations']
+    void updateSettings({ animations: { ...all, [kind]: { ...p, ...patch } } })
+  }
+  return (
+    <>
+      <h4 className="pf-sub">{info.title}</h4>
+      <Row title="Show" desc={info.desc}>
+        <Toggle label={`${info.title} animation`} on={p.on} onChange={(on) => set({ on })} />
+      </Row>
+      <Row title="Length" desc={info.length}>
+        <div className="slider">
+          <output>{p.seconds} s</output>
+          <input type="range" aria-label={`${info.title} animation length in seconds`} min="1" max="30" step="1" value={p.seconds} onChange={(e) => set({ seconds: Number(e.target.value) })} />
+        </div>
+      </Row>
+      {info.min && (
+        <Row title={info.min.title} desc={info.min.desc}>
+          <MinInput label={info.min.title} unit={info.min.unit} value={p.min} max={info.min.max} onChange={(min) => set({ min })} />
+        </Row>
+      )}
     </>
   )
 }

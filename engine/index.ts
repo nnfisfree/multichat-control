@@ -23,7 +23,6 @@ import { KickConnector } from './platforms/kick/connector'
 import { TikTokConnector } from './platforms/tiktok/connector'
 import { TwitchConnector } from './platforms/twitch/connector'
 import { YouTubeConnector } from './platforms/youtube/connector'
-import { ALERTS_READY } from '../shared/app-config'
 import { loadStore, store } from './store'
 import { StreamerbotLink } from './streamerbot'
 
@@ -84,13 +83,12 @@ export async function startEngine(): Promise<void> {
     streamelements: new StreamElements(hub.alertContext('streamelements')),
     streamlabs: new Streamlabs(hub.alertContext('streamlabs'))
   }
-  // BMC runs next to whichever service is picked, as long as a token is saved. It doesn't need
-  // anyone's approval, so ALERTS_READY doesn't gate it.
+  // BMC runs next to whichever service is picked, as long as a token is saved
   const bmc = new BuyMeACoffee(hub.alertContext('buymeacoffee'), demo)
   void bmc.start().catch(() => {})
   const startAlerts = async (): Promise<void> => {
     for (const s of ALERT_SOURCES) {
-      if (ALERTS_READY && s === store.settings.alertService && !demo) await alerts[s].start().catch(() => {})
+      if (s === store.settings.alertService && !demo) await alerts[s].start().catch(() => {})
       else {
         alerts[s].stop()
         hub.alertContext(s).status({ status: 'off' })
@@ -258,7 +256,7 @@ export async function startEngine(): Promise<void> {
     alerts: {
       login: async (source) => {
         if (source === 'buymeacoffee') throw new Error('Paste your Buy Me a Coffee token to connect.')
-        if (!ALERT_SOURCES.includes(source) || demo || !ALERTS_READY) throw new Error('Not available yet.')
+        if (!ALERT_SOURCES.includes(source) || demo) throw new Error('Not available yet.')
         await alerts[source].login()
       },
       logout: async (source) => {

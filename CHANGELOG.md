@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.5.3
+
+**New**
+
+- **Celebrations over chat.** A Twitch follow fires confetti from both bottom corners of the window; it opens into a big cloud and floats down. A cheer rains Bits, a gift bomb rains gift boxes, and a StreamElements or Streamlabs tip rains banknotes with the tip's currency sign down over chat. They play one at a time, in the order the events came in.
+- **Animation settings.** Settings → Chat → Animations: each animation on or off, how long it lasts, and the smallest cheer, gift bomb or tip that sets it off. All on by default.
+- **Drops stay behind the banners.** While a raid, Hype Train or pinned message is showing, the falling pieces pass behind it.
+- **A welcome card for new installs.** The app opens on the chat with a card to log in to Twitch, YouTube, Kick and TikTok, instead of opening Settings over everything. Bring it back from Settings → App → Welcome.
+- **Settings over your chat.** Settings is a card on top of the chat, which stays visible around it. Back to chat button, click the chat to close it, and it can be resized from any edge or corner (it remembers the size; double-click an edge to fill the window).
+
+**Fixed**
+
+- The window edges and corners are much easier to grab to resize the app.
+- Nothing pops up on top of a new user's first screen: What's New and the OBS tip wait until the welcome card is done.
+
+## 0.5.2
+
+**Fixed**
+
+- Drop-down menus open again after a WebView2 update had left them blank.
+
+## 0.5.1
+
+**New**
+
+- Official StreamElements and Streamlabs logos on their events.
+- The Connections menu lists only what's connected or has a problem; services still waiting sit behind a "+N waiting" bar.
+- A thinner frame around the open tab.
+
 ## 0.5.0
 
 **New**

@@ -49,13 +49,6 @@ export async function api(service: Service, method: string, url: string, body?: 
   return settle(await core.api(service, method, url, h, text), service)
 }
 
-/** Same as api() but also returns the status, for calls where 204/404 mean something. */
-export async function apiRaw(service: Service, method: string, url: string, body?: unknown): Promise<{ status: number; body: any }> {
-  const text = asText(body)
-  const r = await core.api(service, method, url, text !== undefined ? { 'Content-Type': 'application/json' } : {}, text)
-  return { status: r.status, body: parse(r.body) }
-}
-
 export function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }

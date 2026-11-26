@@ -13,10 +13,13 @@ import { UserCardPanel } from './components/UserCard'
 import { ClosePrompt } from './components/ClosePrompt'
 import { YoutubeNotice } from './components/YoutubeNotice'
 import { WhatsNew } from './components/WhatsNew'
+import { Welcome } from './components/Welcome'
 import { ObsTip } from './components/ObsTip'
 import { PinnedBar } from './components/PinnedBar'
 import { RaidBar } from './components/RaidBar'
 import { HypeBanner } from './components/HypeBanner'
+import { ResizeEdges } from './components/ResizeEdges'
+import { Celebrations } from './components/Celebrations'
 import { RewardsPanel } from './components/RewardsPanel'
 import { Settings, type SettingsFocus } from './components/Settings'
 import { Tabs, type Tab } from './components/Tabs'
@@ -28,7 +31,12 @@ import { setEventsOpen, updateSettings, useFiltered, useInit, useStore } from '.
 export function App(): JSX.Element {
   useInit()
   const ready = useStore((s) => s.ready)
-  return ready ? <Main /> : <div className="app"><TitleBar demo={false} /></div>
+  return (
+    <>
+      {ready ? <Main /> : <div className="app"><TitleBar demo={false} /></div>}
+      <ResizeEdges />
+    </>
+  )
 }
 
 function Main(): JSX.Element {
@@ -41,7 +49,8 @@ function Main(): JSX.Element {
   const [users, setUsers] = useState(false)
   const [card, setCard] = useState<{ platform: Platform; user: UserEntry; x: number; y: number } | null>(null)
   const [pop, setPop] = useState<Pop>(null)
-  const [settingsOpen, setSettingsOpen] = useState<boolean | SettingsFocus>(!settings.setupDismissed && !boot.demo)
+  // never opens by itself: on a first run the welcome card in chat (Welcome.tsx) does the setup
+  const [settingsOpen, setSettingsOpen] = useState<boolean | SettingsFocus>(false)
   const [menu, setMenu] = useState<{ x: number; y: number; m: ChatMessage; userOnly?: boolean } | null>(null)
   const [quick, setQuick] = useState<{ m: ChatMessage; anchor: DOMRect } | null>(null)
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
@@ -144,9 +153,12 @@ function Main(): JSX.Element {
           {(tab === 'all' || tab === 'twitch') && <PinnedBar />}
           {/* inside the chat area, so pop-ups always stay below the raid / Hype Train / pinned bars */}
           <div className="chat-area">
+            <Welcome onSettings={() => setSettingsOpen({ cat: 'connections' })} />
             <ChatList key={tab} messages={shown} showPlatform={tab === 'all'} showTime={settings.showTimestamps} onMenu={onMenu} onReply={setReplyTo} onQuick={onQuick} quickId={quick?.m.id} />
             <EventPopups covered={events || users || !!pop || !!settingsOpen} />
           </div>
+          {/* Bits / gift / banknote drops: over the chat list, under the bars above it and the pop-ups */}
+          <Celebrations twitchVisible={tab === 'all' || tab === 'twitch'} covered={!!settingsOpen} />
           <EventsDrawer open={events} onClose={() => openEvents(false)} />
           <UsersDrawer open={users} onClose={() => openUsers(false)} onUser={onUser} onCard={(platform, u, x, y) => setCard({ platform, user: u, x, y })} />
           {toast && <div className={toast.ok ? 'toast good' : 'toast bad'} role="status">{toast.message ?? (toast.ok ? 'Done.' : 'Failed.')}</div>}
@@ -160,8 +172,9 @@ function Main(): JSX.Element {
       {quick && <QuickMenu {...quick} onClose={closeQuick} onResult={setToast} onCard={openCard} />}
       {card && <UserCardPanel platform={card.platform} user={card.user} x={card.x} y={card.y} onClose={() => setCard(null)} onReply={setReplyTo} onResult={setToast} />}
       {settingsOpen && <Settings focus={typeof settingsOpen === 'object' ? settingsOpen : undefined} onClose={() => setSettingsOpen(false)} />}
-      {!settingsOpen && !boot.demo && <WhatsNew onSettings={(f) => setSettingsOpen(f)} onCommands={() => setPop('commands')} />}
-      {!settingsOpen && !boot.demo && <ObsTip onSetup={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} />}
+      {/* both wait until the welcome card is done, so a new user gets one thing at a time */}
+      {!settingsOpen && !boot.demo && settings.setupDismissed && <WhatsNew onSettings={(f) => setSettingsOpen(f)} onCommands={() => setPop('commands')} />}
+      {!settingsOpen && !boot.demo && settings.setupDismissed && <ObsTip onSetup={() => setSettingsOpen({ cat: 'connections', target: 'obs-settings' })} />}
       <ClosePrompt />
       <YoutubeNotice />
     </div>

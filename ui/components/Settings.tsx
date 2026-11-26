@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type JSX, type MouseEvent, type ReactNode } from 'react'
-import { ALERTS_READY } from '../../shared/app-config'
 import { ALERT_SOURCE_LABEL, BMC_TOKEN_URL, EULER_KEY_URL, PLATFORM_LABEL, type CloseAction, type IntegrationState, type Platform, STREAM_APPS, type StreamApp } from '../../shared/types'
 import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamElementsLogo, StreamerbotLogo, StreamlabsLogo } from './Icons'
 import { setSecrets, updateSettings, useStore } from '../lib/store'
@@ -43,7 +42,8 @@ const rowToggle = (toggle: () => void) => (e: MouseEvent): void => {
   if (!(e.target as HTMLElement).closest('button, a, input, label')) toggle()
 }
 
-function Account({ platform }: { platform: LoginPlatform }): JSX.Element {
+/** One platform's login row. Also used by the welcome card in chat (Welcome.tsx). */
+export function Account({ platform }: { platform: LoginPlatform }): JSX.Element {
   const settings = useStore((s) => s.settings!)
   const secrets = useStore((s) => s.secrets)
   const st = useStore((s) => s.statuses[platform])
@@ -197,8 +197,7 @@ const ALERT_STATUS: Record<IntegrationState['status'], string> = {
 
 /** Streamers only use one alert service, so: pick one, log in, done. */
 function AlertsPicker(): JSX.Element {
-  // until both services approve us, both show as "soon" and nothing can be picked
-  const choice = useStore((s) => (ALERTS_READY ? s.settings!.alertService : 'none'))
+  const choice = useStore((s) => s.settings!.alertService)
   const st = useStore((s) => (choice === 'none' ? undefined : s.integrations[choice]))
   const [err, setErr] = useState('')
   const act = (fn: () => Promise<unknown>) => () => {
@@ -214,14 +213,10 @@ function AlertsPicker(): JSX.Element {
       <header>
         <div className="seg" role="radiogroup" aria-label="Alert service">
           {(['none', 'streamelements', 'streamlabs'] as const).map((v) => (
-            v !== 'none' && !ALERTS_READY
-              ? <button key={v} role="radio" aria-checked={false} disabled className="soon" title={`${ALERT_SOURCE_LABEL[v]} is coming soon: waiting for ${ALERT_SOURCE_LABEL[v]} to approve the app`}>
-                  {ALERT_SOURCE_LABEL[v]} <small>Soon..</small>
-                </button>
-              : <button key={v} role="radio" aria-checked={choice === v} className={choice === v ? 'on with-logo' : 'with-logo'} onClick={() => { setErr(''); void updateSettings({ alertService: v }) }}>
-                  {v === 'streamelements' ? <StreamElementsLogo size={15} /> : v === 'streamlabs' ? <StreamlabsLogo size={15} /> : null}
-                  {v === 'none' ? 'None' : ALERT_SOURCE_LABEL[v]}
-                </button>
+            <button key={v} role="radio" aria-checked={choice === v} className={choice === v ? 'on with-logo' : 'with-logo'} onClick={() => { setErr(''); void updateSettings({ alertService: v }) }}>
+              {v === 'streamelements' ? <StreamElementsLogo size={15} /> : v === 'streamlabs' ? <StreamlabsLogo size={15} /> : null}
+              {v === 'none' ? 'None' : ALERT_SOURCE_LABEL[v]}
+            </button>
           ))}
         </div>
         {choice !== 'none' && (
@@ -648,6 +643,85 @@ const CATEGORIES: { id: Category; label: string; desc: string; icon: () => JSX.E
   { id: 'about', label: 'About', desc: 'The story behind the app', icon: Icon.info }
 ]
 
+interface CardSize { w: number; h: number }
+const CARD_SIZE_KEY = 'nnf.settingsSize'
+// the sidebar layout needs about this much; a smaller window just gets the whole window
+const CARD_MIN = { w: 640, h: 360 }
+
+/** The size the Settings card was last resized to on this PC, if any. */
+function loadCardSize(): CardSize | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(CARD_SIZE_KEY) ?? 'null') as CardSize | null
+    return v && v.w > 0 && v.h > 0 ? v : null
+  } catch {
+    return null
+  }
+}
+function saveCardSize(v: CardSize | null): void {
+  try {
+    if (v) localStorage.setItem(CARD_SIZE_KEY, JSON.stringify(v))
+    else localStorage.removeItem(CARD_SIZE_KEY)
+  } catch {
+    // storage blocked: the size just isn't remembered
+  }
+}
+
+const GRIPS: { cls: string; x: -1 | 0 | 1; y: -1 | 0 | 1 }[] = [
+  { cls: 'n', x: 0, y: -1 }, { cls: 's', x: 0, y: 1 }, { cls: 'w', x: -1, y: 0 }, { cls: 'e', x: 1, y: 0 },
+  { cls: 'nw', x: -1, y: -1 }, { cls: 'ne', x: 1, y: -1 }, { cls: 'sw', x: -1, y: 1 }, { cls: 'se', x: 1, y: 1 }
+]
+
+/**
+ * Edges and corners to resize the Settings card. It stays centred, so it grows on both sides at once
+ * and the grabbed edge follows the mouse. Never smaller than the sidebar layout needs (or the whole
+ * window, if that's smaller), never bigger than the window. Double-click an edge to fill the window
+ * again. The size is remembered on this PC.
+ */
+function CardGrips({ card, onSize }: { card: React.RefObject<HTMLDivElement | null>; onSize(v: CardSize | null): void }): JSX.Element {
+  const drag = useRef<{ x: number; y: number; w: number; h: number; maxW: number; maxH: number; dx: number; dy: number; last: CardSize } | null>(null)
+  const down = (g: (typeof GRIPS)[number]) => (e: React.PointerEvent<HTMLDivElement>): void => {
+    const box = card.current
+    const back = box?.parentElement
+    if (e.button !== 0 || !box || !back) return
+    e.preventDefault()
+    e.stopPropagation()
+    const r = box.getBoundingClientRect()
+    const cs = getComputedStyle(back)
+    const maxW = back.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+    const maxH = back.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+    drag.current = { x: e.clientX, y: e.clientY, w: r.width, h: r.height, maxW, maxH, dx: g.x, dy: g.y, last: { w: r.width, h: r.height } }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const move = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const d = drag.current
+    if (!d) return
+    const fit = (v: number, min: number, max: number): number => Math.round(Math.max(Math.min(min, max), Math.min(max, v)))
+    d.last = {
+      w: d.dx ? fit(d.w + 2 * d.dx * (e.clientX - d.x), CARD_MIN.w, d.maxW) : Math.round(d.w),
+      h: d.dy ? fit(d.h + 2 * d.dy * (e.clientY - d.y), CARD_MIN.h, d.maxH) : Math.round(d.h)
+    }
+    onSize(d.last)
+  }
+  const up = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const d = drag.current
+    if (!d) return
+    drag.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    saveCardSize(d.last)
+  }
+  const reset = (): void => {
+    onSize(null)
+    saveCardSize(null)
+  }
+  return (
+    <>
+      {GRIPS.map((g) => (
+        <div key={g.cls} className={`set-grip ${g.cls}`} aria-hidden="true" title="Drag to resize. Double-click to fill the window." onPointerDown={down(g)} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onDoubleClick={reset} />
+      ))}
+    </>
+  )
+}
+
 export function Settings({ onClose, focus }: { onClose(): void; focus?: SettingsFocus }): JSX.Element {
   const boot = useStore((s) => s.boot!)
   const s = useStore((x) => x.settings!)
@@ -673,11 +747,23 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
     scroll.current?.scrollTo({ top: 0 })
   }
   const info = CATEGORIES.find((c) => c.id === cat)!
+  // A click on the dimmed chat around the card closes Settings. Only when the press started there
+  // too, so selecting text in Settings and letting go outside the card doesn't close it.
+  const downOnBack = useRef(false)
+  // the card's size when someone resized it; null = fill the window
+  const [size, setSize] = useState<CardSize | null>(loadCardSize)
+  const sized = size ? { flex: 'none', width: size.w, height: size.h, margin: 'auto', maxWidth: '100%', maxHeight: '100%' } : undefined
 
   return (
-    <div className="modal-back">
-      <div className="modal settings" role="dialog" aria-label="Settings" ref={modal} onMouseMove={followLight}>
+    <div
+      className="modal-back settings-back"
+      onMouseDown={(e) => { downOnBack.current = e.target === e.currentTarget }}
+      onClick={(e) => { if (downOnBack.current && e.target === e.currentTarget) onClose(); downOnBack.current = false }}
+    >
+      <div className="modal settings" role="dialog" aria-label="Settings" ref={modal} onMouseMove={followLight} style={sized}>
+        <CardGrips card={modal} onSize={setSize} />
         <aside className="set-side">
+          <button className="back-to-chat" onClick={onClose}><Icon.chevron /> Back to chat</button>
           <div className="set-side-title">Settings</div>
           <nav role="tablist" aria-label="Settings categories" aria-orientation="vertical">
             {CATEGORIES.map((c) => (
@@ -690,7 +776,7 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
         </aside>
 
         <div className="set-main">
-          <button className="icon-btn set-close" aria-label="Close settings" onClick={() => { void updateSettings({ setupDismissed: true }); onClose() }}><Icon.close /></button>
+          <button className="icon-btn set-close" aria-label="Close settings" title="Back to chat" onClick={onClose}><Icon.close /></button>
           {cat === 'about' ? <About chapter={focus?.cat === 'about' ? focus.target : undefined} /> : (
             <div className="modal-scroll" ref={scroll}>
               <header className="cat-head">
@@ -699,7 +785,7 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
               </header>
 
               {cat === 'connections' && <>
-                {!s.setupDismissed && <p className="lead">Welcome! Log in to each platform you stream on. You can do this later from the gear icon.</p>}
+                {!s.setupDismissed && <p className="lead">Welcome! Log in to each platform you stream on, here or on the welcome card in chat. Your chat is right behind this window: close it with Back to chat.</p>}
                 <Section title="Accounts" desc="Connect the platforms you stream on">
                   {(['twitch', 'youtube', 'kick'] as LoginPlatform[]).map((p) => <Account key={p} platform={p} />)}
                   <TikTokAccount startOpen={focus?.target === 'tiktok-settings'} />
@@ -774,6 +860,11 @@ export function Settings({ onClose, focus }: { onClose(): void; focus?: Settings
                       <option value="ask">Ask every time</option>
                       <option value="tray">Minimize to tray</option>
                     </select>
+                  </Row>
+                </Section>
+                <Section title="Welcome" desc="The card in chat that helps you log in to your platforms">
+                  <Row title="Show the Welcome Card" desc="Brings back the welcome card at the top of chat, with a Log in button for each platform">
+                    <button className="btn sm" disabled={!s.setupDismissed} onClick={() => { void updateSettings({ setupDismissed: false }); onClose() }}>{s.setupDismissed ? 'Show again' : 'Showing'}</button>
                   </Row>
                 </Section>
                 <Section title="Safety" desc="Protect against accidental clicks">

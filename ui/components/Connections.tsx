@@ -3,7 +3,6 @@ import { ALERT_SOURCE_LABEL, PLATFORMS, type AlertSource, PLATFORM_LABEL, type C
 import { BmcLogo, Icon, PlatformIcon, StreamAppLogo, StreamElementsLogo, StreamerbotLogo, StreamlabsLogo } from './Icons'
 import { useStore } from '../lib/store'
 import { login as startLogin } from '../lib/login'
-import { ALERTS_READY } from '../../shared/app-config'
 
 type Tone = 'good' | 'wait' | 'warn' | 'bad' | 'off'
 
@@ -105,7 +104,7 @@ function useServices(): Service[] {
         : { tone: 'off' as const, text: 'Not signed in', tracked: false, hint: 'Open the gem panel and click Sign in to Twitch.' })
     })
   }
-  if (ALERTS_READY && choice !== 'none') list.push(alertService(choice, integrations[choice]))
+  if (choice !== 'none') list.push(alertService(choice, integrations[choice]))
   // BMC only shows up once it's been connected (it runs next to the picked alert service)
   const bmc = integrations.buymeacoffee
   if (bmc && bmc.status !== 'off' && (bmc.status !== 'needs-login' || bmc.detail)) list.push(alertService('buymeacoffee', bmc))
